@@ -35,9 +35,31 @@ a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
 // 追加するときはこの配列に1行足すだけ。R は小さい順。初当たり＝TS（低ベース時の大当り確率分母）
 const MACHINES=[
  {id:'umi5',name:'P大海物語5',sub:'三洋物産 / ハイミドル・MTE2',intro:'2023年2月6日',first:319.7,total:9.24,r1:140,R:[10],
-  src:'https://pachinko-spec.info/spec/103492/'}
+  cond:'残保留あり',src:'https://pachinko-spec.info/spec/103492/'},
+ {id:'tg_w',name:'e東京喰種',sub:'ビスティ / ライトミドル・e東京喰種W',intro:'2025年4月21日',first:199.9,total:9.34,r1:140,R:[2, 10],cond:'通常条件（残保留ありの記載なし）',
+  src:'https://pachinko-spec.info/spec/154750/'},
+ {id:'eva15f',name:'P新世紀エヴァンゲリオン15 未来への咆哮 SPECIAL EDITION',sub:'ビスティ / ライトミドル・未来への咆哮F',intro:'2023年9月19日',first:199.1,total:6.67,r1:100,R:[3, 10],cond:'通常条件（残保留ありの記載なし）',
+  src:'https://pachinko-spec.info/spec/129716/'},
+ {id:'umi5sp',name:'P大海物語5スペシャル',sub:'三洋物産 / ハイミドル・ALTA',intro:'2024年11月5日',first:319.7,total:9.68,r1:140,R:[10],cond:'遊タイムあり・残保留あり',
+  src:'https://pachinko-spec.info/spec/146187/'},
+ {id:'oki5ltv',name:'Pスーパー海物語IN沖縄5',sub:'三洋物産 / ハイミドル・LTV',intro:'2021年7月5日',first:319.8,total:9.71,r1:137.56,R:[2, 10],cond:'残保留あり',
+  src:'https://pachinko-spec.info/spec/4273/'},
+ {id:'oki6ltp',name:'Pスーパー海物語IN沖縄6',sub:'三洋物産 / ハイミドル・LTP',intro:'2025年10月6日',first:319.8,total:9.55,r1:137.26,R:[2, 10],cond:'残保留あり',
+  src:'https://pachinko-spec.info/spec/160903/'},
+ {id:'kiwami',name:'P海物語極ジャパン',sub:'三洋物産 / ハイミドル・HTH',intro:'2025年5月7日',first:319.7,total:10.12,r1:140,R:[2, 10],cond:'通常条件（残保留ありの記載なし）',
+  src:'https://pachinko-spec.info/spec/154612/'},
+ {id:'umi5b',name:'P大海物語5 ブラック',sub:'三洋物産 / ライトミドル・HCL',intro:'2023年12月4日',first:199.8,total:9.36,r1:140,R:[3, 10],cond:'通常条件（残保留ありの記載なし）',
+  src:'https://pachinko-spec.info/spec/131678/'},
+ {id:'mawarun4',name:'Pまわるん大海物語4スペシャル',sub:'三洋物産 / 甘デジ・RBA',intro:'2021年8月2日',first:119.8,total:8.52,r1:120,R:[4, 6, 10],cond:'遊タイムあり・残保留あり',
+  src:'https://pachinko-spec.info/spec/25313/'},
+ {id:'pa_umi5',name:'PA大海物語5 Withアグネス・ラム',sub:'三洋物産 / 甘デジ・ARBC',intro:'2023年7月3日',first:99.9,total:6.34,r1:99,R:[4, 6, 10],cond:'遊タイムあり・残保留あり',
+  src:'https://pachinko-spec.info/spec/122132/'},
+ {id:'pa_shinumi',name:'PA新海物語',sub:'三洋物産 / 甘デジ・ARBB',intro:'2022年8月22日',first:87.2,total:5.51,r1:90,R:[5, 10],cond:'遊タイムあり・残保留あり',
+  src:'https://pachinko-spec.info/spec/58637/'},
+ {id:'pa_agnes',name:'PA大海物語 with アグネス・ラム Premium Edition',sub:'三洋物産 / 甘デジ・アグネスプレミアRBA',intro:'2026年9月7日',first:99.9,total:6.48,r1:99,R:[4, 6, 10],cond:'通常条件・遊タイムあり（残保留ありの記載なし）',
+  src:'https://pachinko-spec.info/spec/171633/'}
 ];
-const M={};MACHINES.forEach(m=>{m.R=[...m.R].sort((a,b)=>a-b);M[m.id]=m});
+var MACHINES_IDS=MACHINES.map(m=>m.id);const M={};MACHINES.forEach(m=>{m.R=[...m.R].sort((a,b)=>a-b);M[m.id]=m});
 const RENT=4,EXC=3.57,BALLK=250,SANDB=125,ROWS=20,ROWS0=10;
 const DEF_ADJ=-5;const r1e=(m,adj=DEF_ADJ)=>m.r1*(1+adj/100);// 実効1R出玉＝表記×(1＋増減率)
 const P_=(m,adj=DEF_ADJ)=>r1e(m,adj)/m.total;
@@ -196,7 +218,7 @@ function rowHtml(m,i){const w=st.rows[i]||blankRow();return`<tr id="tr${i}"${i>=
 function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'+k,{}));while(st.rows.length<ROWS)st.rows.push(blankRow());
  more=st.rows.slice(ROWS0).some(w=>Object.entries(w).some(([a,v])=>a==='r'?Object.values(v||{}).some(x=>x!==''&&x!=null):v!==''&&v!=null));
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');const B0=borders(m,defRatio(m)/100);
- el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px;display:flex;gap:10px;align-items:center">${thumb(k,40)}<span>${esc(m.name)}<br><small class="note">初当たり1/${m.first}・トータル1/${m.total}（残保留あり）・1R ${m.r1}玉・1回転 ${P_(m).toFixed(2)}玉</small></span></h1>
+ el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px;display:flex;gap:10px;align-items:center">${thumb(k,40)}<span>${esc(m.name)}<br><small class="note">初当たり1/${m.first}・トータル1/${m.total}（${esc(m.cond||'残保留あり')}）・1R ${m.r1}玉・1回転 ${P_(m).toFixed(2)}玉</small></span></h1>
  <div class="card"><h2>台情報</h2>
  <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read()}this.value=''"><option value="">▼</option>${stores().map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
@@ -224,7 +246,7 @@ function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'
  <h2 style="margin-top:14px">期待値</h2><button class="sub" onclick="calcExp()">見込み計算（今の時刻まで）</button><div id="o_exp" style="margin-top:8px"></div>
  <h2 style="margin-top:14px">見込み仕事量 <small class="note">今の回転率で同じ回転数を回した場合</small></h2><div class="tw"><table><tr><th>比率</th><th>全部現金</th><th>全部持ち玉</th></tr><tr><td class="big" id="o_er">-</td><td class="big" id="o_ec">-</td><td class="big" id="o_eb">-</td></tr></table></div><div id="o_detail" class="note"></div></div>
  <div class="card"><h2>この台を保存</h2><button onclick="saveH()">この台を保存</button><button class="sub" onclick="resetM()">リセット</button><button class="sub" onclick="location.hash='hist'">全機種の履歴</button><div id="hist" style="margin-top:10px"></div></div>
- <div class="card"><h2>注意・出典</h2><p class="note">・回転率＝回した回転数 ÷（使った現金/1000＋使った持ち玉/250）。<br>・仕事量＝現金で回した分（回転数×1回転出玉×3.57−投資）＋持ち玉で回した分（（回転数×1回転出玉−使った玉）×3.57）。行の中で現金と持ち玉を両方使った場合は使った割合で回転数を分けます。<br>・使った現金＝サンド投入合計現金−現在サンド表示現金。使った玉＝サンド玉回数の差×125玉（空欄なら持ち玉の差）。<br>・数値は残保留ありのトータル確率で計算。</p><p class="note">出典：<a href="${m.src}" target="_blank">${m.src}</a></p></div>`;
+ <div class="card"><h2>注意・出典</h2><p class="note">・回転率＝回した回転数 ÷（使った現金/1000＋使った持ち玉/250）。<br>・仕事量＝現金で回した分（回転数×1回転出玉×3.57−投資）＋持ち玉で回した分（（回転数×1回転出玉−使った玉）×3.57）。行の中で現金と持ち玉を両方使った場合は使った割合で回転数を分けます。<br>・使った現金＝サンド投入合計現金−現在サンド表示現金。使った玉＝サンド玉回数の差×125玉（空欄なら持ち玉の差）。<br>・数値は${esc(m.cond||"残保留あり")}のトータル確率で計算。</p><p class="note">出典：<a href="${m.src}" target="_blank">${m.src}</a></p></div>`;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
  update();renderH();banner();scrollTo(0,0)}
 window.showMore=()=>{more=true;for(let i=ROWS0;i<ROWS;i++)$('tr'+i).classList.remove('hidden');$('moreBtn').style.display='none'};
