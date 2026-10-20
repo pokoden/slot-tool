@@ -171,7 +171,7 @@ window.syncNow=async manual=>{const tok=LS.get('v2_token','');if(!tok){if(manual
    if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
    const d=new Date(),p=n=>String(n).padStart(2,'0');syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);refreshView();break}
  }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;if(again){again=false;syncSoon()}}};
-function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('')}else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
+function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('');const ss=$('sel_store');if(ss)ss.innerHTML=storeOpts()}else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});
 addEventListener('online',()=>syncNow(false));
 window.$=$;
@@ -180,6 +180,7 @@ window.saveStore=()=>{const name=$('s_name').value.trim(),lend=+$('s_lend').valu
  const s=stores().filter(x=>x.name!==name);s.push({name,lend,ex,rate:Math.round(100/ex*10000)/10000});putStores(s);['s_name','s_lend','s_ex'].forEach(k=>$(k).value='');renderStores()};
 window.editStore=i=>{const x=stores()[i];$('s_name').value=x.name;$('s_lend').value=x.lend;$('s_ex').value=exOf(x)??'';$('s_name').scrollIntoView({block:'center'})};
 window.delStore=i=>{const s=stores();if(!confirm(`「${s[i].name}」を削除しますか？`))return;s.splice(i,1);putStores(s);renderStores()};
+function storeOpts(){return '<option value="">▼</option>'+stores().map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}
 function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'min="0" inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
 function step(id,val,w=56){return`<span style="display:inline-flex;gap:4px;align-items:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',-1)">−</button><input id="${id}" type="number" min="0" inputmode="numeric" value="${esc(val)}" style="width:${w}px;text-align:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',1)">＋</button></span>`}
 window.bump=(id,d)=>{const x=$(id);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);x.dispatchEvent(new Event('input'))};
@@ -187,7 +188,7 @@ function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');
  let h=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">${esc(m.name)}</h1>
  <div class="card"><h2>台情報</h2>
- <div class="row"><label>店舗名</label>${inp('f_store',st.store,'text','list="dl_store"')}<datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
+ <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select id="sel_store" aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read()}this.value=''">${storeOpts()}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
 ${m.at?`<div class="row"><label>打ち始め通常回転数</label>${inp('f_start',st.start)}</div>
