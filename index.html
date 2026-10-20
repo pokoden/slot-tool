@@ -147,7 +147,7 @@ function seedStores(list){const have=new Set((list||[]).map(storeKey));const add
 // 旧データ移行
 (function(){let h=hist(),ch=false;h=h.map(e=>{if(e.st&&('unit' in e.st||'inv' in e.st||Object.values(e.st.checks||{}).some(x=>x===true))){migrate(e.st);ch=true}if(!e.fp&&e.st){e.fp=fingerprint(e.mid,e.st);ch=true}return e});if(ch)LS.set('v2_hist',[...h,...rawHist().filter(x=>x.deleted)]);
  for(const k in M){const c=LS.get('v2_cur_'+k,null);if(c){migrate(c);LS.set('v2_cur_'+k,c)}}})();
-function banner(){const n=hist().filter(e=>!e.exported).length;$('banner').classList.toggle('hidden',!n);$('banner').innerHTML=`未書き出し <b>${n}</b> 件 <button class="sm" onclick="exportCSV(false)">書き出し</button>`}
+function banner(){const b=$('banner');if(b)b.classList.add('hidden')}
 function thumb(k,w){const m=M[k];return m?`<img src="img/${k}.jpg" alt="" width="${w}" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px" onerror="this.outerHTML='<span style=&quot;display:inline-block;width:${w}px;padding:6px 0;border-radius:6px;background:#2b6fe8;color:#fff;font-size:11px;text-align:center&quot;>${esc(m.name.replace(/[（(].*/,'').slice(0,6))}</span>'">`:''}
 const BADGE=(t,c,b)=>`<span style="display:inline-block;font-size:.75em;font-weight:bold;padding:1px 7px;border-radius:9px;margin-right:4px;background:${b};color:${c}">${t}</span>`,BS=BADGE('保存済み','#1b7a34','#e3f4e6'),BP=BADGE('保存前','#a35a00','#ffefd6');
 function histPage(){mid=null;$('mach').classList.add('hidden');const el=$('home');el.classList.remove('hidden');
