@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>貯玉管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="貯玉管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
+<title>収支管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="収支管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -58,7 +58,27 @@ function calcKind(k){const rows=new Map();for(const e of records(k)){const st=sk
  const out=[...rows.values()].map(r=>{const id=k+'|'+r.store+'|'+r.date,yp=yenPer(k,r.store),on=tobOn(id),tob=on&&yp?Math.round(TOB_YEN/yp):0;return{...r,id,yp,on,tob,res:r.net-tob}});
  out.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:a.store.localeCompare(b.store));const bal=new Map();for(const r of out){const o=bal.get(r.store)||{store:r.store,bal:0,yp:r.yp};o.bal+=r.res;bal.set(r.store,o)}
  return{rows:out,bal:[...bal.values()].sort((a,b)=>b.bal-a.bal)}}
-let IDS=[];
+let IDS=[],main=LS.get('cd_main','ss'),calM=null;
+// ===== 収支管理：両ツールの保存済み記録の収支(e.yen)・稼働時間(e.hours)（本日の収支と同じ値）。削除・重複は除外、保存前は入れない =====
+const pad2=n=>String(n).padStart(2,'0'),todayS=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())};
+function allRecs(){const L=[];for(const k of['p','s'])for(const e of records(k)){const d=e.date||String(e.saved||'').slice(0,10);if(!d)continue;L.push({k,date:d,store:sk(e.store),memo:e.memo||'',machine:e.machine||e.mid||'',yen:e.yen!=null&&isFinite(+e.yen)?+e.yen:null,hours:+e.hours>0?+e.hours:0,saved:e.saved||''})}return L}
+function byDay(){const m=new Map();for(const r of allRecs()){if(!m.has(r.date))m.set(r.date,{date:r.date,yen:0,yn:0,hours:0,list:[]});const o=m.get(r.date);if(r.yen!=null){o.yen+=r.yen;o.yn++}o.hours+=r.hours;o.list.push(r)}return m}
+const yenTxt=x=>x==null?'-':sg(x)+'円',hTxt=h=>h>0?h.toFixed(1)+'時間':'-';
+function calendar(){const D=byDay();if(!calM)calM=todayS().slice(0,7);const [y,mo]=calM.split('-').map(Number),first=new Date(y,mo-1,1),days=new Date(y,mo,0).getDate(),off=first.getDay();
+ let ty=0,tn=0,th=0;for(const [d,o] of D)if(d.slice(0,7)===calM){ty+=o.yen;tn+=o.yn;th+=o.hours}
+ let cells='';for(let i=0;i<off;i++)cells+='<td></td>';for(let d=1;d<=days;d++){const k=calM+'-'+pad2(d),o=D.get(k),c=(off+d-1)%7,col=o&&o.yn?(o.yen>0?'#1e5bd6':o.yen<0?'#d62828':'#555'):'',bg=o&&o.yn?(o.yen>0?'#e8f0ff':o.yen<0?'#ffecec':'#f4f4f4'):'';
+  cells+=`<td id="cal_${k}" style="vertical-align:top;height:58px;padding:2px;${bg?'background:'+bg+';':''}${o?'cursor:pointer;':''}${k===todayS()?'outline:2px solid #2b6fe8;outline-offset:-2px;':''}"${o?` onclick="goDay('${k}')"`:''}><div style="text-align:left;font-size:.9em;color:${c===0?'#d62828':c===6?'#1e5bd6':'#333'}">${d}</div>${o?`<div style="font-weight:bold;color:${col};font-size:.86em">${o.yn?sg(o.yen):'-'}</div><div style="color:#777;font-size:.8em">${o.hours>0?o.hours.toFixed(1)+'h':''}</div>`:''}</td>`;if(c===6&&d<days)cells+='</tr><tr>'}
+ const wh=th>0&&tn?ty/th:null;
+ return`<div class="card"><div class="row" style="margin:0 0 6px"><button class="sub sm" id="cal_prev" onclick="calMove(-1)">◀</button><b style="font-size:1.1em" id="cal_title">${y}年${mo}月</b><button class="sub sm" id="cal_next" onclick="calMove(1)">▶</button></div>
+ <div class="tw" style="margin-bottom:8px"><table id="mtot"><tr><th>月の収支</th><th>稼働時間</th><th>時給</th></tr><tr style="font-weight:bold"><td${pc(ty)}>${tn?sg(ty)+'円':'-'}</td><td>${hTxt(th)}</td><td${pc(wh)}>${wh==null?'-':sg(wh)+'円'}</td></tr></table></div>
+ <table id="cal" style="table-layout:fixed;font-size:.8em;white-space:normal"><tr>${'日月火水木金土'.split('').map((w,i)=>`<th style="color:${i===0?'#d62828':i===6?'#1e5bd6':''}">${w}</th>`).join('')}</tr><tr>${cells}</tr></table><p class="note">パチンコとスロットの保存済み記録の合計（円）と稼働時間。日をタップするとその日の一覧へ。</p></div>`}
+function dayList(){const D=[...byDay().values()].sort((a,b)=>a.date<b.date?1:-1);if(!D.length)return'<div class="card"><p class="note">保存データがありません</p></div>';
+ const W='日月火水木金土';return D.map(o=>{const [y,m,d]=o.date.split('-').map(Number),w=isFinite(y)?W[new Date(y,m-1,d).getDay()]:'';
+  return`<div class="card" id="day_${o.date}"><div class="row" style="margin:0 0 6px"><b>${m}/${d}（${w}）</b><span><b${pc(o.yn?o.yen:null)}>${o.yn?yenTxt(o.yen):'-'}</b> <small class="note">${hTxt(o.hours)}</small></span></div>
+  ${o.list.sort((a,b)=>a.saved<b.saved?-1:1).map(r=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px;margin:6px 0"><label><span class="tag" style="margin:0 4px 0 0;${r.k==='p'?'background:#fff3d6;color:#a35a00':''}">${r.k==='p'?'パチ':'スロ'}</span><b>${esc(r.machine)}</b><small>${esc(r.store)}${r.memo?' 台'+esc(r.memo):''}</small></label><span style="text-align:right"><b${pc(r.yen)}>${yenTxt(r.yen)}</b><br><small class="note">${hTxt(r.hours)}</small></span></div>`).join('')}</div>`}).join('')}
+window.calMove=d=>{const [y,m]=calM.split('-').map(Number),t=new Date(y,m-1+d,1);calM=t.getFullYear()+'-'+pad2(t.getMonth()+1);const Y=scrollY;render();scrollTo(0,Y)};
+window.setMain=k=>{main=k;LS.set('cd_main',k);const Y=scrollY;render();scrollTo(0,Y)};
+window.goDay=k=>{if(main!=='ss'){main='ss';LS.set('cd_main','ss');render()}const e=$('day_'+k);if(e){e.scrollIntoView({block:'start',behavior:'smooth'});e.style.outline='2px solid #2b6fe8';setTimeout(()=>e.style.outline='',1500)}};
 // 店舗ごとのまとめ（パチンコとスロットで同じ店舗名は1行に）
 function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b of P.bal)m.set(b.store,{p:b});for(const b of S.bal){const o=m.get(b.store)||{};o.s=b;m.set(b.store,o)}
  if(!m.size)return'<div class="card"><h2>店舗ごとの残高</h2><p class="note">保存データがありません</p></div>';
@@ -68,16 +88,19 @@ function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b
  <div class="tw" style="margin-top:8px"><table id="tot"><tr><th>全店合計</th><th>貯玉</th><th>貯メダル</th><th>金額</th></tr><tr style="font-weight:bold"><td></td><td${pc(tp)}>${sg(tp)}玉</td><td${pc(ts)}>${sg(ts)}枚</td><td${pc(ty)}>${sg(ty)}円${noY?'＊':''}</td></tr></table></div>
  <p class="note">円換算：パチンコ＝店舗の1玉の価値（未登録は3.57円）、スロット＝店舗の換金額（円/枚）。${noY?'＊レート未設定の店舗は金額に含みません。':''}</p></div>`}
 function render(){const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メダル';IDS=c.rows.map(r=>r.id);
- $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">💰 貯玉管理</h1>${summary()}
+ $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">📅 収支管理</h1>${calendar()}
+ <div class="seg" style="margin-bottom:12px"><button id="main_ss" class="${main==='ss'?'':'sub'}" onclick="setMain('ss')">収支管理</button><button id="main_cd" class="${main==='cd'?'':'sub'}" onclick="setMain('cd')">貯玉管理</button></div>
+ <div id="pane_ss" class="${main==='ss'?'':'hidden'}">${dayList()}</div>
+ <div id="pane_cd" class="${main==='cd'?'':'hidden'}">${summary()}
  <div class="seg" style="margin-bottom:12px">${Object.entries(KIND).map(([k,x])=>`<button id="tab_${k}" class="${k===tab?'':'sub'}" onclick="setTab('${k}')">${x.l}</button>`).join('')}</div>
  <div class="card"><h2>店舗×日付 <small class="note">${c.rows.length}件</small></h2>${c.rows.length?`<div class="tw"><table id="rows"><tr><th>日付</th><th style="text-align:left">店舗</th><th>台数</th><th>増減</th><th>タバコ交換</th><th>結果</th></tr>${c.rows.map((r,i)=>`<tr><td>${esc(r.date)}</td><td style="text-align:left">${esc(r.store)}</td><td>${r.n}</td><td${pc(r.net)}>${sg(r.net)}</td><td><button class="tob ${r.on?'on':'off'}" onclick="toggleTob(${i})"${r.yp?'':' disabled'}>${r.on?'有り':'無し'}</button>${r.on&&r.tob?`<br><small style="color:#d62828">−${r.tob.toLocaleString()}${u}</small>`:''}</td><td${pc(r.res)}><b>${sg(r.res)}</b></td></tr>`).join('')}</table></div>`:'<p class="note">保存データがありません</p>'}
- <p class="note">増減＝その店・その日の保存済み記録の合計（1台＝回収−使用持ち${W}−使用貯${W}）。タバコ交換有り＝${TOB_YEN.toLocaleString()}円分（${TOB_YEN}÷${tab==='p'?'1玉の価値':'換金額'}、四捨五入）をその行から引きます。残高＝その店の全行の結果の累計。</p></div>
+ <p class="note">増減＝その店・その日の保存済み記録の合計（1台＝回収−使用持ち${W}−使用貯${W}）。タバコ交換有り＝${TOB_YEN.toLocaleString()}円分（${TOB_YEN}÷${tab==='p'?'1玉の価値':'換金額'}、四捨五入）をその行から引きます。残高＝その店の全行の結果の累計。</p></div></div>
  <div class="card"><h2>同期設定</h2><p class="note">記録はスロット版・パチンコ版の同期データ（GitHub）から読みます。ホーム画面から開いた場合は保存領域が別になるので、ここにもトークンを入れてください（スロット版と同じトークン）。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" style="width:170px" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div><button onclick="saveTok()">保存して同期</button><button class="sub" onclick="syncNow()">今すぐ同期</button>
  <p class="note" id="sy">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'未設定（この端末の記録だけで表示中）'}</p></div>`}
 window.saveTok=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow()};
-window.setTab=k=>{tab=k;LS.set('cd_tab',k);render()};
-window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);render();syncSoon()};
+window.setTab=k=>{tab=k;LS.set('cd_tab',k);const Y=scrollY;render();scrollTo(0,Y)};
+window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);const Y=scrollY;render();scrollTo(0,Y);syncSoon()};
 // ===== 同期：記録は読むだけ（pachinko.json / data.json）、タバコ交換は chodama.json に保存 =====
 const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
 async function ghGet(tok,f){const r=await fetch(REPO+f+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return{sha:j.sha,data:JSON.parse(b64d(j.content||''))}}
