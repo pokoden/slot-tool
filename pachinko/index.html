@@ -189,6 +189,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 addEventListener('online',()=>syncNow(false));
 window.$=$;
 // ===== 判別ページ =====
+function adjBump(d){const e=document.getElementById('f_adj');const v=e.value===''?DEF_ADJ:+e.value;e.value=Math.round((v+d)*10)/10;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}))}
 function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
 const COLS=[['s0','打ち始め<br>回転数'],['s1','当たり時<br>回転数'],['ds','回した<br>回転数',null,1],['b0','打ち始め<br>回転数','bd'],['b1','打ち終わり<br>回転数','bd'],['m0','打ち始め<br>持ち玉','bd'],['m1','現在の<br>持ち玉','bd'],['y0','サンド投入<br>合計現金','bd'],['y1','現在サンド<br>表示現金','bd'],['c0','サンド打ち始<br>玉回数','bd'],['c1','サンド現在<br>玉回数','bd']];
 function rowHtml(m,i){const w=st.rows[i]||blankRow();return`<tr id="tr${i}"${i>=ROWS0&&!more?' class="hidden"':''}><th>${i+1}回目</th>${COLS.map(([k,,c,x])=>x?`<td class="c" id="o${i}_ds">-</td>`:`<td class="${c||''}"><input id="r${i}_${k}" type="number" inputmode="numeric" value="${esc(w[k])}"${k==='b0'||k==='b1'?` placeholder="${esc(w[k==='b0'?'s0':'s1'])}"`:''}></td>`).join('')}<td class="c" id="o${i}_rate">-</td><td class="c" id="o${i}_dr">-</td><td class="c" id="o${i}_dc">-</td><td class="c" id="o${i}_db">-</td>${m.R.map(R=>`<td style="white-space:nowrap"><button class="sub sm" onclick="rb(${i},${R},-1)">−</button><input id="r${i}_R${R}" type="number" inputmode="numeric" value="${esc((w.r||{})[R]??'')}" style="width:40px;text-align:center"><button class="sub sm" onclick="rb(${i},${R},1)">＋</button></td>`).join('')}<td class="bd"><input id="r${i}_d0" type="number" inputmode="numeric" value="${esc(w.d0??'')}"></td><td class="bd"><input id="r${i}_d1" type="number" inputmode="numeric" value="${esc(w.d1??'')}"></td><td class="c" id="o${i}_r1">-</td><td class="c" id="o${i}_r1p">-</td></tr>`}
@@ -202,7 +203,7 @@ function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div></div>
  <div class="card"><h2>ボーダー</h2>
  <div class="row"><label>持ち玉比率（%）<small>空欄＝初期値 ${defRatio(m)}%（初当たり1/${m.first}）</small></label>${inp('f_ratio',st.ratio,'number',`placeholder="${defRatio(m)}"`)}</div>
- <div class="row"><label>1R出玉増減率（%）<small>空欄＝${DEF_ADJ}%<br>表記出玉 <b>${m.r1}玉</b>　増減後出玉 <b id="o_r1e">-</b></small></label>${inp('f_adj',st.adj??'','number',`placeholder="${DEF_ADJ}"`)}</div>
+ <div class="row"><label>1R出玉増減率（%）<small>空欄＝${DEF_ADJ}%<br>表記出玉 <b>${m.r1}玉</b>　増減後出玉 <b id="o_r1e">-</b></small></label><button type="button" style="min-width:44px;font-size:18px" onclick="adjBump(-1)">−</button>${inp('f_adj',st.adj??'','number',`placeholder="${DEF_ADJ}" style="width:70px"`)}<button type="button" style="min-width:44px;font-size:18px" onclick="adjBump(1)">＋</button></div>
  <div class="tw"><table><tr><th>比率ボーダー</th><th>現金ボーダー</th><th>持ち玉ボーダー</th></tr><tr><td class="big" id="o_br">-</td><td class="big" id="o_bc">-</td><td class="big" id="o_bb">-</td></tr></table></div>
  <p class="note">1000円あたりの回転数。貸玉1000円＝250玉・交換1玉3.57円</p></div>
  <div class="card"><h2>回転数・持ち玉・現金</h2><p class="note">横にスクロールして入力。色付き部分はボーダー計算用（打ち始め/打ち終わり回転数は空欄なら左の値を使用）。空欄は無視、0は0として計算。</p>
