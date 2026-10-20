@@ -108,7 +108,7 @@ function calc(m,st){setRate(rateOf(st.store));const adj=N(st.adj)??DEF_ADJ,P=P_(
 function hm2min(t){const x=String(t||'').match(/^(\d{1,2}):(\d{2})/);return x?+x[1]*60+ +x[2]:null}
 function hours(a,b){const x=hm2min(a),y=hm2min(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d/60}
 function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
-function fingerprint(mid,st){const c={...st};delete c.tS;delete c.tE;delete c.tEman;const s=JSON.stringify([mid,c]);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const ch=s.charCodeAt(i);h1=Math.imul(h1^ch,16777619);h2=Math.imul(h2^ch,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
+function fingerprint(mid,st){const c={...st};delete c.tS;delete c.tE;delete c.tEman;delete c.tL;const s=JSON.stringify([mid,c]);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const ch=s.charCodeAt(i);h1=Math.imul(h1^ch,16777619);h2=Math.imul(h2^ch,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
 if(typeof module!=='undefined')module.exports={M,MACHINES,P_,borders,defRatio,rowCalc,calc,hours};
 // ===== UI =====
 if(typeof document!=='undefined'){
@@ -116,7 +116,7 @@ const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const pad=n=>String(n).padStart(2,'0'),today=()=>{const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`},nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
 const blankRow=()=>({s0:'',s1:'',b0:'',b1:'',m0:'',m1:'',y0:'',y1:'',k0:'',k1:'',t0:'',t1:'',d0:'',d1:'',r:{}});
-const blank=()=>({store:'',memo:'',date:today(),ratio:'',inv:'',bStart:'',bEnd:'',bOut:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',usv:'',uhb:'',adj:'',tS:'',tE:'',tEman:false,bx:{k1:'0',m1:'0',y1:'0'},rows:Array.from({length:ROWS},blankRow)});
+const blank=()=>({store:'',memo:'',date:today(),ratio:'',inv:'',bStart:'',bEnd:'',bOut:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',usv:'',uhb:'',adj:'',tS:'',tE:'',tL:'',tEman:false,bx:{k1:'0',m1:'0',y1:'0'},rows:Array.from({length:ROWS},blankRow)});
 let mid=null,st=null,more=false;
 const TOK='v2_token';// スロット版と同じ鍵を共有
 const rawStores=()=>LS.get('p1_stores',[]),rawHist=()=>LS.get('p1_hist',[]);
@@ -258,7 +258,7 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');const B0=borders(m,defRatio(m)/100);
  el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px;display:flex;gap:10px;align-items:center">${thumb(k,40)}<span>${esc(m.name)}<br><small class="note">初当たり1/${m.first}・トータル1/${m.total}（${esc(m.cond||'残保留あり')}）・1R ${m.r1}玉・1回転 ${(m.r1/m.total).toFixed(2)}玉</small></span></h1>
  <div class="card"><h2>台情報</h2>
- <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read()}this.value=''"><option value="">▼</option>${stores().map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
+ <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read(event)}this.value=''"><option value="">▼</option>${stores().map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div></div>
  <div class="card"><h2>ボーダー</h2>
@@ -283,16 +283,18 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  <div class="row"><label class="big">${m.yt?"合計仕事量":"仕事量"}</label><b class="big" id="o_work">-</b></div><div class="row"><label>　仕事量時給</label><b id="o_wkh">-</b></div><div id="o_res"></div>
  <h2 style="margin-top:14px">期待値</h2><button class="sub" onclick="calcExp()">見込み計算（今の時刻まで）</button><div id="o_exp" style="margin-top:8px"></div>
  <h2 style="margin-top:14px">見込み仕事量 <small class="note">今の回転率で同じ回転数を回した場合</small></h2><div class="tw"><table><tr><th>比率</th><th>全部現金</th><th>全部持ち玉</th></tr><tr><td class="big" id="o_er">-</td><td class="big" id="o_ec">-</td><td class="big" id="o_eb">-</td></tr></table></div><div id="o_detail" class="note"></div></div>
- <div class="card"><h2>この台を保存</h2> <div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝保存を押した時刻（手で直せます）</small></label></div>
+ <div class="card"><h2>この台を保存</h2> <div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝最終更新時刻に自動で合わせます（手で入力した時刻が優先、消すと自動に戻る）</small></label></div>
  <div class="row"><label style="text-align:right">開始</label>${inp('f_tS',st.tS,'time','style="width:110px"')}<label style="text-align:right">終了</label>${inp('f_tE',st.tE,'time','style="width:110px"')}</div>
-<button onclick="saveH()">この台を保存</button><button class="sub" onclick="resetM()">リセット</button><button class="sub" onclick="location.hash='hist'">全機種の履歴</button><div id="hist" style="margin-top:10px"></div></div>
+<p class="note" id="o_tL"></p><div style="display:flex;gap:8px"><button style="flex:1" onclick="saveH('last')">最終更新時間で保存</button><button style="flex:1" onclick="saveH('now')">現在の時刻で保存</button></div><button class="sub" onclick="resetM()">リセット</button><button class="sub" onclick="location.hash='hist'">全機種の履歴</button><div id="hist" style="margin-top:10px"></div></div>
  <div class="card"><h2>注意・出典</h2><p class="note">・回転率＝回した回転数 ÷（使った現金/1000＋使った持ち玉/250）。<br>・仕事量＝現金で回した分（回転数×1回転出玉×3.57−投資）＋持ち玉で回した分（（回転数×1回転出玉−使った玉）×3.57）。行の中で現金と持ち玉を両方使った場合は使った割合で回転数を分けます。<br>・使った現金＝サンド投入合計現金−現在サンド表示現金。使った玉＝貯玉の差（回数表記なら×1回の玉数）＋持ち玉の差。${m.yt?'<br>・遊タイム仕事量＝（遊タイム回転数×1回転出玉−遊タイム回転数×1玉）×1玉の価値。合計仕事量＝通常仕事量＋遊タイム仕事量。':''}<br>・数値は${esc(m.cond||"残保留あり")}のトータル確率で計算。</p><p class="note">出典：<a href="${m.src}" target="_blank">${m.src}</a></p></div>`;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
- update();renderH();banner();scrollTo(0,0)}
+ update();$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:'';renderH();banner();scrollTo(0,0)}
 window.showMore=v=>{more=v==null?!more:!!v;for(let i=ROWS0;i<ROWS;i++)$('tr'+i).classList.toggle('hidden',!more);$('moreBtn').textContent=more?'閉じる（10回目まで表示）':'さらに表示（11〜30回目）';if(!more)$('moreBtn').scrollIntoView({block:'center'})};
-window.rb=(i,R,d)=>{const x=$('r'+i+'_R'+R);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);read()};
+window.rb=(i,R,d)=>{const x=$('r'+i+'_R'+R);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);read({target:{id:'btn'}})};
 function read(ev){for(const f of['store','memo','date','ratio','adj','out','inv','usv','uhb','tS','tE'])st[f]=$('f_'+f).value;
- if(ev&&ev.target&&ev.target.id==='f_tE')st.tEman=true;
+ const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';
+ // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
+ if(tid&&tid!=='f_tE'&&tid!=='f_tS')st.tL=nowHM();if(!st.tEman&&st.tL&&st.tE!==st.tL){st.tE=st.tL;$('f_tE').value=st.tE}$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:''
  st.bx={};for(const t of['k','m','y'])for(const j of['0','1'])st.bx[t+j]=$('bx_'+t+j).value;
  const m=M[mid];let any=false;for(let i=0;i<ROWS;i++){const w=blankRow();for(const[k,,,x]of [...COLS,['d0'],['d1']]){if(x)continue;w[k]=$('r'+i+'_'+k).value;if(w[k]!=='')any=true}for(const R of m.R){const v=$('r'+i+'_R'+R).value;if(v!==''){w.r[R]=Math.max(0,parseInt(v)||0);any=true}}st.rows[i]=w;
   $('r'+i+'_b0').placeholder=w.s0;$('r'+i+'_b1').placeholder=w.s1}
@@ -326,11 +328,11 @@ function update(){const m=M[mid],c=calc(m,st);{const cnt=RATE.mode==='count';$('
  $('o_detail').textContent=c.k>0?`現金で約${Math.round(c.cs)}回転（${c.yen.toLocaleString()}円）・持ち玉で約${Math.round(c.bs)}回転（${c.balls.toLocaleString()}玉）・持ち玉比率（実際）${(c.bs/(c.sp||1)*100).toFixed(0)}%`:'';
  {const h=st.tS&&st.tE?hours(st.tS,st.tE):null,ok=h>0,yb2=x=>x==null?'-':sg(x)+'円／'+sg(x/EXC)+'玉';$('o_time').textContent=ok?`${st.tS}〜${st.tE}（${h.toFixed(1)}時間）`:st.tS?`${st.tS}〜（保存で終了）`:'-';
   const a=ok&&c.pl!=null?c.pl/h:null,b=ok&&c.work!=null?c.work/h:null;setO('o_plh',yb2(a),a);setO('o_wkh',yb2(b),b)}return c}
-window.saveH=()=>{read();const m=M[mid];if(!st.tEman||!st.tE){st.tE=nowHM();$('f_tE').value=st.tE}LS.set('p1_cur_'+mid,st);const c=update(),fp=fingerprint(mid,st),h=hist();
+window.saveH=mode=>{read();const m=M[mid];st.tE=mode==='now'?nowHM():(st.tL||st.tE||nowHM());st.tEman=false;$('f_tE').value=st.tE;LS.set('p1_cur_'+mid,st);const c=update(),fp=fingerprint(mid,st),h=hist();
  if(h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
  const hr=hours(st.tS,st.tE);
  h.unshift({id:genId(),mid,machine:m.name,store:st.store,memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,st:JSON.parse(JSON.stringify(st)),
-  G:c.spT,adj:c.adj,r1m:c.r1m,r1p:c.r1p,borderSpins:c.sp,k:c.k,rate:c.rate,ratio:Math.round(c.r*100),work:c.work,yen:c.pl,cashYen:c.yen,ballsUsed:c.balls,hits:c.hits,rounds:c.rounds,firsts:c.firsts,exp:c.exp,tS:st.tS,tE:st.tE,hours:hr,exported:false});putHist(h);renderH();banner();update();alert('保存しました')};
+  G:c.spT,adj:c.adj,r1m:c.r1m,r1p:c.r1p,borderSpins:c.sp,k:c.k,rate:c.rate,ratio:Math.round(c.r*100),work:c.work,yen:c.pl,cashYen:c.yen,ballsUsed:c.balls,hits:c.hits,rounds:c.rounds,firsts:c.firsts,exp:c.exp,tS:st.tS,tE:st.tE,tL:st.tL||'',hours:hr,exported:false});putHist(h);renderH();banner();update();alert('保存しました')};
 function renderH(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><small>${eLine(e)}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
 window.loadH=id=>{const e=hist().find(x=>x.id===id);if(!e)return;LS.set('p1_cur_'+mid,JSON.parse(JSON.stringify(e.st)));machine(mid)};
 window.delH=id=>{if(!confirm('この保存データを削除しますか？'))return;putHist(hist().filter(x=>x.id!==id));renderH();banner()};
