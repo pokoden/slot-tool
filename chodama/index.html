@@ -61,14 +61,14 @@ function calcKind(k){const rows=new Map();for(const e of records(k)){const st=sk
  const bal=new Map();for(const r of[...out].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)){const o=bal.get(r.store)||{store:r.store,bal:0,yp:r.yp};o.bal+=r.res;r.cash=cashOf(r.id);if(r.cash!=null)o.bal=r.cash;r.after=o.bal;bal.set(r.store,o)}
  out.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:a.store.localeCompare(b.store));
  return{rows:out,bal:[...bal.values()].sort((a,b)=>b.bal-a.bal)}}
-let IDS=[],main=LS.get('cd_main','ss'),calM=null,mode=LS.get('cd_mode','all');
+let IDS=[],main=LS.get('cd_main','ss'),calM=null,mode=LS.get('cd_mode','all'),cstore=LS.get('cd_store','all'),pg='home';
 // ===== 収支管理：両ツールの保存済み記録の収支(e.yen)・稼働時間(e.hours)（本日の収支と同じ値）。削除・重複は除外、保存前は入れない =====
 const pad2=n=>String(n).padStart(2,'0'),todayS=()=>{const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())};
 function allRecs(){const L=[];for(const k of['p','s'])for(const e of records(k)){const d=e.date||String(e.saved||'').slice(0,10);if(!d)continue;const yen=e.yen!=null&&isFinite(+e.yen)?+e.yen:null,st=e.st||{};let diff=null,g3=null;
   if(k==='p'){const vp=yenPer('p',sk(e.store));diff=yen!=null&&vp?yen/vp:null}// 差玉＝収支÷1玉の価値（本日の収支と同じ）
   else{diff=e.diff!=null&&isFinite(+e.diff)?+e.diff:null;const og=st.ttotal!==''&&st.ttotal!=null?Math.max(0,(+st.ttotal||0)-(+st.tstart||0)):(()=>{if(st.total===''||st.total==null)return 0;const x=(+st.total||0)-(+st.start||0);return x>0?x:0})();g3=og>0&&diff!=null?3*og:null}// 機械割の投入＝3枚×自分G（スロット版と同じ）
   L.push({k,date:d,store:sk(e.store),memo:e.memo||'',machine:e.machine||e.mid||'',yen,hours:+e.hours>0?+e.hours:0,G:+e.G>0?+e.G:0,diff,g3,saved:e.saved||''})}return L}
-function byDay(){const m=new Map();for(const r of allRecs()){if(mode!=='all'&&r.k!==mode)continue;if(!m.has(r.date))m.set(r.date,{date:r.date,yen:0,yn:0,hours:0,G:0,list:[]});const o=m.get(r.date);if(r.yen!=null){o.yen+=r.yen;o.yn++}o.hours+=r.hours;o.G+=r.G;o.list.push(r)}return m}
+function byDay(){const m=new Map();for(const r of allRecs()){if(mode!=='all'&&r.k!==mode)continue;if(cstore!=='all'&&r.store!==cstore)continue;if(!m.has(r.date))m.set(r.date,{date:r.date,yen:0,yn:0,hours:0,G:0,list:[]});const o=m.get(r.date);if(r.yen!=null){o.yen+=r.yen;o.yn++}o.hours+=r.hours;o.G+=r.G;o.list.push(r)}return m}
 const yenTxt=x=>x==null?'-':sg(x)+'円',hTxt=h=>h>0?h.toFixed(1)+'時間':'-';
 function calendar(){const D=byDay();if(!calM)calM=todayS().slice(0,7);const [y,mo]=calM.split('-').map(Number),first=new Date(y,mo-1,1),days=new Date(y,mo,0).getDate(),off=first.getDay();
  let ty=0,tn=0,th=0,cnt=0,tg=0,td=0,tdn=0,pin=0,pout=0;for(const [d,o] of D)if(d.slice(0,7)===calM){ty+=o.yen;tn+=o.yn;th+=o.hours;tg+=o.G;cnt+=o.list.length;for(const r of o.list){if(r.diff!=null){td+=r.diff;tdn++}if(r.g3){pin+=r.g3;pout+=r.g3+r.diff}}}
@@ -76,7 +76,7 @@ function calendar(){const D=byDay();if(!calM)calM=todayS().slice(0,7);const [y,m
   cells+=`<td id="cal_${k}" style="vertical-align:top;height:58px;padding:2px;${bg?'background:'+bg+';':''}${o?'cursor:pointer;':''}${k===todayS()?'outline:2px solid #2b6fe8;outline-offset:-2px;':''}"${o?` onclick="goDay('${k}')"`:''}><div style="text-align:left;font-size:.9em;color:${c===0?'#d62828':c===6?'#1e5bd6':'#333'}">${d}</div>${o?`<div style="font-weight:bold;color:${col};font-size:.86em">${o.yn?sg(o.yen):'-'}</div><div style="color:#777;font-size:.8em">${o.hours>0?o.hours.toFixed(1)+'h':''}</div>${mode!=='all'&&o.G?`<div style="color:#777;font-size:.75em">${o.G.toLocaleString()}${mode==='p'?'回':'G'}</div>`:''}`:''}</td>`;if(c===6&&d<days)cells+='</tr><tr>'}
  const wh=th>0&&tn?ty/th:null;
  return`<div class="card"><div class="row" style="margin:0 0 6px"><button class="sub sm" id="cal_prev" onclick="calMove(-1)">◀</button><b style="font-size:1.1em" id="cal_title">${y}年${mo}月</b><button class="sub sm" id="cal_next" onclick="calMove(1)">▶</button></div>
- <div class="seg" style="margin-bottom:8px">${[['all','合計'],['p','パチンコ'],['s','スロット']].map(([k,l])=>`<button id="mode_${k}" class="${k===mode?'':'sub'}" onclick="setMode('${k}')">${l}</button>`).join('')}</div>
+ 
  ${(()=>{const it=[['金額',tn?sg(ty)+'円':'-',tn?ty:null]];if(mode!=='all')it.push([mode==='p'?'差玉':'差枚',tdn?sg(td)+(mode==='p'?'玉':'枚'):'-',tdn?td:null]);it.push(['台数',cnt+'台']);if(mode!=='all')it.push(['回転数',tg.toLocaleString()+(mode==='p'?'回転':'G')]);
   it.push(['稼働時間',hTxt(th)],['平均稼働時間',cnt&&th>0?(th/cnt).toFixed(1)+'時間':'-']);if(mode!=='all')it.push(['平均回転数',cnt?Math.round(tg/cnt).toLocaleString()+(mode==='p'?'回転':'G'):'-']);it.push(['時給',wh==null?'-':sg(wh)+'円',wh]);
   if(mode==='s'){const pr=pin>0?pout/pin*100:null;it.push(['機械割',pr==null?'-':pr.toFixed(1)+'%',pr==null?null:pr-100])}
@@ -87,9 +87,30 @@ function dayList(){const D=[...byDay().values()].sort((a,b)=>a.date<b.date?1:-1)
   return`<div class="card" id="day_${o.date}"><div class="row" style="margin:0 0 6px"><b>${m}/${d}（${w}）</b><span><b${pc(o.yn?o.yen:null)}>${o.yn?yenTxt(o.yen):'-'}</b> <small class="note">${hTxt(o.hours)}</small></span></div>
   ${o.list.sort((a,b)=>a.saved<b.saved?-1:1).map(r=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px;margin:6px 0"><label><span class="tag" style="margin:0 4px 0 0;${r.k==='p'?'background:#fff3d6;color:#a35a00':''}">${r.k==='p'?'パチ':'スロ'}</span><b>${esc(r.machine)}</b><small>${esc(r.store)}${r.memo?' 台'+esc(r.memo):''}</small></label><span style="text-align:right"><b${pc(r.yen)}>${yenTxt(r.yen)}</b><br><small class="note">${hTxt(r.hours)}</small></span></div>`).join('')}</div>`}).join('')}
 window.calMove=d=>{const [y,m]=calM.split('-').map(Number),t=new Date(y,m-1+d,1);calM=t.getFullYear()+'-'+pad2(t.getMonth()+1);const Y=scrollY;render();scrollTo(0,Y)};
+function selBar(){const ss=[...new Set(allRecs().map(r=>r.store))].sort();if(cstore!=='all'&&!ss.includes(cstore))ss.push(cstore);
+ return`<div class="card"><div class="seg" style="margin-bottom:8px">${[['all','合計'],['p','パチンコ'],['s','スロット']].map(([k,l])=>`<button id="mode_${k}" class="${k===mode?'':'sub'}" onclick="setMode('${k}')">${l}</button>`).join('')}</div>
+ <select id="sel_store" style="width:100%;font-size:16px" onchange="setStore(this.value)"><option value="all"${cstore==='all'?' selected':''}>全店舗</option>${ss.map(x=>`<option value="${esc(x)}"${x===cstore?' selected':''}>${esc(x)}</option>`).join('')}</select></div>`}
+// 収支ページの集計：日単位（その日の収支＝選んだ種類・店舗の合計）。平均は行った1日あたり
+function aggDays(days){const a={n:days.length,win:0,yen:0,yn:0,h:0,G:0,d:0,dn:0,pin:0,pout:0};for(const o of days){if(o.yn&&o.yen>0)a.win++;a.yen+=o.yen;a.yn+=o.yn;a.h+=o.hours;a.G+=o.G;for(const r of o.list){if(r.diff!=null){a.d+=r.diff;a.dn++}if(r.g3){a.pin+=r.g3;a.pout+=r.g3+r.diff}}}return a}
+function statSecs(){const D=[...byDay().values()].filter(o=>/^\d{4}-\d{2}-\d{2}$/.test(o.date)),WD='日月火水木金土';
+ const info=o=>{const [y,m,d]=o.date.split('-').map(Number);return{y,m,d,w:new Date(y,m-1,d).getDay()}};
+ const defs=[['ym','年月',o=>{const i=info(o);return[-(i.y*100+i.m),i.y+'年'+i.m+'月']}],['y','年',o=>{const i=info(o);return[-i.y,i.y+'年']}],['m','月',o=>{const i=info(o);return[i.m,i.m+'月']}],
+  ['tail','日末尾',o=>{const i=info(o);return[i.d%10,'末尾'+(i.d%10)]}],['d','日',o=>{const i=info(o);return[i.d,i.d+'日']}],['w','曜日',o=>{const i=info(o),k=(i.w+6)%7;return[k,WD[i.w]+'曜日']}]];
+ const U=mode==='p'?'玉':'枚',GU=mode==='p'?'回転':'G',n0=x=>Math.round(x).toLocaleString(),it=(l,v,c)=>`<span style="display:inline-block;min-width:31%;margin:2px 0"><small class="note">${l}</small><br><b${c==null?'':pc(c)}>${v}</b></span>`;
+ return defs.map(([id,t,f])=>{const g=new Map();for(const o of D){const [k,l]=f(o);if(!g.has(k))g.set(k,{k,l,days:[]});g.get(k).days.push(o)}
+  const rows=[...g.values()].sort((a,b)=>a.k-b.k).map(x=>({...x,a:aggDays(x.days)})).filter(x=>x.a.n>0);
+  let bi=-1,wi=-1;rows.forEach((x,i)=>{if(!x.a.yn)return;if(bi<0||x.a.yen>rows[bi].a.yen)bi=i;if(wi<0||x.a.yen<rows[wi].a.yen)wi=i});if(rows.length<2)bi=wi=-1;
+  return`<details class="card" id="sec_${id}"><summary><b>${t}別</b> <small class="note">${rows.length}行</small></summary>${rows.map((x,i)=>{const a=x.a,wh=a.h>0&&a.yn?a.yen/a.h:null,bg=i===bi?'background:#e3efff;border-left:4px solid #2b6fe8':i===wi?'background:#ffe5e5;border-left:4px solid #d62828':'';
+   return`<div id="r_${id}_${x.k}" style="border-top:1px solid #eee;padding:6px;${bg}"><b>${x.l}</b>
+   <div>${it('稼働回数',a.n+'日')}${it('勝ち日数',a.win+'日')}${it('勝率',(a.win/a.n*100).toFixed(1)+'%')}</div>
+   <div>${it('収支',a.yn?sg(a.yen)+'円':'-',a.yen)}${it('平均収支',a.yn?sg(Math.round(a.yen/a.n))+'円':'-',a.yen)}${it('時給',wh==null?'-':sg(Math.round(wh))+'円',wh)}</div>
+   <div>${it('稼働時間',hTxt(a.h))}${it('平均稼働時間',a.h>0?(a.h/a.n).toFixed(1)+'時間':'-')}</div>
+   ${mode==='all'?'':`<div>${it('回転数',n0(a.G)+GU)}${it('平均回転数',n0(a.G/a.n)+GU)}${it(mode==='p'?'差玉':'差枚',a.dn?sg(Math.round(a.d))+U:'-',a.d)}${it(mode==='p'?'平均差玉':'平均差枚',a.dn?sg(Math.round(a.d/a.n))+U:'-',a.d)}${mode==='s'?it('機械割',a.pin>0?(a.pout/a.pin*100).toFixed(1)+'%':'-',a.pin>0?a.pout-a.pin:null):''}</div>`}</div>`}).join('')}</details>`}).join('')}
+window.setStore=v=>{cstore=v;LS.set('cd_store',v);const Y=scrollY;render();scrollTo(0,Y)};
+window.goPg=k=>{pg=k;render();scrollTo(0,0)};
 window.setMode=k=>{mode=k;LS.set('cd_mode',k);const Y=scrollY;render();scrollTo(0,Y)};
 window.setMain=k=>{main=k;LS.set('cd_main',k);const Y=scrollY;render();scrollTo(0,Y)};
-window.goDay=k=>{if(main!=='ss'){main='ss';LS.set('cd_main','ss');render()}const e=$('day_'+k);if(e){e.scrollIntoView({block:'start',behavior:'smooth'});e.style.outline='2px solid #2b6fe8';setTimeout(()=>e.style.outline='',1500)}};
+window.goDay=k=>{if(pg!=='ss'){pg='ss';render()}const e=$('day_'+k);if(e){e.scrollIntoView({block:'start',behavior:'smooth'});e.style.outline='2px solid #2b6fe8';setTimeout(()=>e.style.outline='',1500)}};
 // 店舗ごとのまとめ（パチンコとスロットで同じ店舗名は1行に）
 function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b of P.bal)m.set(b.store,{p:b});for(const b of S.bal){const o=m.get(b.store)||{};o.s=b;m.set(b.store,o)}
  if(!m.size)return'<div class="card"><h2>店舗ごとの残高</h2><p class="note">保存データがありません</p></div>';
@@ -99,10 +120,11 @@ function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b
  <div class="tw" style="margin-top:8px"><table id="tot"><tr><th>全店合計</th><th>貯玉</th><th>貯メダル</th><th>金額</th></tr><tr style="font-weight:bold"><td></td><td${pc(tp)}>${sg(tp)}玉</td><td${pc(ts)}>${sg(ts)}枚</td><td${pc(ty)}>${sg(ty)}円${noY?'＊':''}</td></tr></table></div>
  <p class="note">円換算：パチンコ＝店舗の1玉の価値（未登録は3.57円）、スロット＝店舗の換金額（円/枚）。${noY?'＊レート未設定の店舗は金額に含みません。':''}</p></div>`}
 function render(){const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メダル';IDS=c.rows.map(r=>r.id);
- $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">📅 収支管理</h1>${calendar()}
- <div class="seg" style="margin-bottom:12px"><button id="main_ss" class="${main==='ss'?'':'sub'}" onclick="setMain('ss')">収支管理</button><button id="main_cd" class="${main==='cd'?'':'sub'}" onclick="setMain('cd')">貯玉管理</button></div>
- <div id="pane_ss" class="${main==='ss'?'':'hidden'}">${dayList()}</div>
- <div id="pane_cd" class="${main==='cd'?'':'hidden'}">${summary()}
+ $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">📅 ${pg==='ss'?'収支管理':pg==='cd'?'貯玉管理':'収支・貯玉'}</h1>
+ ${pg==='home'?'':`<button id="back" class="sub sm" style="margin-bottom:10px" onclick="goPg('home')">← 戻る</button>`}${pg==='cd'?'':selBar()}
+ ${pg==='home'?`${calendar()}<div class="seg" style="margin-bottom:12px"><button id="main_ss" onclick="goPg('ss')">収支管理</button><button id="main_cd" onclick="goPg('cd')">貯玉管理</button></div>`:''}
+ <div id="pane_ss" class="${pg==='ss'?'':'hidden'}">${pg==='ss'?statSecs()+'<h2 style="margin:14px 0 6px">日別</h2>'+dayList():''}</div>
+ <div id="pane_cd" class="${pg==='cd'?'':'hidden'}">${summary()}
  <div class="seg" style="margin-bottom:12px">${Object.entries(KIND).map(([k,x])=>`<button id="tab_${k}" class="${k===tab?'':'sub'}" onclick="setTab('${k}')">${x.l}</button>`).join('')}</div>
  <div class="card"><h2>店舗×日付 <small class="note">${c.rows.length}件</small></h2>${c.rows.length?`<div class="tw"><table id="rows"><tr><th>日付</th><th style="text-align:left">店舗</th><th>台数</th><th>増減</th><th>現金換金<br><small>換金後の残数</small></th><th>タバコ交換</th><th>結果</th></tr>${c.rows.map((r,i)=>`<tr><td>${esc(r.date)}</td><td style="text-align:left">${esc(r.store)}</td><td>${r.n}</td><td${pc(r.net)}>${sg(r.net)}</td><td><input type="number" inputmode="numeric" id="cash_${i}" style="width:72px;font-size:16px" value="${r.cash==null?'':r.cash}" placeholder="−" onchange="setCash(${i},this.value)"></td><td><button class="tob ${r.on?'on':'off'}" onclick="toggleTob(${i})"${r.yp?'':' disabled'}>${r.on?'有り':'無し'}</button>${r.on&&r.tob?`<br><small style="color:#d62828">−${r.tob.toLocaleString()}${u}</small>`:''}</td><td${pc(r.res)}><b>${sg(r.res)}</b>${r.cash!=null?`<br><small style="color:#a35a00">換金後 ${r.cash.toLocaleString()}${u}</small>`:''}</td></tr>`).join('')}</table></div>`:'<p class="note">保存データがありません</p>'}
  <p class="note">増減＝その店・その日の保存済み記録の合計（1台＝回収−使用持ち${W}−使用貯${W}）。タバコ交換有り＝${TOB_YEN.toLocaleString()}円分（${TOB_YEN}÷${tab==='p'?'1玉の価値':'換金額'}、四捨五入）をその行から引きます。残高＝その店の全行の結果の累計。</p></div></div>
