@@ -1,0 +1,223 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スロ設定判別ツール</title>
+<style>
+*{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
+h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:8px}
+.row label{flex:1;font-size:.92em}.row small,.note{color:#777;font-size:.78em}.row small{display:block}
+input,select{width:96px;padding:8px;font-size:1em;border:1px solid #ccd;border-radius:8px;text-align:right;background:#fff}
+input[type=text],input[type=date]{width:160px;text-align:left}
+button{width:100%;padding:13px;font-size:1.05em;border:0;border-radius:10px;background:#2b6fe8;color:#fff;font-weight:bold;margin-top:8px;cursor:pointer}
+button.sub{background:#e4e8f0;color:#333}button.sm{width:auto;padding:7px 10px;font-size:.85em;margin:0}
+.mbtn{text-align:left;background:#fff;color:#222;border:2px solid #2b6fe8;font-size:1.05em}
+.bar{height:20px;background:#e8edf6;border-radius:10px;overflow:hidden;flex:2}.bar div{height:100%;background:#2b6fe8}
+.res .row span{width:58px;text-align:right;font-weight:bold}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.76em;white-space:nowrap}td,th{border:1px solid #dde;padding:4px;text-align:center}th{background:#eef2fa}
+td.hit{background:#ff9f2e;color:#fff;font-weight:bold}td.me{background:#fff7e6;font-weight:bold}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:.9em}.chk input{width:22px;height:22px;flex:none}
+.tag{font-size:.72em;padding:1px 6px;border-radius:6px;background:#eef2fa;color:#2b6fe8;margin-left:4px}
+.warn{background:#ffe9e9;color:#c00;padding:8px;border-radius:8px;font-size:.9em}
+.banner{background:#fff3d6;color:#8a5a00;padding:10px;border-radius:10px;margin-bottom:12px;font-size:.92em}
+.seg{display:flex;gap:6px}.seg button{margin:0;padding:9px;font-size:.88em}
+a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
+</style></head><body>
+<div id="banner" class="banner hidden"></div>
+<div id="home"></div>
+<div id="mach" class="hidden"></div>
+<script>
+// ===== 機種データ（出典に記載の公表・解析値のみ） =====
+const M={
+tg:{name:'L 東京喰種',sub:'スマスロ / AT機',
+ payout:[97.5,99.0,101.6,105.6,110.3,114.9],
+ els:[
+  {k:'at',l:'AT初当たり',t:'rate',d:[394.4,380.5,357.0,325.9,291.2,261.3]},
+  {k:'rem',l:'レミニセンス',t:'rate',d:[300.5,295.1,287.6,276.7,262.7,251.2]},
+  {k:'rize',l:'大喰いの利世',t:'rate',d:[2079.1,1906.5,1722.8,1478.9,1226.6,1074.9]},
+  {k:'ep',l:'エピソードボーナス',t:'rate',d:[6620.2,5879.7,5114.5,4062.5,3166.7,2639.5]},
+  {k:'choku',l:'リプレイのAT直撃',s:'引き戻し・AT間天井・EP非経由',t:'rate',d:[28460.6,24453.5,18093.0,12019.5,8615.4,7036.8]},
+  {k:'gerep',l:'下段リプレイ',t:'rate',d:[1260.3,1213.6,1170.3,1129.9,1092.3,1024.0]},
+  {k:'c100',l:'100G以内CZ当選',s:'朝一除く。判定区間数／うち当選',t:'pct',p:[19.58,21.04,23.15,26.37,31.96,36.01]},
+  {k:'hb',l:'AT引き戻し',s:'AT終了回数／うち引き戻し',t:'pct',p:[7.81,7.81,9.38,10.94,12.50,15.23]},
+  {k:'ura',l:'初回裏AT',s:'有馬ジャッジメント非経由のAT初当たり／うち裏AT',t:'pct',p:[1.10,1.32,1.63,2.19,2.85,3.32]},
+  {k:'wcn',l:'弱チェCZ当選（通常）',s:'通常滞在の弱チェ回数／うちCZ',t:'pct',p:[0.27,0.29,0.31,0.33,0.38,0.43]},
+  {k:'wch',l:'弱チェCZ当選（高確）',s:'高確滞在の弱チェ回数／うちCZ',t:'pct',p:[0.59,0.63,0.69,0.73,0.83,0.95]},
+  {k:'sei',l:'精神世界 継続G数',s:'10G/20G/30G の回数',t:'multi',c:['10G','20G','30G'],
+   p:[[81.25,15.63,3.13],[81.25,15.63,3.13],[75.00,18.75,6.25],[71.88,18.75,9.38],[67.19,21.88,10.94],[65.63,21.88,12.50]]}],
+ hints:[
+  ['CZ終了画面',[['鈴屋什造','偶数濃厚',[2,4,6]],['梟','設定4以上',[4,5,6]],['有馬貴将','設定6',[6]]]],
+  ['AT終了画面',[['亜門&真戸','奇数示唆',null],['鈴屋&篠原','偶数示唆',null],['神代利世','設定1否定',[2,3,4,5,6]],['笛口親子','高設定示唆(弱)',null],['ウタ&イトリ&四方','高設定示唆(強)',null],['金木&董香','設定4以上',[4,5,6]],['あんていく全員集合','設定6',[6]]]],
+  ['月山招待状',[['偶にはディナーでも','偶数示唆',null],['不思議な香りだ','設定1否定',[2,3,4,5,6]],['活字中毒らしいね','設定2否定',[1,3,4,5,6]],['本は良いよね','設定3否定',[1,2,4,5,6]],['僕としたことがすまない','設定4否定',[1,2,3,5,6]],['存分に楽しもう','設定4以上',[4,5,6]],['特別な夜を楽しもう','設定6',[6]]]],
+  ['獲得枚数表示',[['456OVER','設定4以上',[4,5,6]],['666OVER','設定6',[6]],['1000-7OVER','設定6',[6]]]],
+  ['エンディングカード',[['白(弱)','奇数示唆(弱)',null],['白(強)','奇数示唆(強)',null],['青(弱)','偶数示唆(弱)',null],['青(強)','偶数示唆(強)',null],['赤(弱)','高設定示唆(弱)',null],['赤(強)','高設定示唆(強)',null],
+   ['銅 鈴屋什造','設定1否定',[2,3,4,5,6]],['銅 高槻泉','設定2否定',[1,3,4,5,6]],['銅 梟','設定3否定',[1,2,4,5,6]],['銅 エト','設定4否定',[1,2,3,5,6]],['銀 金木研','設定3以上',[3,4,5,6]],['金 神代利世','設定4以上',[4,5,6]],['金 隻眼の梟','設定5以上',[5,6]],['虹 有馬貴将','設定6',[6]]]],
+  ['ナミちゃんトロフィー（※他機種参考の示唆）',[['銅','設定2以上',[2,3,4,5,6]],['銀','設定3以上',[3,4,5,6]],['金','設定4以上',[4,5,6]],['特殊(喰)','設定5以上',[5,6]],['虹','設定6',[6]]]]],
+ src:['https://nana-press.com/kaiseki/machine/889/27249/','https://altema.jp/pachimo/ltokyoghoulseetei','https://data.hazuse.com/?genre=208&machine_code=4S1320','https://slot-toolbox.com/tokyo-ghoul-setting/'],
+ notes:['精神世界（超高確）中の弱チェCZ当選率は設定1(40.27%)のみ判明のため未使用。','スイカ・チャンス目・強チェの当選率、有馬乱入率は設定1のみ判明のため未使用。','エンディングカード銅「梟」は出典ページの表記どおり（CZ終了画面の「梟」と同名）。']},
+kb:{name:'スマスロ 甲鉄城のカバネリ 海門決戦',sub:'サミー / AT機（2026年3月導入）',
+ payout:[97.5,98.5,100.8,106.0,111.0,114.9],
+ els:[
+  {k:'bon',l:'ボーナス初当り',t:'rate',d:[254.2,242.3,239.6,214.0,203.2,195.1]},
+  {k:'st',l:'ST初当り',t:'rate',d:[422.5,405.9,398.7,357.2,332.6,318.5]},
+  {k:'bell',l:'下段ベル',t:'rate',d:[121.1,114.4,112.8,106.2,104.2,99.1]},
+  {k:'c3',l:'3周期目ボーナス当選',s:'3周期目到達回数／うち当選',t:'pct',p:[18.4,23.8,21.1,28.5,32.4,37.1]},
+  {k:'c4',l:'4周期目ボーナス当選',s:'4周期目到達回数／うち当選',t:'pct',p:[33.6,35.2,36.3,40.2,43.4,46.9]},
+  {k:'pt3',l:'駿城ボーナス中 3000pt獲得',s:'単独チャンス目回数／うち3000pt',t:'pct',p:[1.2,2,2,2,2,2.3]},
+  {k:'chara',l:'キャラ紹介（当日5000G未満）',s:'カバネリBONUS中 女性/男性の回数（美馬は除外）',t:'multi',c:['女性','男性'],
+   p:[[50,50],[57.5,42.5],[41.5,58.5],[58.5,41.4],[39.9,60],[60,39.85]]}],
+ hints:[
+  ['サミートロフィー',[['銅','設定2以上',[2,3,4,5,6]],['銀','設定3以上',[3,4,5,6]],['金','設定4以上',[4,5,6]],['キリン柄','設定5以上',[5,6]],['虹','設定6',[6]]]],
+  ['アイテムくじ',[['小吉','設定2以上',[2,3,4,5,6]],['中吉','設定4以上',[4,5,6]],['大吉','設定6',[6]],['菖蒲の弓','高設定期待度アップ',null],['ミヤマカラスアゲハ','高設定期待度アップ(強)',null],['来栖の刀','特定設定否定（実戦上2否定?）',null],['無名のけん玉','特定設定否定（実戦上1否定?）',null]]],
+  ['ST終了画面',[['水着','設定6（スロベース記載）',[6]]]],
+  ['キャラ紹介',[['美馬（5000G未満）','設定4以上（選択率4〜6のみ記載）',[4,5,6]]]]],
+ src:['https://pachinavi.net/machines/smasloth-kabaneri-unato-kessen/settei/','https://slobase.jp/machines/kabaneri-unato','https://pacnk.com/slot/tools/sh_kotetsujonokabaneriunatokessen.html','https://kenslo65536.com/hanbetsu/l-kabaneri-unato.html'],
+ notes:['キャラ紹介の5001G以降の振り分け、サミートロフィー出現率は設定1〜3が不明のため未使用。','裏景之ST突入率・低確チャンス目発光率は出典の一部のみ確認のため未使用。','初当りとSTは重複を含む（ST初当りはボーナス経由）。']}
+};
+const S=[1,2,3,4,5,6];
+// ===== 計算 =====
+function lb(k,n,p){return n>0&&k>=0&&k<=n?k*Math.log(p)+(n-k)*Math.log(1-p):0}
+function likelihood(m,v,G){return S.map((s,i)=>{let l=0;for(const e of m.els){
+ if(e.t==='rate')l+=lb(v[e.k]||0,G,1/e.d[i]);
+ else if(e.t==='pct')l+=lb(v[e.k+'_k']||0,v[e.k+'_n']||0,e.p[i]/100);
+ else{const tot=e.p[i].reduce((a,b)=>a+b,0);e.c.forEach((c,j)=>{const x=v[e.k+'_'+j]||0;if(x)l+=x*Math.log(e.p[i][j]/tot)})}}return l})}
+function allowed(m,checks){let a=new Set(S),notes=[];m.hints.forEach((g,gi)=>g[1].forEach((h,hi)=>{const n=+checks[gi+'_'+hi]||0;if(n>0){if(h[2])a=new Set([...a].filter(s=>h[2].includes(s)));else notes.push(h[0]+'：'+h[1]+'×'+n)}}));return{a,notes}}
+function post(m,v,G,checks){const L=likelihood(m,v,G),{a,notes}=allowed(m,checks||{});
+ if(!a.size)return{p:null,notes};const mx=Math.max(...L.filter((x,i)=>a.has(S[i])));
+ const w=L.map((x,i)=>a.has(S[i])?Math.exp(x-mx):0),z=w.reduce((x,y)=>x+y);return{p:w.map(x=>x/z),notes}}
+function useG(st){const tot=+st.total||0,start=+st.start||0;return st.gmode==='mine'?Math.max(0,tot-start):tot}
+function summary(m,st){const r=post(m,st.v,useG(st),st.checks);if(!r.p)return{p:null,avg:null,hi:null,notes:r.notes};
+ const avg=r.p.reduce((a,x,i)=>a+x*S[i],0);return{p:r.p,avg,hi:r.p[3]+r.p[4]+r.p[5],notes:r.notes}}
+
+function money(st,stores){const N=x=>x===''||x==null?0:+x||0;const s=(stores||[]).find(x=>x.name===(st.store||'').trim())||null;
+ const lend=s&&+s.lend>0?+s.lend:null,rate=s&&+s.rate>0?+s.rate:null;
+ const iy=N(st.invYen),im=N(st.invMai),rm=N(st.retMai),ry=N(st.retYen),any=[st.invYen,st.invMai,st.retMai,st.retYen].some(x=>x!==''&&x!=null);
+ const diff=!any?null:(iy>0&&lend==null)?null:rm-im-(iy>0?iy/1000*lend:0);
+ const yen=!any?null:((im>0||rm>0)&&rate==null)?null:rm*(rate||0)+ry-iy-im*(rate||0);
+ return{any,lend,rate,diff,yen}}
+function migrate(st){if(!st)return st;if('unit' in st||'inv' in st){if(st.unit==='円'){st.invYen=st.invYen??st.inv??'';st.retYen=st.retYen??st.ret??''}else{st.invMai=st.invMai??st.inv??'';st.retMai=st.retMai??st.ret??''}delete st.unit;delete st.inv;delete st.ret}
+ for(const f of['invYen','invMai','retMai','retYen'])if(st[f]==null)st[f]='';
+ const c={};for(const k in st.checks||{}){const n=st.checks[k]===true?1:+st.checks[k]||0;if(n)c[k]=n}st.checks=c;st.v=st.v||{};return st}
+function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else if(typeof crypto!=='undefined'&&crypto.getRandomValues){const b=crypto.getRandomValues(new Uint8Array(16));r=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
+if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate,genId};
+// ===== 内容フィンガープリント（id・保存時刻を除く全記録項目） =====
+function canon(mid,st){const n=x=>x===''||x==null?'':String(+x===+x&&String(x).trim()!==''?+x:String(x).trim());
+ const v={};Object.keys(st.v||{}).sort().forEach(k=>{if(+st.v[k])v[k]=+st.v[k]});
+ const c={};Object.keys(st.checks||{}).sort().forEach(k=>{if(+st.checks[k])c[k]=+st.checks[k]});
+ return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c])}
+function fingerprint(mid,st){const s=canon(mid,st);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
+if(typeof module!=='undefined')Object.assign(module.exports,{fingerprint,canon});
+// ===== UI =====
+if(typeof document!=='undefined'){
+const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
+const blank=()=>({start:'',total:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',v:{},checks:{}});
+let mid=null,st=null;
+const stores=()=>LS.get('v2_stores',[]);
+// 旧データ移行
+const hist=()=>LS.get('v2_hist',[]),putHist=h=>LS.set('v2_hist',h);
+(function(){let h=hist(),ch=false;h=h.map(e=>{if(e.st&&('unit' in e.st||'inv' in e.st||Object.values(e.st.checks||{}).some(x=>x===true))){migrate(e.st);ch=true}if(!e.fp&&e.st){e.fp=fingerprint(e.mid,e.st);ch=true}return e});if(ch)putHist(h);
+ for(const k in M){const c=LS.get('v2_cur_'+k,null);if(c){migrate(c);LS.set('v2_cur_'+k,c)}}})();
+function banner(){const n=hist().filter(e=>!e.exported).length;$('banner').classList.toggle('hidden',!n);$('banner').innerHTML=`未書き出し <b>${n}</b> 件 <button class="sm" onclick="exportCSV(false)">書き出し</button>`}
+function home(){$('mach').classList.add('hidden');$('home').classList.remove('hidden');
+ $('home').innerHTML=`<h1>スロ設定判別ツール</h1><div class="card"><h2>機種を選択</h2>${Object.entries(M).map(([k,m])=>`<button class="mbtn" onclick="location.hash='m='+'${k}'">${esc(m.name)}<br><small class="note">${esc(m.sub)}</small></button>`).join('')}</div>
+ <div class="card"><h2>店舗設定</h2><div id="slist"></div>
+ <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
+ <div class="row"><label>貸出枚数<small>1000円あたり（例：46）</small></label><input id="s_lend" type="number" step="any" inputmode="decimal"></div>
+ <div class="row"><label>換金額 円/枚<small>例：18.5（等価なら20）</small></label><input id="s_rate" type="number" step="any" inputmode="decimal"></div>
+ <div class="row"><label>または 交換枚数<small>1000円あたり何枚で交換か → 換金額を自動計算</small></label><input id="s_ex" type="number" step="any" inputmode="decimal" oninput="if(+this.value>0)$('s_rate').value=Math.round(1000/this.value*100)/100"></div>
+ <button onclick="saveStore()">店舗を保存（同名は上書き）</button></div>
+ <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>`;renderStores();banner()}
+window.$=$;
+function renderStores(){const s=stores();$('slist').innerHTML=s.length?s.map((x,i)=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><b>${esc(x.name)}</b><small>貸出 ${esc(x.lend)}枚/1000円・換金 ${esc(x.rate)}円/枚</small></label><button class="sub sm" onclick="editStore(${i})">編集</button><button class="sub sm" onclick="delStore(${i})">削除</button></div>`).join(''):'<p class="note">店舗レート未登録</p>'}
+window.saveStore=()=>{const name=$('s_name').value.trim(),lend=+$('s_lend').value,rate=+$('s_rate').value;if(!name||!(lend>0)||!(rate>0)){alert('店舗名・貸出枚数・換金額を入力してね');return}
+ const s=stores().filter(x=>x.name!==name);s.push({name,lend,rate});LS.set('v2_stores',s);['s_name','s_lend','s_rate','s_ex'].forEach(k=>$(k).value='');renderStores()};
+window.editStore=i=>{const x=stores()[i];$('s_name').value=x.name;$('s_lend').value=x.lend;$('s_rate').value=x.rate;$('s_name').scrollIntoView({block:'center'})};
+window.delStore=i=>{const s=stores();if(!confirm(`「${s[i].name}」を削除しますか？`))return;s.splice(i,1);LS.set('v2_stores',s);renderStores()};
+function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'min="0" inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
+function step(id,val,w=56){return`<span style="display:inline-flex;gap:4px;align-items:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',-1)">−</button><input id="${id}" type="number" min="0" inputmode="numeric" value="${esc(val)}" style="width:${w}px;text-align:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',1)">＋</button></span>`}
+window.bump=(id,d)=>{const x=$(id);x.value=Math.max(0,(parseInt(x.value)||0)+d);x.dispatchEvent(new Event('input'))};
+function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('v2_cur_'+k,{})));st.v=st.v||{};
+ $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');
+ let h=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">${esc(m.name)}</h1>
+ <div class="card"><h2>台情報</h2>
+ <div class="row"><label>店舗名</label>${inp('f_store',st.store,'text','list="dl_store"')}<datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
+ <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
+ <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
+ <div class="row"><label>打ち始め回転数</label>${inp('f_start',st.start)}</div>
+ <div class="row"><label>総回転数<small>データ表示の通常時ゲーム数</small></label>${inp('f_total',st.total)}</div>
+ <div class="row"><label>自分が回したG</label><b id="mine">-</b></div>
+ <div class="row"><label>計算に使うG数<small>回数入力が履歴全体なら「全体」、自分の分だけなら「自分」</small></label><div class="seg" style="flex:1"><button id="gm_all" onclick="setG('all')">履歴全体</button><button id="gm_mine" onclick="setG('mine')">自分の分だけ</button></div></div></div>
+ <div class="card"><h2>収支</h2>
+ <div class="row"><label>投資（円）</label>${inp('f_invYen',st.invYen)}</div>
+ <div class="row"><label>投資（枚）<small>貯枚再プレー等</small></label>${inp('f_invMai',st.invMai)}</div>
+ <div class="row"><label>回収（枚）</label>${inp('f_retMai',st.retMai)}</div>
+ <div class="row"><label>回収（円）<small>任意</small></label>${inp('f_retYen',st.retYen)}</div>
+ <div id="money" class="note"></div></div>
+ <div class="card"><h2>カウント</h2>`;
+ for(const e of m.els){if(e.t==='rate')h+=`<div class="row"><label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;
+  else if(e.t==='pct')h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
+  else{h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div>`;e.c.forEach((c,j)=>{h+=`<div class="row"><label style="padding-left:12px">${c}</label>${step('v_'+e.k+'_'+j,st.v[e.k+'_'+j]??'')}</div>`})}}
+ h+=`</div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`;
+ m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">${esc(g[0])}</p>`;g[1].forEach((x,hi)=>{h+=`<div class="row"><label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`})});
+ h+=`</div><div class="card res"><h2>結果</h2><div id="out"></div></div>
+ <div class="card"><h2>確率表と実測</h2><p class="note">オレンジ＝実測値に最も近い設定</p><div class="tw" id="tbl"></div></div>
+ <div class="card"><h2>この台を保存</h2><button onclick="saveH()">この台を保存</button><button class="sub" onclick="resetM()">リセット</button><div id="hist" style="margin-top:10px"></div></div>
+ <div class="card"><h2>注意・出典</h2><p class="note">※各要素を独立とみなして掛け合わせる簡易計算です（例：初当たりにはCZ・ボーナス経由分が含まれるなど重複があるため、結果はやや強めに出ます）。事前確率は各設定均等。</p>
+ ${m.notes.map(n=>`<p class="note">・${esc(n)}</p>`).join('')}<p class="note">出典：<br>${m.src.map(u=>`<a href="${u}" target="_blank">${u}</a>`).join('<br>')}</p></div>`;
+ el.innerHTML=h;
+ el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
+ update();renderH();banner();scrollTo(0,0)}
+function read(){for(const f of['store','memo','date','start','total','invYen','invMai','retMai','retYen'])st[f]=$('f_'+f).value;
+ const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
+ const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
+ LS.set('v2_cur_'+mid,st);update()}
+window.setG=g=>{st.gmode=g;LS.set('v2_cur_'+mid,st);update()};
+const r1=x=>Math.round(x*10)/10,sg=x=>(x>0?'+':'')+Math.round(x).toLocaleString();
+function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
+ $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
+ $('gm_all').className=st.gmode==='all'?'':'sub';$('gm_mine').className=st.gmode==='mine'?'':'sub';
+ const mo=money(st,stores());
+ $('money').innerHTML=!mo.any?'金額を入力すると収支を計算します':`<div class="row"><label>合算差枚</label><b>${mo.diff==null?'店舗レート未設定':sg(mo.diff)+'枚'}</b></div><div class="row"><label>最終合算収支</label><b>${mo.yen==null?'店舗レート未設定':sg(mo.yen)+'円'}</b></div>${mo.lend?`<small>貸出${mo.lend}枚/1000円・換金${mo.rate}円/枚</small>`:'<small>店舗設定（トップ画面）に店舗名を登録すると計算できます</small>'}`;
+ const sm=summary(m,st);let o='';
+ if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
+ else{o=`<p class="note">計算G数：${G}G（${st.gmode==='mine'?'自分の分だけ':'履歴全体'}）</p>`+sm.p.map((x,i)=>`<div class="row"><label style="flex:0 0 52px">設定${S[i]}</label><div class="bar"><div style="width:${(x*100).toFixed(1)}%"></div></div><span>${(x*100).toFixed(1)}%</span></div>`).join('')+
+  `<p><b>期待設定：${sm.avg.toFixed(2)}</b>　設定4以上：${(sm.hi*100).toFixed(1)}%</p>`}
+ if(sm.notes.length)o+=`<p class="note">示唆メモ：${sm.notes.map(esc).join(' / ')}</p>`;$('out').innerHTML=o;
+ const rows=[];const near=(arr,val)=>{if(val==null||!isFinite(val))return-1;let b=0;arr.forEach((x,i)=>{if(Math.abs(x-val)<Math.abs(arr[b]-val))b=i});return b};
+ for(const e of m.els){if(e.t==='rate'){const c=st.v[e.k]||0,me=c&&G?G/c:null;rows.push([e.l,e.d.map(x=>'1/'+x),me?'1/'+r1(me):'-',near(e.d,me)])}
+  else if(e.t==='pct'){const n=st.v[e.k+'_n']||0,k=st.v[e.k+'_k']||0,me=n?k/n*100:null;rows.push([e.l,e.p.map(x=>x+'%'),me!=null?r1(me)+'%':'-',near(e.p,me)])}
+  else{const cs=e.c.map((c,j)=>st.v[e.k+'_'+j]||0),t=cs.reduce((a,b)=>a+b,0);e.c.forEach((c,j)=>{const col=e.p.map(r=>r[j]),me=t?cs[j]/t*100:null;rows.push([e.l+' '+c,col.map(x=>x+'%'),me!=null?r1(me)+'%':'-',near(col,me)])})}}
+ const pm=(G>0&&mo.diff!=null)?(3*G+mo.diff)/(3*G)*100:null;
+ rows.push(['機械割',m.payout.map(x=>x+'%'),pm!=null?r1(pm)+'%':'-',near(m.payout,pm)]);
+ $('tbl').innerHTML=`<table><tr><th>項目</th>${S.map(s=>`<th>設${s}</th>`).join('')}<th>実測</th></tr>${rows.map(r=>`<tr><td style="text-align:left">${esc(r[0])}</td>${r[1].map((x,i)=>`<td class="${i===r[3]?'hit':''}">${x}</td>`).join('')}<td class="me">${r[2]}</td></tr>`).join('')}</table>
+ <p class="note">機械割の実測は（投入3枚×計算G数＋合算差枚）÷投入の概算（合算差枚が出るときのみ）。</p>`}
+function hintText(m,ch){const t=[];m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>{const n=+ch[gi+'_'+hi]||0;if(n)t.push(x[0]+'('+x[1]+')×'+n)}));return t.join(' / ')}
+window.saveH=()=>{read();const m=M[mid],sm=summary(m,st),fp=fingerprint(mid,st);const h=hist();
+ if(h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
+ const mo=money(st,stores());
+ h.unshift({id:genId(),mid,machine:m.name,store:st.store,memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,
+  st:JSON.parse(JSON.stringify(st)),G:useG(st),lend:mo.lend,rate:mo.rate,diff:mo.diff,yen:mo.yen,p:sm.p,avg:sm.avg,hi:sm.hi,hints:hintText(m,st.checks),exported:false});putHist(h);renderH();banner();alert('保存しました')};
+function renderH(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><b>${esc(e.store||'店舗未入力')} ${esc(e.memo||'')}</b><small>${esc(e.date)} ${e.G}G ${e.avg!=null?'期待設定'+e.avg.toFixed(2)+' / 4以上'+(e.hi*100).toFixed(1)+'%':'矛盾あり'}${e.yen!=null?' / '+sg(e.yen)+'円':''}${e.exported?' ・書出済':''}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
+window.loadH=id=>{const e=hist().find(x=>x.id===id);if(!e)return;LS.set('v2_cur_'+mid,migrate(JSON.parse(JSON.stringify(e.st))));machine(mid)};
+window.delH=id=>{if(!confirm('この保存データを削除しますか？'))return;putHist(hist().filter(x=>x.id!==id));renderH();banner()};
+window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('v2_cur_'+mid);machine(mid)};
+window.exportCSV=async all=>{const h=hist(),list=all?h:h.filter(e=>!e.exported);if(!list.length){alert('書き出すデータがありません');return}
+ const name=`slot_settei_${today()}.csv`,blob=new Blob([buildCSV(list)],{type:'text/csv'});let ok=false;
+ try{const f=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});ok=true}}catch(e){if(e&&e.name==='AbortError')return}
+ if(!ok){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+ const ids=new Set(list.map(e=>e.id));putHist(h.map(e=>ids.has(e.id)?{...e,exported:true}:e));banner();if(mid&&!$('mach').classList.contains('hidden'))renderH();else home()};
+function route(){const m=location.hash.match(/m=(\w+)/);if(m&&M[m[1]])machine(m[1]);else{mid=null;home()}}
+addEventListener('hashchange',route);route()}
+// ===== CSV（UI外：nodeでテスト可） =====
+function csvCols(){const c=[];for(const[k,m]of Object.entries(M)){for(const e of m.els){if(e.t==='rate')c.push([k,'v',e.k,m.name+':'+e.l]);else if(e.t==='pct'){c.push([k,'v',e.k+'_n',m.name+':'+e.l+'(母数)']);c.push([k,'v',e.k+'_k',m.name+':'+e.l+'(当選)'])}else e.c.forEach((x,j)=>c.push([k,'v',e.k+'_'+j,m.name+':'+e.l+' '+x]))}
+ m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>c.push([k,'c',gi+'_'+hi,m.name+':示唆 '+g[0].replace(/（.*）/,'')+' '+x[0]+'('+x[1]+')'])))}return c}
+const q=x=>{x=String(x??'');return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+function buildCSV(list){const cols=csvCols();const head=['id','fingerprint','日付','店舗','機種','台番号/メモ','打ち始めG','総回転数','自分G','計算G数','計算G方式',...cols.map(c=>c[3]),'投資(円)','投資(枚)','回収(枚)','回収(円)','貸出枚数/1000円','換金額(円/枚)','合算差枚','合算収支(円)','期待設定','設定4以上%',...S.map(s=>'設定'+s+'%'),'示唆','保存日時'];
+ const lines=[head.map(q).join(',')];for(const e of list){const s=e.st;const r1=x=>x==null?'':Math.round(x*10)/10;
+  lines.push([e.id,e.fp||fingerprint(e.mid,s),e.date,e.store,e.machine,e.memo,s.start,s.total,s.total!==''?Math.max(0,(+s.total||0)-(+s.start||0)):'',e.G,s.gmode==='mine'?'自分の分だけ':'履歴全体',
+   ...cols.map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.invYen,s.invMai,s.retMai,s.retYen,e.lend??'',e.rate??'',r1(e.diff),r1(e.yen),
+   e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||''].map(q).join(','))}
+ return '\ufeff'+lines.join('\r\n')}
+if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV});
+</script></body></html>
