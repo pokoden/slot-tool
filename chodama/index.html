@@ -1,0 +1,92 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>貯玉管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="貯玉管理">
+<style>
+*{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
+h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:8px}
+.row label{flex:1;font-size:.92em}.row small,.note{color:#777;font-size:.78em}.row small{display:block}
+input,select{width:96px;padding:8px;font-size:1em;border:1px solid #ccd;border-radius:8px;text-align:right;background:#fff}
+input[type=text],input[type=date]{width:160px;text-align:left}
+button{width:100%;padding:13px;font-size:1.05em;border:0;border-radius:10px;background:#2b6fe8;color:#fff;font-weight:bold;margin-top:8px;cursor:pointer}
+button.sub{background:#e4e8f0;color:#333}button.sm{width:auto;padding:7px 10px;font-size:.85em;margin:0}
+.mbtn{text-align:left;background:#fff;color:#222;border:2px solid #2b6fe8;font-size:1.05em}
+.bar{height:20px;background:#e8edf6;border-radius:10px;overflow:hidden;flex:2}.bar div{height:100%;background:#2b6fe8}
+.res .row span{width:58px;text-align:right;font-weight:bold}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.76em;white-space:nowrap}td,th{border:1px solid #dde;padding:4px;text-align:center}th{background:#eef2fa}
+td.hit{background:#ff9f2e;color:#fff;font-weight:bold}td.me{background:#fff7e6;font-weight:bold}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:.9em}.chk input{width:22px;height:22px;flex:none}
+.tag{font-size:.72em;padding:1px 6px;border-radius:6px;background:#eef2fa;color:#2b6fe8;margin-left:4px}
+.warn{background:#ffe9e9;color:#c00;padding:8px;border-radius:8px;font-size:.9em}
+.banner{background:#fff3d6;color:#8a5a00;padding:10px;border-radius:10px;margin-bottom:12px;font-size:.92em}
+.seg{display:flex;gap:6px}.seg button{margin:0;padding:9px;font-size:.88em}
+a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
+.pt{font-size:.8em}.pt input{width:64px;padding:6px 4px;font-size:16px;text-align:right}.pt td,.pt th{padding:3px}.pt th{font-size:.85em;white-space:normal;min-width:56px}
+.pt td.c{font-weight:bold;min-width:56px}.pt .bd{background:#f6f8fc}.pt button.sm{width:30px;height:32px;padding:0}.pt th.g{background:#fff3d6}.mbtn.ytm{border-color:#d62828}.ytb{color:#d62828;font-weight:bold}.pt td.yt input{border:2px solid #2b6fe8}.pt th.yt,.pt td.yt{background:#e6f0ff}.pt th.grp{background:#dde6f5;font-size:.85em}.bx td input{width:80px}
+.big{font-size:1.15em}
+</style>
+<style>.tob{width:auto;margin:0;padding:6px 10px;font-size:.85em}.tob.on{background:#d62828}.tob.off{background:#e4e8f0;color:#333}</style></head><body>
+<div id="app"></div>
+<script>
+// ===== 貯玉管理（パチンコ＝貯玉 / スロット＝貯メダル）。データは各ツールの保存記録（localStorage＋同期データ）から計算 =====
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const N=x=>x===''||x==null?null:(isFinite(+x)?+x:null),Z=x=>N(x)??0;
+const sg=x=>(x>0?'+':x<0?'−':'±')+Math.abs(Math.round(x)).toLocaleString(),pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'';
+const TOK='v2_token',TOB='cd_tob',TOB_YEN=6000,REPO='https://api.github.com/repos/pokoden/slot-data/contents/';
+const KIND={p:{hist:'p1_hist',stores:'p1_stores',file:'pachinko.json',l:'パチンコ（貯玉）',u:'玉'},s:{hist:'v2_hist',stores:'v2_stores',file:'data.json',l:'スロット（貯メダル）',u:'枚'}};
+let remote={p:null,s:null},tab=LS.get('cd_tab','p');
+const sk=n=>String(n||'').trim()||'店舗未入力';
+function storesOf(k){const a=LS.get(KIND[k].stores,[])||[],b=(remote[k]&&remote[k].stores)||[],m=new Map();
+ for(const x of[...a,...b]){if(!x)continue;const o=m.get(sk(x.name));if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(sk(x.name),x)}return[...m.values()].filter(x=>!x.deleted)}
+// 1玉(1枚)の円価値：パチンコ＝店舗の1玉の価値（未登録3.57円）、スロット＝店舗の換金額（100円あたりの枚数から）
+function yenPer(k,name){const s=storesOf(k).find(x=>sk(x.name)===name);if(k==='p')return s&&+s.val>0?+s.val:3.57;
+ const ex=s&&+s.ex>0?+s.ex:(s&&+s.rate>0?Math.round(100/s.rate*1000)/1000:null);return ex?100/ex:null}
+// 保存記録：ローカル＋同期データをidでマージ（新しい方）、削除済み除外、同じ記録の重複は最新のみ
+function records(k){const m=new Map();for(const x of[...(LS.get(KIND[k].hist,[])||[]),...((remote[k]&&remote[k].entries)||[])]){if(!x||!x.id)continue;const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}
+ const best=new Map();for(const e of m.values()){if(e.deleted)continue;const key=(e.st&&e.st.recId)||e.id,o=best.get(key);if(!o||String(e.saved||'')>String(o.saved||''))best.set(key,e)}return[...best.values()]}
+// 1台の増減＝回収−使用持ち玉(メダル)−使用貯玉(メダル)（パチンコの自動値は表の上のボックスと同じ計算）
+function netOf(k,e){const s=e.st||{};
+ if(k==='p'&&s.bx&&typeof s.bx==='object'&&s._p4){const st=storesOf('p').find(x=>sk(x.name)===sk(e.store))||{},per=st.mode==='ball'?1:(+st.per>0?+st.per:125);
+  const top=q=>{for(const w of s.rows||[]){const v=N((w||{})[q]);if(v!=null)return v}return null},bx=s.bx,used=(t,f)=>{const a=N(bx[t+'0'])??top(t+'0');return a==null?0:(a-(N(bx[t+'1'])??0))*f};
+  return Z(s.out)-(N(s.usv)??used('k',s.bxKball?1:per))-(N(s.uhb)??used('m',1))}
+ return Z(s.out)-(Z(s.sv0)-Z(s.sv1))-(Z(s.hb0)-Z(s.hb1))}
+// タバコ交換状態 [{id:'p|店舗|日付',on,updatedAt}]
+const tobList=()=>LS.get(TOB,[])||[],tobOn=id=>{const x=tobList().find(t=>t.id===id);return!!(x&&x.on)};
+function mergeTob(a,b){const m=new Map();for(const x of[...(a||[]),...(b||[])]){const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}return[...m.values()]}
+function calcKind(k){const rows=new Map();for(const e of records(k)){const st=sk(e.store),d=e.date||String(e.saved||'').slice(0,10),key=st+'|'+d;if(!rows.has(key))rows.set(key,{store:st,date:d,net:0,n:0});const r=rows.get(key);r.net+=netOf(k,e);r.n++}
+ const out=[...rows.values()].map(r=>{const id=k+'|'+r.store+'|'+r.date,yp=yenPer(k,r.store),on=tobOn(id),tob=on&&yp?Math.round(TOB_YEN/yp):0;return{...r,id,yp,on,tob,res:r.net-tob}});
+ out.sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:a.store.localeCompare(b.store));const bal=new Map();for(const r of out){const o=bal.get(r.store)||{store:r.store,bal:0,yp:r.yp};o.bal+=r.res;bal.set(r.store,o)}
+ return{rows:out,bal:[...bal.values()].sort((a,b)=>b.bal-a.bal)}}
+let IDS=[];
+// 店舗ごとのまとめ（パチンコとスロットで同じ店舗名は1行に）
+function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b of P.bal)m.set(b.store,{p:b});for(const b of S.bal){const o=m.get(b.store)||{};o.s=b;m.set(b.store,o)}
+ if(!m.size)return'<div class="card"><h2>店舗ごとの残高</h2><p class="note">保存データがありません</p></div>';
+ let tp=0,ts=0,ty=0,noY=false;const cell=(b,u)=>{if(!b)return'<td>−</td>';if(b.yp)ty+=b.bal*b.yp;else noY=true;return`<td${pc(b.bal)}><b>${sg(b.bal)}${u}</b><br><small>${b.yp?sg(b.bal*b.yp)+'円':'レート未設定'}</small></td>`};
+ const rows=[...m.entries()].sort((a,b)=>a[0].localeCompare(b[0],'ja')).map(([k,o])=>{if(o.p)tp+=o.p.bal;if(o.s)ts+=o.s.bal;return`<tr><td style="text-align:left">${esc(k)}</td>${cell(o.p,'玉')}${cell(o.s,'枚')}</tr>`}).join('');
+ return`<div class="card"><h2>店舗ごとの残高</h2><div class="tw"><table id="sum"><tr><th style="text-align:left">店舗</th><th>貯玉</th><th>貯メダル</th></tr>${rows}</table></div>
+ <div class="tw" style="margin-top:8px"><table id="tot"><tr><th>全店合計</th><th>貯玉</th><th>貯メダル</th><th>金額</th></tr><tr style="font-weight:bold"><td></td><td${pc(tp)}>${sg(tp)}玉</td><td${pc(ts)}>${sg(ts)}枚</td><td${pc(ty)}>${sg(ty)}円${noY?'＊':''}</td></tr></table></div>
+ <p class="note">円換算：パチンコ＝店舗の1玉の価値（未登録は3.57円）、スロット＝店舗の換金額（円/枚）。${noY?'＊レート未設定の店舗は金額に含みません。':''}</p></div>`}
+function render(){const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メダル';IDS=c.rows.map(r=>r.id);
+ $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">💰 貯玉管理</h1>${summary()}
+ <div class="seg" style="margin-bottom:12px">${Object.entries(KIND).map(([k,x])=>`<button id="tab_${k}" class="${k===tab?'':'sub'}" onclick="setTab('${k}')">${x.l}</button>`).join('')}</div>
+ <div class="card"><h2>店舗×日付 <small class="note">${c.rows.length}件</small></h2>${c.rows.length?`<div class="tw"><table id="rows"><tr><th>日付</th><th style="text-align:left">店舗</th><th>台数</th><th>増減</th><th>タバコ交換</th><th>結果</th></tr>${c.rows.map((r,i)=>`<tr><td>${esc(r.date)}</td><td style="text-align:left">${esc(r.store)}</td><td>${r.n}</td><td${pc(r.net)}>${sg(r.net)}</td><td><button class="tob ${r.on?'on':'off'}" onclick="toggleTob(${i})"${r.yp?'':' disabled'}>${r.on?'有り':'無し'}</button>${r.on&&r.tob?`<br><small style="color:#d62828">−${r.tob.toLocaleString()}${u}</small>`:''}</td><td${pc(r.res)}><b>${sg(r.res)}</b></td></tr>`).join('')}</table></div>`:'<p class="note">保存データがありません</p>'}
+ <p class="note">増減＝その店・その日の保存済み記録の合計（1台＝回収−使用持ち${W}−使用貯${W}）。タバコ交換有り＝${TOB_YEN.toLocaleString()}円分（${TOB_YEN}÷${tab==='p'?'1玉の価値':'換金額'}、四捨五入）をその行から引きます。残高＝その店の全行の結果の累計。</p></div>
+ <div class="card"><p class="note" id="sy">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'同期未設定（スロット版でGitHubトークンを保存すると2台で同期）'}</p><button class="sub" onclick="syncNow()">今すぐ同期</button></div>`}
+window.setTab=k=>{tab=k;LS.set('cd_tab',k);render()};
+window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);render();syncSoon()};
+// ===== 同期：記録は読むだけ（pachinko.json / data.json）、タバコ交換は chodama.json に保存 =====
+const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
+async function ghGet(tok,f){const r=await fetch(REPO+f+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return{sha:j.sha,data:JSON.parse(b64d(j.content||''))}}
+let syT=null,busy=false,again=false;const syncSoon=()=>{clearTimeout(syT);syT=setTimeout(syncNow,600)};
+const srt=a=>JSON.stringify([...a].sort((x,y)=>x.id<y.id?-1:1));
+window.syncNow=async()=>{const tok=LS.get(TOK,'');if(!tok)return;if(busy){again=true;return}busy=true;const msg=t=>{LS.set('cd_sync_msg',t);if($('sy'))$('sy').textContent=t};msg('同期中…');
+ try{if(navigator.onLine===false)throw new Error('オフライン');for(const k of['p','s']){try{remote[k]=(await ghGet(tok,KIND[k].file)).data}catch(e){}}
+  for(let i=0;i<4;i++){const g=await ghGet(tok,'chodama.json'),rt=(g.data&&g.data.tobacco)||[],mg=mergeTob(tobList(),rt);LS.set(TOB,mg);
+   if(srt(mg)!==srt(rt)){const body={message:'chodama sync '+new Date().toISOString(),content:b64e(JSON.stringify({version:1,tobacco:mg,updatedAt:new Date().toISOString()}))};if(g.sha)body.sha=g.sha;
+    const r=await fetch(REPO+'chodama.json',{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status)}break}
+  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);render()}catch(e){msg('エラー：'+(e.message||e))}finally{busy=false;if(again){again=false;syncSoon()}}};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});
+render();syncNow();
+
+</script></body></html>
