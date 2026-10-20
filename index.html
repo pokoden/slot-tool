@@ -113,10 +113,17 @@ const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){re
 const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
 const blank=()=>({start:'',total:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',v:{},checks:{}});
 let mid=null,st=null;
-const stores=()=>LS.get('v2_stores',[]);
+// 同期対応：localStorageには削除済み(tombstone)も含めて保存し、表示用は除外して返す
+const rawStores=()=>LS.get('v2_stores',[]),rawHist=()=>LS.get('v2_hist',[]);
+const stores=()=>rawStores().filter(x=>!x.deleted);
+const hist=()=>rawHist().filter(x=>!x.deleted);
+const putStores=s=>{LS.set('v2_stores',applyChanges(rawStores(),s,storeKey,new Date().toISOString()));syncSoon()};
+const putHist=h=>{LS.set('v2_hist',applyChanges(rawHist(),h,entryKey,new Date().toISOString()));syncSoon()};
+// id / updatedAt 付与（既存データ移行）
+(function(){const now=new Date().toISOString();let a=rawStores(),c=false;a=a.map(x=>{if(!x.id||!x.updatedAt){c=true;return{...x,id:x.id||genId(),updatedAt:x.updatedAt||now}}return x});if(c)LS.set('v2_stores',a);
+ let b=rawHist();c=false;b=b.map(x=>{if(!x.id||!x.updatedAt){c=true;return{...x,id:x.id||genId(),updatedAt:x.updatedAt||x.saved||now}}return x});if(c)LS.set('v2_hist',b)})();
 // 旧データ移行
-const hist=()=>LS.get('v2_hist',[]),putHist=h=>LS.set('v2_hist',h);
-(function(){let h=hist(),ch=false;h=h.map(e=>{if(e.st&&('unit' in e.st||'inv' in e.st||Object.values(e.st.checks||{}).some(x=>x===true))){migrate(e.st);ch=true}if(!e.fp&&e.st){e.fp=fingerprint(e.mid,e.st);ch=true}return e});if(ch)putHist(h);
+(function(){let h=hist(),ch=false;h=h.map(e=>{if(e.st&&('unit' in e.st||'inv' in e.st||Object.values(e.st.checks||{}).some(x=>x===true))){migrate(e.st);ch=true}if(!e.fp&&e.st){e.fp=fingerprint(e.mid,e.st);ch=true}return e});if(ch)LS.set('v2_hist',[...h,...rawHist().filter(x=>x.deleted)]);
  for(const k in M){const c=LS.get('v2_cur_'+k,null);if(c){migrate(c);LS.set('v2_cur_'+k,c)}}})();
 function banner(){const n=hist().filter(e=>!e.exported).length;$('banner').classList.toggle('hidden',!n);$('banner').innerHTML=`未書き出し <b>${n}</b> 件 <button class="sm" onclick="exportCSV(false)">書き出し</button>`}
 function home(){$('mach').classList.add('hidden');$('home').classList.remove('hidden');
@@ -127,13 +134,40 @@ function home(){$('mach').classList.add('hidden');$('home').classList.remove('hi
  <div class="row"><label>換金額 円/枚<small>例：18.5（等価なら20）</small></label><input id="s_rate" type="number" step="any" inputmode="decimal"></div>
  <div class="row"><label>または 交換枚数<small>1000円あたり何枚で交換か → 換金額を自動計算</small></label><input id="s_ex" type="number" step="any" inputmode="decimal" oninput="if(+this.value>0)$('s_rate').value=Math.round(1000/this.value*100)/100"></div>
  <button onclick="saveStore()">店舗を保存（同名は上書き）</button></div>
- <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>`;renderStores();banner()}
+ <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
+ <div class="card"><h2>同期設定（2台で共有）</h2><p class="note">GitHubの鍵（トークン）を入れると、店舗設定と保存データが他のiPhoneと自動で同期されます。</p>
+ <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" placeholder="${LS.get('v2_token','')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div>
+ <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button><button class="sub sm" onclick="clearToken()">鍵を削除</button>
+ <p class="note" id="sy_st"></p></div>`;renderStores();banner();syncStatus()}
+// ===== GitHub同期 =====
+const SYNC_URL='https://api.github.com/repos/pokoden/slot-data/contents/data.json';
+let syncing=false,again=false,syncT=null;
+function syncStatus(t){if(t!=null)LS.set('v2_sync_msg',t);const el=$('sy_st');if(!el)return;const tok=LS.get('v2_token','');el.textContent=!tok?'未設定（この端末だけに保存中）':LS.get('v2_sync_msg','')}
+window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set('v2_token',v);$('sy_tok').value='';syncNow(true)};
+window.clearToken=()=>{if(!confirm('この端末の同期キーを削除しますか？（データは残ります）'))return;LS.del('v2_token');home()};
+function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
+async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
+ if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
+ const j=await r.json();return{sha:j.sha,data:JSON.parse(b64dec(j.content||''))}}
+async function ghPut(tok,data,sha){const body={message:'sync '+new Date().toISOString(),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
+ return fetch(SYNC_URL,{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)})}
+window.syncNow=async manual=>{const tok=LS.get('v2_token','');if(!tok){if(manual)syncStatus();return}
+ if(syncing){again=true;return}syncing=true;syncStatus('同期中…');
+ try{if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new Error('オフライン（あとで自動で同期します）');
+  for(let i=0;i<4;i++){const rm=await ghGet(tok);const loc={stores:rawStores(),entries:rawHist()};const mg=mergeData(loc,rm.data);
+   LS.set('v2_stores',mg.stores);LS.set('v2_hist',mg.entries);
+   if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
+   const d=new Date(),p=n=>String(n).padStart(2,'0');syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);refreshView();break}
+ }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;if(again){again=false;syncSoon()}}};
+function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('')}else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});
+addEventListener('online',()=>syncNow(false));
 window.$=$;
 function renderStores(){const s=stores();$('slist').innerHTML=s.length?s.map((x,i)=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><b>${esc(x.name)}</b><small>貸出 ${esc(x.lend)}枚/1000円・換金 ${esc(x.rate)}円/枚</small></label><button class="sub sm" onclick="editStore(${i})">編集</button><button class="sub sm" onclick="delStore(${i})">削除</button></div>`).join(''):'<p class="note">店舗レート未登録</p>'}
 window.saveStore=()=>{const name=$('s_name').value.trim(),lend=+$('s_lend').value,rate=+$('s_rate').value;if(!name||!(lend>0)||!(rate>0)){alert('店舗名・貸出枚数・換金額を入力してね');return}
- const s=stores().filter(x=>x.name!==name);s.push({name,lend,rate});LS.set('v2_stores',s);['s_name','s_lend','s_rate','s_ex'].forEach(k=>$(k).value='');renderStores()};
+ const s=stores().filter(x=>x.name!==name);s.push({name,lend,rate});putStores(s);['s_name','s_lend','s_rate','s_ex'].forEach(k=>$(k).value='');renderStores()};
 window.editStore=i=>{const x=stores()[i];$('s_name').value=x.name;$('s_lend').value=x.lend;$('s_rate').value=x.rate;$('s_name').scrollIntoView({block:'center'})};
-window.delStore=i=>{const s=stores();if(!confirm(`「${s[i].name}」を削除しますか？`))return;s.splice(i,1);LS.set('v2_stores',s);renderStores()};
+window.delStore=i=>{const s=stores();if(!confirm(`「${s[i].name}」を削除しますか？`))return;s.splice(i,1);putStores(s);renderStores()};
 function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'min="0" inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
 function step(id,val,w=56){return`<span style="display:inline-flex;gap:4px;align-items:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',-1)">−</button><input id="${id}" type="number" min="0" inputmode="numeric" value="${esc(val)}" style="width:${w}px;text-align:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',1)">＋</button></span>`}
 window.bump=(id,d)=>{const x=$(id);x.value=Math.max(0,(parseInt(x.value)||0)+d);x.dispatchEvent(new Event('input'))};
@@ -208,7 +242,21 @@ window.exportCSV=async all=>{const h=hist(),list=all?h:h.filter(e=>!e.exported);
  if(!ok){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
  const ids=new Set(list.map(e=>e.id));putHist(h.map(e=>ids.has(e.id)?{...e,exported:true}:e));banner();if(mid&&!$('mach').classList.contains('hidden'))renderH();else home()};
 function route(){const m=location.hash.match(/m=(\w+)/);if(m&&M[m[1]])machine(m[1]);else{mid=null;home()}}
-addEventListener('hashchange',route);route()}
+addEventListener('hashchange',route);route();syncNow(false)}
+// ===== 同期用の純粋関数（nodeでテスト可） =====
+function storeKey(x){return 'n:'+String(x.name||'').trim()}
+function entryKey(x){return x.id}
+function strip(x){const{updatedAt,...r}=x;return JSON.stringify(r)}
+// 旧リスト(tombstone含む)と新しい表示リストから、変更分にupdatedAtを付け、消えた物をtombstone化
+function applyChanges(raw,next,key,now){const old=new Map(raw.map(x=>[key(x),x])),out=[],seen=new Set();
+ for(const x of next){const k=key(x);seen.add(k);const o=old.get(k);if(o&&!o.deleted&&strip(o)===strip({...x,deleted:undefined}))out.push(o);else{const y={...x,updatedAt:now};delete y.deleted;if(!y.id)y.id=(o&&o.id)||genId();out.push(y)}}
+ for(const[k,o]of old)if(!seen.has(k))out.push(o.deleted?o:{id:o.id,name:o.name,deleted:true,updatedAt:now});return out}
+function mergeList(a,b,key){const m=new Map();for(const x of[...(a||[]),...(b||[])]){const k=key(x);const o=m.get(k);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(k,x)}return[...m.values()]}
+function mergeData(l,r){r=r||{};const ent=mergeList(l.entries,r.entries,entryKey).sort((x,y)=>String(y.saved||y.updatedAt||'').localeCompare(String(x.saved||x.updatedAt||'')));
+ return{version:1,stores:mergeList(l.stores,r.stores,storeKey),entries:ent,updatedAt:new Date().toISOString()}}
+function sameData(a,b){const n=d=>JSON.stringify({s:[...(d.stores||[])].sort((x,y)=>storeKey(x)<storeKey(y)?-1:1),e:[...(d.entries||[])].sort((x,y)=>x.id<y.id?-1:1)});return n(a)===n(b||{})}
+function b64enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s)}
+function b64dec(b64){const s=atob(b64.replace(/\s/g,''));const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return new TextDecoder().decode(b)}
 // ===== CSV（UI外：nodeでテスト可） =====
 function csvCols(){const c=[];for(const[k,m]of Object.entries(M)){for(const e of m.els){if(e.t==='rate')c.push([k,'v',e.k,m.name+':'+e.l]);else if(e.t==='pct'){c.push([k,'v',e.k+'_n',m.name+':'+e.l+'(母数)']);c.push([k,'v',e.k+'_k',m.name+':'+e.l+'(当選)'])}else e.c.forEach((x,j)=>c.push([k,'v',e.k+'_'+j,m.name+':'+e.l+' '+x]))}
  m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>c.push([k,'c',gi+'_'+hi,m.name+':示唆 '+g[0].replace(/（.*）/,'')+' '+x[0]+'('+x[1]+')'])))}return c}
@@ -219,5 +267,5 @@ function buildCSV(list){const cols=csvCols();const head=['id','fingerprint','日
    ...cols.map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.invYen,s.invMai,s.retMai,s.retYen,e.lend??'',e.rate??'',r1(e.diff),r1(e.yen),
    e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||''].map(q).join(','))}
  return '\ufeff'+lines.join('\r\n')}
-if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV});
+if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,applyChanges,mergeList,mergeData,sameData,b64enc,b64dec,storeKey,entryKey});
 </script></body></html>
