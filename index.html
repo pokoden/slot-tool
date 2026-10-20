@@ -99,7 +99,7 @@ function summary(m,st){const r=post(m,st.v,useG(st),st.checks,gMine(st));if(!r.p
 function exOf(s){return s&&+s.ex>0?+s.ex:(s&&+s.rate>0?Math.round(100/s.rate*1000)/1000:null)}
 function money(st,stores){const N=x=>x===''||x==null?0:+x||0;const s=(stores||[]).find(x=>x.name===(st.store||'').trim())||null;
  const lend=s&&+s.lend>0?+s.lend:null,ex=exOf(s),rate=ex?100/ex:null;
- const iy=N(st.invYen),im=N(st.invMai),rm=N(st.retMai),any=[st.invYen,st.invMai,st.retMai].some(x=>x!==''&&x!=null);
+ const ro=st.retOut!==''&&st.retOut!=null,iy=N(st.invYen),im=N(st.invMai),rm=ro?N(st.retOut):N(st.retMai),any=[st.invYen,st.invMai,st.retMai,st.retOut].some(x=>x!==''&&x!=null);
  const lent=iy>0?(lend==null?null:iy/1000*lend):0;
  const diff=!any||lent==null?null:rm-im-lent;
  const yen=!any?null:(rm-im!==0&&rate==null)?null:(rm-im)*(rate||0)-iy;
@@ -113,7 +113,7 @@ if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate
 function canon(mid,st){const n=x=>x===''||x==null?'':String(+x===+x&&String(x).trim()!==''?+x:String(x).trim());
  const v={};Object.keys(st.v||{}).sort().forEach(k=>{if(+st.v[k])v[k]=+st.v[k]});
  const c={};Object.keys(st.checks||{}).sort().forEach(k=>{if(+st.checks[k])c[k]=+st.checks[k]});
- return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c].concat(n(st.tstart)||n(st.ttotal)?[n(st.tstart),n(st.ttotal)]:[]))}
+ return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c].concat(n(st.tstart)||n(st.ttotal)||n(st.retOut)?[n(st.tstart),n(st.ttotal)]:[]).concat(n(st.retOut)?[n(st.retOut)]:[]))}
 function fingerprint(mid,st){const s=canon(mid,st);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
 if(typeof module!=='undefined')Object.assign(module.exports,{fingerprint,canon});
 // ===== UI =====
@@ -121,7 +121,7 @@ if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
-const blank=()=>({start:'',total:'',tstart:'',ttotal:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',v:{},checks:{},tS:'',tE:''});
+const blank=()=>({start:'',total:'',tstart:'',ttotal:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',retOut:'',v:{},checks:{},tS:'',tE:''});
 let mid=null,st=null;
 // 同期対応：localStorageには削除済み(tombstone)も含めて保存し、表示用は除外して返す
 const rawStores=()=>LS.get('v2_stores',[]),rawHist=()=>LS.get('v2_hist',[]);
@@ -269,6 +269,7 @@ ${blocks(m)}
  <div class="row"><label>現金投資（円）</label>${inp('f_invYen',st.invYen)}</div>
  <div class="row"><label>最初の所持メダル（枚）<small>打ち始め時に持っていた枚数。空欄＝0</small></label>${inp('f_invMai',st.invMai)}</div>
  <div class="row"><label>今の持ちメダル（枚）<small>終了時／現在の枚数（出玉込み）。空欄＝0</small></label>${inp('f_retMai',st.retMai)}</div>
+ <div class="row"><label>回収枚数（枚）<small>最後に流した枚数。入れると今の持ちメダルの代わりに使います</small></label>${inp('f_retOut',st.retOut??'')}</div>
  <div id="money" class="note"></div></div>
  <div class="card"><h2>カウント</h2>`;
  for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row"><label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
@@ -284,7 +285,7 @@ ${blocks(m)}
  el.innerHTML=h;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
  update();renderH();banner();scrollTo(0,0)}
-function read(){for(const f of['store','memo','date','start','total','invYen','invMai','retMai','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
+function read(){for(const f of['store','memo','date','start','total','invYen','invMai','retMai','retOut','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
  const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
  const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
  if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.value!==''))st.tS=nowHM();
@@ -300,7 +301,12 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
  
  const mo=money(st,stores());
  $('money').innerHTML=!mo.any?'金額を入力すると収支を計算します':`<div class="row"><label>貸出枚</label><b>${mo.lent==null?'店舗レート未設定':Math.round(mo.lent).toLocaleString()+'枚'}</b></div><div class="row"><label>差枚</label><b${pc(mo.diff)}>${mo.diff==null?'店舗レート未設定':sg(mo.diff)+'枚'}</b></div><div class="row"><label>収支</label><b${pc(mo.yen)}>${mo.yen==null?'店舗レート未設定':sg(mo.yen)+'円'}</b></div>${mo.ex?`<small>貸出${mo.lend}枚/1000円・交換${mo.ex}枚/100円（1枚${mo.rate.toFixed(2)}円）</small>`:'<small>店舗設定（トップ画面）に店舗名を登録すると計算できます</small>'}`;
- {const pm=payoutMine(m,st,mo),h=hrs(st.tS,st.tE);let x='';if(mo.any)x+=`<div class="row"><label>機械割（自分の分）</label><b${pc(pm==null?null:pm-100)}>${pm==null?'-':r1(pm)+'%'}</b></div>`;
+ {const pm=payoutMine(m,st,mo),h=hrs(st.tS,st.tE);let x='';{const gm=gMine(st),tg=m.at&&st.ttotal!==''&&st.ttotal!=null?Math.max(0,+st.ttotal-(+st.tstart||0)):null;
+  x+=m.at?`<div class="row"><label>通常回転数（自分）</label><b>${gm??0}G</b></div><div class="row"><label>総回転数（自分）</label><b>${tg??'-'}${tg!=null?'G':''}</b></div>`:`<div class="row"><label>総回転数（自分）</label><b>${gm??0}G</b></div>`;
+  const ks=m.at?['xbig','xreg']:(m.els.some(e=>e.k==='big')?['big','reg']:null);
+  if(ks){const c=k=>st.v[k]!=null&&st.v[k]!==''?Math.max(0,(+st.v[k]||0)-(+st.v[k+'_s']||0)):0,b=c(ks[0]),r=c(ks[1]),g=gm||0,pr=n=>n>0&&g>0?'1/'+(g/n).toFixed(1):'-';
+   x+=[['BB',b],['RB',r],['合成',b+r]].map(([l,n])=>`<div class="row"><label>${l}（自分）</label><b>${n}回　${pr(n)}</b></div>`).join('')}}
+  if(mo.any)x+=`<div class="row"><label>機械割</label><b${pc(pm==null?null:pm-100)}>${pm==null?'-':r1(pm)+'%'}</b></div>`;
   if(st.tS&&st.tE&&h>0)x+=`<div class="row"><label>${st.tS}〜${st.tE}（${h.toFixed(1)}時間）</label><b${pc(mo.yen)}>時給 ${mo.yen==null?'-':sg(mo.yen/h)+'円'}</b></div>`;if(x)$('money').innerHTML+=x}
  const sm=summary(m,st);let o='';
  if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
@@ -350,11 +356,11 @@ function b64dec(b64){const s=atob(b64.replace(/\s/g,''));const b=new Uint8Array(
 function csvCols(ext){const c=[];for(const[k,m]of Object.entries(M)){if(!!m.ext!==!!ext)continue;for(const e of m.els){if(e.t==='rate')c.push([k,'v',e.k,m.name+':'+e.l]);else if(e.t==='pct'){c.push([k,'v',e.k+'_n',m.name+':'+e.l+'(母数)']);c.push([k,'v',e.k+'_k',m.name+':'+e.l+'(当選)'])}else e.c.forEach((x,j)=>c.push([k,'v',e.k+'_'+j,m.name+':'+e.l+' '+x]))}
  m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>c.push([k,'c',gi+'_'+hi,m.name+':示唆 '+g[0].replace(/（.*）/,'')+' '+x[0]+'('+x[1]+')'])))}return c}
 const q=x=>{x=String(x??'');return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
-function buildCSV(list){const base=csvCols(false),xc=csvCols(true),cols=base,sc=[];for(const[k,m]of Object.entries(M))for(const e of m.els)if(e.sk)sc.push([k,'v',e.k+'_s',m.name+':打ち始め'+e.l]);for(const[k,m]of Object.entries(M))if(m.at)for(const[x,l]of[['xbig','BIG'],['xbig_s','打ち始めBIG'],['xreg','REG'],['xreg_s','打ち始めREG']])sc.push([k,'v',x,m.name+':'+l+'(記録)']);const head=['id','fingerprint','日付','店舗','機種','台番号/メモ','打ち始めG','総回転数','自分G','計算G数','計算G方式',...cols.map(c=>c[3]),'投資(円)','投資(枚)','回収(枚)','回収(円)','貸出枚数/1000円','換金額(円/枚)','合算差枚','合算収支(円)','期待設定','設定4以上%',...S.map(s=>'設定'+s+'%'),'示唆','保存日時',...xc.map(c=>c[3]),...sc.map(c=>c[3]),'打ち始め総回転数','総回転数(AT込)','交換枚数/100円','貸出枚','換金単価(円/枚)','最初の所持メダル','今の持ちメダル','開始時刻','終了時刻','打った時間(h)','時給(円)','機械割(自分の分)%'];
+function buildCSV(list){const base=csvCols(false),xc=csvCols(true),cols=base,sc=[];for(const[k,m]of Object.entries(M))for(const e of m.els)if(e.sk)sc.push([k,'v',e.k+'_s',m.name+':打ち始め'+e.l]);for(const[k,m]of Object.entries(M))if(m.at)for(const[x,l]of[['xbig','BIG'],['xbig_s','打ち始めBIG'],['xreg','REG'],['xreg_s','打ち始めREG']])sc.push([k,'v',x,m.name+':'+l+'(記録)']);const head=['id','fingerprint','日付','店舗','機種','台番号/メモ','打ち始めG','総回転数','自分G','計算G数','計算G方式',...cols.map(c=>c[3]),'投資(円)','投資(枚)','回収(枚)','回収(円)','貸出枚数/1000円','換金額(円/枚)','合算差枚','合算収支(円)','期待設定','設定4以上%',...S.map(s=>'設定'+s+'%'),'示唆','保存日時',...xc.map(c=>c[3]),...sc.map(c=>c[3]),'打ち始め総回転数','総回転数(AT込)','交換枚数/100円','貸出枚','換金単価(円/枚)','最初の所持メダル','今の持ちメダル','開始時刻','終了時刻','打った時間(h)','時給(円)','機械割%','回収枚数'];
  const lines=[head.map(q).join(',')];for(const e of list){const s=e.st;const r1=x=>x==null?'':Math.round(x*10)/10;
   lines.push([e.id,e.fp||fingerprint(e.mid,s),e.date,e.store,e.machine,e.memo,s.start,s.total,s.total!==''?Math.max(0,(+s.total||0)-(+s.start||0)):'',e.G,'自分の分だけ',
    ...cols.map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.invYen,s.invMai,s.retMai,s.retYen,e.lend??'',e.rate??'',r1(e.diff),r1(e.yen),
-   e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||'',...[...xc,...sc].map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.tstart??'',s.ttotal??'',e.ex??'',r1(e.lent),e.rate!=null?Math.round(e.rate*1000)/1000:'',s.invMai??'',s.retMai??'',e.tS??'',e.tE??'',e.hours!=null?Math.round(e.hours*100)/100:'',e.hours>0&&e.yen!=null?Math.round(e.yen/e.hours):'',e.payout!=null?Math.round(e.payout*10)/10:''].map(q).join(','))}
+   e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||'',...[...xc,...sc].map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.tstart??'',s.ttotal??'',e.ex??'',r1(e.lent),e.rate!=null?Math.round(e.rate*1000)/1000:'',s.invMai??'',s.retMai??'',e.tS??'',e.tE??'',e.hours!=null?Math.round(e.hours*100)/100:'',e.hours>0&&e.yen!=null?Math.round(e.yen/e.hours):'',e.payout!=null?Math.round(e.payout*10)/10:'',s.retOut??''].map(q).join(','))}
  return '\ufeff'+lines.join('\r\n')}
 if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,applyChanges,mergeList,mergeData,sameData,b64enc,b64dec,storeKey,entryKey});
 </script></body></html>
