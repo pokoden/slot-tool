@@ -28,7 +28,7 @@ a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
 <script>
 // ===== 機種データ（出典に記載の公表・解析値のみ） =====
 const M={
-tg:{name:'L 東京喰種',sub:'スマスロ / AT機',
+tg:{at:1,intro:'2025年2月3日',name:'L 東京喰種',sub:'スマスロ / AT機',
  payout:[97.5,99.0,101.6,105.6,110.3,114.9],
  els:[
   {k:'at',l:'AT初当たり',t:'rate',d:[394.4,380.5,357.0,325.9,291.2,261.3]},
@@ -54,7 +54,7 @@ tg:{name:'L 東京喰種',sub:'スマスロ / AT機',
   ['ナミちゃんトロフィー（※他機種参考の示唆）',[['銅','設定2以上',[2,3,4,5,6]],['銀','設定3以上',[3,4,5,6]],['金','設定4以上',[4,5,6]],['特殊(喰)','設定5以上',[5,6]],['虹','設定6',[6]]]]],
  src:['https://nana-press.com/kaiseki/machine/889/27249/','https://altema.jp/pachimo/ltokyoghoulseetei','https://data.hazuse.com/?genre=208&machine_code=4S1320','https://slot-toolbox.com/tokyo-ghoul-setting/'],
  notes:['精神世界（超高確）中の弱チェCZ当選率は設定1(40.27%)のみ判明のため未使用。','スイカ・チャンス目・強チェの当選率、有馬乱入率は設定1のみ判明のため未使用。','エンディングカード銅「梟」は出典ページの表記どおり（CZ終了画面の「梟」と同名）。']},
-kb:{name:'スマスロ 甲鉄城のカバネリ 海門決戦',sub:'サミー / AT機（2026年3月導入）',
+kb:{at:1,intro:'2026年3月2日',name:'スマスロ 甲鉄城のカバネリ 海門決戦',sub:'サミー / AT機（2026年3月導入）',
  payout:[97.5,98.5,100.8,106.0,111.0,114.9],
  els:[
   {k:'bon',l:'ボーナス初当り',t:'rate',d:[254.2,242.3,239.6,214.0,203.2,195.1]},
@@ -72,10 +72,10 @@ kb:{name:'スマスロ 甲鉄城のカバネリ 海門決戦',sub:'サミー / A
   ['キャラ紹介',[['美馬（5000G未満）','設定4以上（選択率4〜6のみ記載）',[4,5,6]]]]],
  src:['https://pachinavi.net/machines/smasloth-kabaneri-unato-kessen/settei/','https://slobase.jp/machines/kabaneri-unato','https://pacnk.com/slot/tools/sh_kotetsujonokabaneriunatokessen.html','https://kenslo65536.com/hanbetsu/l-kabaneri-unato.html'],
  notes:['キャラ紹介の5001G以降の振り分け、サミートロフィー出現率は設定1〜3が不明のため未使用。','裏景之ST突入率・低確チャンス目発光率は出典の一部のみ確認のため未使用。','初当りとSTは重複を含む（ST初当りはボーナス経由）。']},
-im:{name:'ネオアイムジャグラーEX（アイムEX6号機と共通）',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.0, 98.0, 99.5, 101.1, 103.3, 105.5],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 269.7, 269.7, 259.0, 259.0, 255.0]},{k:'reg',l:'REG',t:'rate',sk:1,d:[439.8, 399.6, 331.0, 315.1, 255.0, 255.0]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[6.02, 6.02, 6.02, 6.02, 6.02, 5.78]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[69.8, 69.5, 69.7, 70.2, 70.0, 70.0]}],hints:[],src:['https://1geki.jp/slot/s_ij_ex_6/0/', 'https://grape-reverse.com/aimex', 'https://pachislot.win/neo-im-jugler-ex-guide/', 'https://www.rakupachi.com/blog/neo-im-juggler-ex-guide'],notes:['ネオアイムEXは6号機アイムジャグラーEXと同一スペック。どちらもこのページでOK。', '合算：1/168.5 1/161.0 1/148.6 1/142.2 1/128.5 1/127.5', 'ブドウは設定1〜5共通1/6.02・設定6のみ1/5.78（解析・実戦値ベース）。チェリーは公表値が一致しないため未使用。', '単独REG率は単独REG(1/630.1〜1/364.1)とチェリー重複REG(1/1456.4〜1/851.1)から算出。機械割はメーカー値（チェリー狙いで約+1%）。']},
-my5:{name:'マイジャグラーV',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.0, 98.0, 99.9, 102.8, 105.3, 109.4],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 270.8, 266.4, 254.0, 240.1, 229.1]},{k:'reg',l:'REG',t:'rate',sk:1,d:[409.6, 385.5, 336.1, 290.0, 268.6, 229.1]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[5.9, 5.85, 5.8, 5.78, 5.76, 5.66]},{k:'che',l:'非重複チェリー',s:'ペカらなかったチェリー',t:'rate',d:[38.1, 38.1, 36.82, 35.62, 35.62, 35.62]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[62.5, 64.7, 67.7, 71.7, 68.9, 69.9]}],hints:[],src:['https://jug123.com/my6spec/', 'https://choikatu.com/myjag6-spec/', 'https://1geki.jp/slot/s_myj6/0/', 'https://pekasen.com/machines/myjuggler-6'],notes:['合算：1/163.8 1/159.1 1/148.6 1/135.4 1/126.8 1/114.6', 'ブドウ・非重複チェリーは解析値（ガリぞう氏値、jug123/choikatu掲載）。ペカセンはブドウ1/5.91〜1/5.67と小差。', '単独REG率は単独REG(1/655.36〜1/327.68)とチェリー重複REG(1/1092.27〜1/762.05)から算出（choikatu値）。機械割はメーカー値。']},
-my6:{name:'マイジャグラー6',sub:'北電子 / ノーマルAタイプ（2026年10月5日導入）',ext:true,payout:[97.0, 98.0, 99.9, 102.8, 105.3, 109.4],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 270.8, 266.4, 254.0, 240.1, 229.1]},{k:'reg',l:'REG',t:'rate',sk:1,d:[409.6, 385.5, 336.1, 290.0, 268.6, 229.1]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[5.9, 5.85, 5.8, 5.78, 5.76, 5.66]},{k:'che',l:'非重複チェリー',s:'ペカらなかったチェリー',t:'rate',d:[38.1, 38.1, 36.82, 35.62, 35.62, 35.62]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[62.5, 64.7, 67.7, 71.7, 68.9, 69.9]}],hints:[],src:['https://jug123.com/my6spec/', 'https://choikatu.com/myjag6-spec/', 'https://1geki.jp/slot/s_myj6/0/', 'https://nana-press.com/kaiseki/machine/1190/39197/'],notes:['ボーナス確率・機械割はメーカー公表でマイジャグラーVと同じ。合算：1/163.8 1/159.1 1/148.6 1/135.4 1/126.8 1/114.6', '小役・単独REGの内訳は「Vを継承」としてVの値を流用（新機種のため6独自の解析は未確定）。設定6実戦値：ブドウ1/5.61〜1/5.66。']},
-gg3:{name:'ゴーゴージャグラー3',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.2, 98.2, 99.4, 101.6, 103.8, 106.5],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[259.0, 258.0, 257.0, 254.0, 247.3, 234.9]},{k:'reg',l:'REG',t:'rate',sk:1,d:[354.2, 332.7, 306.2, 268.6, 247.3, 234.9]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[6.25, 6.2, 6.15, 6.07, 6.0, 5.92]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[75.1, 74.1, 73.4, 74.2, 74.7, 74.2]}],hints:[],src:['https://www.dynam.jp/m/amusement/machines/s0005223001.html', 'https://www.nankaikoya.jp/gogojuggler3/', 'https://pekasen.com/machines/gogo-juggler-3', 'https://grape-reverse.com/gogo3', 'https://akirameruna.com/gogojug3-tool'],notes:['合算：1/149.6 1/145.3 1/139.7 1/130.5 1/123.7 1/117.4', '設定5のREGは多数派の1/247.3を採用（1サイトのみ1/243.3）。', 'ブドウは1/6.25〜1/5.92（2サイト一致、ぽこすろっとは1/6.23〜1/5.94）。いずれも独自調査値。チェリーは調査中のため未使用。', '単独REG率は単独REG(1/471.5〜1/316.6)とチェリー重複REG(1/1423.7〜1/910.3)から算出（grape-reverse値）。']}
+im:{intro:'ネオアイム 2025年9月1日／アイムEX(6号機) 2020年12月14日',name:'ネオアイムジャグラーEX（アイムEX6号機と共通）',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.0, 98.0, 99.5, 101.1, 103.3, 105.5],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 269.7, 269.7, 259.0, 259.0, 255.0]},{k:'reg',l:'REG',t:'rate',sk:1,d:[439.8, 399.6, 331.0, 315.1, 255.0, 255.0]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[6.02, 6.02, 6.02, 6.02, 6.02, 5.78]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[69.8, 69.5, 69.7, 70.2, 70.0, 70.0]}],hints:[],src:['https://1geki.jp/slot/s_ij_ex_6/0/', 'https://grape-reverse.com/aimex', 'https://pachislot.win/neo-im-jugler-ex-guide/', 'https://www.rakupachi.com/blog/neo-im-juggler-ex-guide'],notes:['ネオアイムEXは6号機アイムジャグラーEXと同一スペック。どちらもこのページでOK。', '合算：1/168.5 1/161.0 1/148.6 1/142.2 1/128.5 1/127.5', 'ブドウは設定1〜5共通1/6.02・設定6のみ1/5.78（解析・実戦値ベース）。チェリーは公表値が一致しないため未使用。', '単独REG率は単独REG(1/630.1〜1/364.1)とチェリー重複REG(1/1456.4〜1/851.1)から算出。機械割はメーカー値（チェリー狙いで約+1%）。']},
+my5:{intro:'2021年12月6日',name:'マイジャグラーV',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.0, 98.0, 99.9, 102.8, 105.3, 109.4],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 270.8, 266.4, 254.0, 240.1, 229.1]},{k:'reg',l:'REG',t:'rate',sk:1,d:[409.6, 385.5, 336.1, 290.0, 268.6, 229.1]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[5.9, 5.85, 5.8, 5.78, 5.76, 5.66]},{k:'che',l:'非重複チェリー',s:'ペカらなかったチェリー',t:'rate',d:[38.1, 38.1, 36.82, 35.62, 35.62, 35.62]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[62.5, 64.7, 67.7, 71.7, 68.9, 69.9]}],hints:[],src:['https://jug123.com/my6spec/', 'https://choikatu.com/myjag6-spec/', 'https://1geki.jp/slot/s_myj6/0/', 'https://pekasen.com/machines/myjuggler-6'],notes:['合算：1/163.8 1/159.1 1/148.6 1/135.4 1/126.8 1/114.6', 'ブドウ・非重複チェリーは解析値（ガリぞう氏値、jug123/choikatu掲載）。ペカセンはブドウ1/5.91〜1/5.67と小差。', '単独REG率は単独REG(1/655.36〜1/327.68)とチェリー重複REG(1/1092.27〜1/762.05)から算出（choikatu値）。機械割はメーカー値。']},
+my6:{intro:'2026年10月5日',name:'マイジャグラー6',sub:'北電子 / ノーマルAタイプ（2026年10月5日導入）',ext:true,payout:[97.0, 98.0, 99.9, 102.8, 105.3, 109.4],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[273.1, 270.8, 266.4, 254.0, 240.1, 229.1]},{k:'reg',l:'REG',t:'rate',sk:1,d:[409.6, 385.5, 336.1, 290.0, 268.6, 229.1]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[5.9, 5.85, 5.8, 5.78, 5.76, 5.66]},{k:'che',l:'非重複チェリー',s:'ペカらなかったチェリー',t:'rate',d:[38.1, 38.1, 36.82, 35.62, 35.62, 35.62]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[62.5, 64.7, 67.7, 71.7, 68.9, 69.9]}],hints:[],src:['https://jug123.com/my6spec/', 'https://choikatu.com/myjag6-spec/', 'https://1geki.jp/slot/s_myj6/0/', 'https://nana-press.com/kaiseki/machine/1190/39197/'],notes:['ボーナス確率・機械割はメーカー公表でマイジャグラーVと同じ。合算：1/163.8 1/159.1 1/148.6 1/135.4 1/126.8 1/114.6', '小役・単独REGの内訳は「Vを継承」としてVの値を流用（新機種のため6独自の解析は未確定）。設定6実戦値：ブドウ1/5.61〜1/5.66。']},
+gg3:{intro:'2023年7月3日',name:'ゴーゴージャグラー3',sub:'北電子 / ノーマルAタイプ',ext:true,payout:[97.2, 98.2, 99.4, 101.6, 103.8, 106.5],els:[{k:'big',l:'BIG',t:'rate',sk:1,d:[259.0, 258.0, 257.0, 254.0, 247.3, 234.9]},{k:'reg',l:'REG',t:'rate',sk:1,d:[354.2, 332.7, 306.2, 268.6, 247.3, 234.9]},{k:'bud',l:'ブドウ',s:'通常時（ボーナス中除く）',t:'rate',d:[6.25, 6.2, 6.15, 6.07, 6.0, 5.92]},{k:'rt',l:'REG内訳：単独REG率',s:'契機を確認したREG回数／うち単独REG',t:'pct',p:[75.1, 74.1, 73.4, 74.2, 74.7, 74.2]}],hints:[],src:['https://www.dynam.jp/m/amusement/machines/s0005223001.html', 'https://www.nankaikoya.jp/gogojuggler3/', 'https://pekasen.com/machines/gogo-juggler-3', 'https://grape-reverse.com/gogo3', 'https://akirameruna.com/gogojug3-tool'],notes:['合算：1/149.6 1/145.3 1/139.7 1/130.5 1/123.7 1/117.4', '設定5のREGは多数派の1/247.3を採用（1サイトのみ1/243.3）。', 'ブドウは1/6.25〜1/5.92（2サイト一致、ぽこすろっとは1/6.23〜1/5.94）。いずれも独自調査値。チェリーは調査中のため未使用。', '単独REG率は単独REG(1/471.5〜1/316.6)とチェリー重複REG(1/1423.7〜1/910.3)から算出（grape-reverse値）。']}
 };
 const S=[1,2,3,4,5,6];
 // ===== 計算 =====
@@ -111,7 +111,7 @@ if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate
 function canon(mid,st){const n=x=>x===''||x==null?'':String(+x===+x&&String(x).trim()!==''?+x:String(x).trim());
  const v={};Object.keys(st.v||{}).sort().forEach(k=>{if(+st.v[k])v[k]=+st.v[k]});
  const c={};Object.keys(st.checks||{}).sort().forEach(k=>{if(+st.checks[k])c[k]=+st.checks[k]});
- return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c])}
+ return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c].concat(n(st.tstart)||n(st.ttotal)?[n(st.tstart),n(st.ttotal)]:[]))}
 function fingerprint(mid,st){const s=canon(mid,st);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
 if(typeof module!=='undefined')Object.assign(module.exports,{fingerprint,canon});
 // ===== UI =====
@@ -119,7 +119,7 @@ if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
-const blank=()=>({start:'',total:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',v:{},checks:{}});
+const blank=()=>({start:'',total:'',tstart:'',ttotal:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',v:{},checks:{}});
 let mid=null,st=null;
 // 同期対応：localStorageには削除済み(tombstone)も含めて保存し、表示用は除外して返す
 const rawStores=()=>LS.get('v2_stores',[]),rawHist=()=>LS.get('v2_hist',[]);
@@ -135,7 +135,7 @@ const putHist=h=>{LS.set('v2_hist',applyChanges(rawHist(),h,entryKey,new Date().
  for(const k in M){const c=LS.get('v2_cur_'+k,null);if(c){migrate(c);LS.set('v2_cur_'+k,c)}}})();
 function banner(){const n=hist().filter(e=>!e.exported).length;$('banner').classList.toggle('hidden',!n);$('banner').innerHTML=`未書き出し <b>${n}</b> 件 <button class="sm" onclick="exportCSV(false)">書き出し</button>`}
 function home(){$('mach').classList.add('hidden');$('home').classList.remove('hidden');
- $('home').innerHTML=`<h1>スロ設定判別ツール</h1><div class="card"><h2>機種を選択</h2>${Object.entries(M).map(([k,m])=>`<button class="mbtn" onclick="location.hash='m='+'${k}'">${esc(m.name)}<br><small class="note">${esc(m.sub)}</small></button>`).join('')}</div>
+ $('home').innerHTML=`<h1>スロ設定判別ツール</h1><div class="card"><h2>機種を選択</h2>${Object.entries(M).map(([k,m])=>`<button class="mbtn" onclick="location.hash='m='+'${k}'">${esc(m.name)}<br><small class="note">${esc(m.sub)}${m.intro?' ・導入日 '+esc(m.intro):''}</small></button>`).join('')}</div>
  <div class="card"><h2>店舗設定</h2><div id="slist"></div>
  <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
  <div class="row"><label>貸出枚数<small>1000円あたり（例：46）</small></label><input id="s_lend" type="number" step="any" inputmode="decimal"></div>
@@ -186,9 +186,12 @@ function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('
  <div class="row"><label>店舗名</label>${inp('f_store',st.store,'text','list="dl_store"')}<datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
- <div class="row"><label>打ち始め回転数</label>${inp('f_start',st.start)}</div>
- <div class="row"><label>総回転数<small>データ表示の通常時ゲーム数</small></label>${inp('f_total',st.total)}</div>
- <div class="row"><label>自分が回したG</label><b id="mine">-</b></div>
+${m.at?`<div class="row"><label>打ち始め通常回転数</label>${inp('f_start',st.start)}</div>
+ <div class="row"><label>通常回転数<small>データ表示の通常時ゲーム数（現在）</small></label>${inp('f_total',st.total)}</div>
+ <div class="row"><label>打ち始め総回転数<small>空欄＝0</small></label>${inp('f_tstart',st.tstart)}</div>
+ <div class="row"><label>総回転数<small>AT中も含む全ゲーム数（現在）。機械割の実測に使用</small></label>${inp('f_ttotal',st.ttotal)}</div>`:`<div class="row"><label>打ち始め回転数</label>${inp('f_start',st.start)}</div>
+ <div class="row"><label>総回転数<small>データ表示の通常時ゲーム数</small></label>${inp('f_total',st.total)}</div>`}
+ <div class="row"><label>自分が回したG${m.at?'（通常）':''}</label><b id="mine">-</b></div>
  <div class="row"><label>計算に使うG数<small>回数入力が履歴全体なら「全体」、自分の分だけなら「自分」</small></label><div class="seg" style="flex:1"><button id="gm_all" onclick="setG('all')">履歴全体</button><button id="gm_mine" onclick="setG('mine')">自分の分だけ</button></div></div></div>
  <div class="card"><h2>収支</h2>
  <div class="row"><label>投資（円）</label>${inp('f_invYen',st.invYen)}</div>
@@ -200,6 +203,7 @@ function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('
  for(const e of m.els){if(e.t==='rate'){h+=`<div class="row"><label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0（入力時は 総回転数−打ち始め回転数 で計算）</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
   else if(e.t==='pct')h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
   else{h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div>`;e.c.forEach((c,j)=>{h+=`<div class="row"><label style="padding-left:12px">${c}</label>${step('v_'+e.k+'_'+j,st.v[e.k+'_'+j]??'')}</div>`})}}
+ if(m.at)h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">BIG・REG（記録用・計算には不使用）</p>`+[['xbig','BIG'],['xreg','REG']].map(([k,l])=>`<div class="row"><label>${l} 回数</label>${step('v_'+k,st.v[k]??'')}</div><div class="row"><label style="padding-left:12px">打ち始め${l}<small>空欄＝0</small></label>${step('v_'+k+'_s',st.v[k+'_s']??'')}</div>`).join('');
  h+=`</div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`;
  m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">${esc(g[0])}</p>`;g[1].forEach((x,hi)=>{h+=`<div class="row"><label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`})});
  h+=`</div><div class="card res"><h2>結果</h2><div id="out"></div></div>
@@ -210,7 +214,7 @@ function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('
  el.innerHTML=h;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
  update();renderH();banner();scrollTo(0,0)}
-function read(){for(const f of['store','memo','date','start','total','invYen','invMai','retMai','retYen'])st[f]=$('f_'+f).value;
+function read(){for(const f of['store','memo','date','start','total','invYen','invMai','retMai','retYen','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
  const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
  const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
  LS.set('v2_cur_'+mid,st);update()}
@@ -225,15 +229,15 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
  if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
  else{o=`<p class="note">計算G数：${G}G（${st.gmode==='mine'?'自分の分だけ':'履歴全体'}）</p>`+(()=>{const mx=Math.max(...sm.p);return sm.p.map((x,i)=>`<div class="row"><label style="flex:0 0 52px">設定${S[i]}</label><div class="bar"><div style="width:${(x*100).toFixed(1)}%${x>=mx-1e-12?';background:#ff9f2e':''}"></div></div><span>${(x*100).toFixed(1)}%</span></div>`).join('')})()+
   `<p><b>期待設定：${sm.avg.toFixed(2)}</b>　設定4以上：${(sm.hi*100).toFixed(1)}%</p>`}
- if(sm.notes.length)o+=`<p class="note">示唆メモ：${sm.notes.map(esc).join(' / ')}</p>`;{const W=terms(m,st.v,G,gMine(st)).warn;if(st.total!==''&&+st.start>+st.total)W.unshift('打ち始め回転数が総回転数より大きいです');if(W.length)o=`<div class="warn">${W.map(esc).join('<br>')}</div>`+o}$('out').innerHTML=o;
+ if(sm.notes.length)o+=`<p class="note">示唆メモ：${sm.notes.map(esc).join(' / ')}</p>`;{const W=terms(m,st.v,G,gMine(st)).warn;if(st.total!==''&&+st.start>+st.total)W.unshift(m.at?'打ち始め通常回転数が通常回転数より大きいです（通常時の項目は自分の分を計算から外します）':'打ち始め回転数が総回転数より大きいです');if(m.at&&st.ttotal!==''&&+st.tstart>+st.ttotal)W.unshift('打ち始め総回転数が総回転数より大きいので、機械割の実測を出しません');if(m.at)for(const k of['xbig','xreg'])if(st.v[k]!=null&&st.v[k+'_s']!=null&&+st.v[k+'_s']>+st.v[k])W.push('打ち始め'+k.slice(1).toUpperCase()+'が現在の回数より大きいです（記録のみ）');if(W.length)o=`<div class="warn">${W.map(esc).join('<br>')}</div>`+o}$('out').innerHTML=o;
  const rows=[];const near=(arr,val)=>{if(val==null||!isFinite(val))return-1;let b=0;arr.forEach((x,i)=>{if(Math.abs(x-val)<Math.abs(arr[b]-val))b=i});return b};
  const TT=new Map(terms(m,st.v,G,gMine(st)).out.map(x=>[x[0].k,x]));for(const e of m.els){if(e.t==='rate'){const t=TT.get(e.k),me=t&&t[1]>0?t[2]/t[1]:null;rows.push([e.l,e.d.map(x=>'1/'+x),me?'1/'+r1(me):'-',near(e.d,me)])}
   else if(e.t==='pct'){const n=st.v[e.k+'_n']||0,k=st.v[e.k+'_k']||0,me=n?k/n*100:null;rows.push([e.l,e.p.map(x=>x+'%'),me!=null?r1(me)+'%':'-',near(e.p,me)])}
   else{const cs=e.c.map((c,j)=>st.v[e.k+'_'+j]||0),t=cs.reduce((a,b)=>a+b,0);e.c.forEach((c,j)=>{const col=e.p.map(r=>r[j]),me=t?cs[j]/t*100:null;rows.push([e.l+' '+c,col.map(x=>x+'%'),me!=null?r1(me)+'%':'-',near(col,me)])})}}
- const pm=(G>0&&mo.diff!=null)?(3*G+mo.diff)/(3*G)*100:null;
+ const TG=m.at&&st.ttotal!==''?(+st.ttotal-(+st.tstart||0)):null,PG=TG!=null?(TG>0?TG:0):G;const pm=(PG>0&&mo.diff!=null)?(3*PG+mo.diff)/(3*PG)*100:null;
  rows.push(['機械割',m.payout.map(x=>x+'%'),pm!=null?r1(pm)+'%':'-',near(m.payout,pm)]);
  $('tbl').innerHTML=`<table><tr><th>項目</th>${S.map(s=>`<th>設${s}</th>`).join('')}<th>実測</th></tr>${rows.map(r=>`<tr><td style="text-align:left">${esc(r[0])}</td>${r[1].map((x,i)=>`<td class="${i===r[3]?'hit':''}">${x}</td>`).join('')}<td class="me">${r[2]}</td></tr>`).join('')}</table>
- <p class="note">機械割の実測は（投入3枚×計算G数＋合算差枚）÷投入の概算（合算差枚が出るときのみ）。</p>`}
+ <p class="note">機械割の実測は（投入3枚×計算G数＋合算差枚）÷投入の概算（合算差枚が出るときのみ）。${m.at?'AT機は総回転数を入れると（総回転数−打ち始め総回転数）で計算。':''}</p>`}
 function hintText(m,ch){const t=[];m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>{const n=+ch[gi+'_'+hi]||0;if(n)t.push(x[0]+'('+x[1]+')×'+n)}));return t.join(' / ')}
 window.saveH=()=>{read();const m=M[mid],sm=summary(m,st),fp=fingerprint(mid,st);const h=hist();
  if(h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
@@ -269,11 +273,11 @@ function b64dec(b64){const s=atob(b64.replace(/\s/g,''));const b=new Uint8Array(
 function csvCols(ext){const c=[];for(const[k,m]of Object.entries(M)){if(!!m.ext!==!!ext)continue;for(const e of m.els){if(e.t==='rate')c.push([k,'v',e.k,m.name+':'+e.l]);else if(e.t==='pct'){c.push([k,'v',e.k+'_n',m.name+':'+e.l+'(母数)']);c.push([k,'v',e.k+'_k',m.name+':'+e.l+'(当選)'])}else e.c.forEach((x,j)=>c.push([k,'v',e.k+'_'+j,m.name+':'+e.l+' '+x]))}
  m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>c.push([k,'c',gi+'_'+hi,m.name+':示唆 '+g[0].replace(/（.*）/,'')+' '+x[0]+'('+x[1]+')'])))}return c}
 const q=x=>{x=String(x??'');return /[",\n\r]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
-function buildCSV(list){const base=csvCols(false),xc=csvCols(true),cols=base,sc=[];for(const[k,m]of Object.entries(M))for(const e of m.els)if(e.sk)sc.push([k,'v',e.k+'_s',m.name+':打ち始め'+e.l]);const head=['id','fingerprint','日付','店舗','機種','台番号/メモ','打ち始めG','総回転数','自分G','計算G数','計算G方式',...cols.map(c=>c[3]),'投資(円)','投資(枚)','回収(枚)','回収(円)','貸出枚数/1000円','換金額(円/枚)','合算差枚','合算収支(円)','期待設定','設定4以上%',...S.map(s=>'設定'+s+'%'),'示唆','保存日時',...xc.map(c=>c[3]),...sc.map(c=>c[3])];
+function buildCSV(list){const base=csvCols(false),xc=csvCols(true),cols=base,sc=[];for(const[k,m]of Object.entries(M))for(const e of m.els)if(e.sk)sc.push([k,'v',e.k+'_s',m.name+':打ち始め'+e.l]);for(const[k,m]of Object.entries(M))if(m.at)for(const[x,l]of[['xbig','BIG'],['xbig_s','打ち始めBIG'],['xreg','REG'],['xreg_s','打ち始めREG']])sc.push([k,'v',x,m.name+':'+l+'(記録)']);const head=['id','fingerprint','日付','店舗','機種','台番号/メモ','打ち始めG','総回転数','自分G','計算G数','計算G方式',...cols.map(c=>c[3]),'投資(円)','投資(枚)','回収(枚)','回収(円)','貸出枚数/1000円','換金額(円/枚)','合算差枚','合算収支(円)','期待設定','設定4以上%',...S.map(s=>'設定'+s+'%'),'示唆','保存日時',...xc.map(c=>c[3]),...sc.map(c=>c[3]),'打ち始め総回転数','総回転数(AT込)'];
  const lines=[head.map(q).join(',')];for(const e of list){const s=e.st;const r1=x=>x==null?'':Math.round(x*10)/10;
   lines.push([e.id,e.fp||fingerprint(e.mid,s),e.date,e.store,e.machine,e.memo,s.start,s.total,s.total!==''?Math.max(0,(+s.total||0)-(+s.start||0)):'',e.G,s.gmode==='mine'?'自分の分だけ':'履歴全体',
    ...cols.map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.invYen,s.invMai,s.retMai,s.retYen,e.lend??'',e.rate??'',r1(e.diff),r1(e.yen),
-   e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||'',...[...xc,...sc].map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0))].map(q).join(','))}
+   e.avg!=null?e.avg.toFixed(2):'',e.hi!=null?(e.hi*100).toFixed(1):'',...S.map((x,i)=>e.p?(e.p[i]*100).toFixed(1):''),e.hints,e.saved||'',...[...xc,...sc].map(c=>c[0]!==e.mid?'':c[1]==='v'?(s.v[c[2]]??''):(s.checks[c[2]]||0)),s.tstart??'',s.ttotal??''].map(q).join(','))}
  return '\ufeff'+lines.join('\r\n')}
 if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,applyChanges,mergeList,mergeData,sameData,b64enc,b64dec,storeKey,entryKey});
 </script></body></html>
