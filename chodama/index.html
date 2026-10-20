@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>貯玉管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="貯玉管理">
+<title>貯玉管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="貯玉管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -72,7 +72,10 @@ function render(){const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メ
  <div class="seg" style="margin-bottom:12px">${Object.entries(KIND).map(([k,x])=>`<button id="tab_${k}" class="${k===tab?'':'sub'}" onclick="setTab('${k}')">${x.l}</button>`).join('')}</div>
  <div class="card"><h2>店舗×日付 <small class="note">${c.rows.length}件</small></h2>${c.rows.length?`<div class="tw"><table id="rows"><tr><th>日付</th><th style="text-align:left">店舗</th><th>台数</th><th>増減</th><th>タバコ交換</th><th>結果</th></tr>${c.rows.map((r,i)=>`<tr><td>${esc(r.date)}</td><td style="text-align:left">${esc(r.store)}</td><td>${r.n}</td><td${pc(r.net)}>${sg(r.net)}</td><td><button class="tob ${r.on?'on':'off'}" onclick="toggleTob(${i})"${r.yp?'':' disabled'}>${r.on?'有り':'無し'}</button>${r.on&&r.tob?`<br><small style="color:#d62828">−${r.tob.toLocaleString()}${u}</small>`:''}</td><td${pc(r.res)}><b>${sg(r.res)}</b></td></tr>`).join('')}</table></div>`:'<p class="note">保存データがありません</p>'}
  <p class="note">増減＝その店・その日の保存済み記録の合計（1台＝回収−使用持ち${W}−使用貯${W}）。タバコ交換有り＝${TOB_YEN.toLocaleString()}円分（${TOB_YEN}÷${tab==='p'?'1玉の価値':'換金額'}、四捨五入）をその行から引きます。残高＝その店の全行の結果の累計。</p></div>
- <div class="card"><p class="note" id="sy">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'同期未設定（スロット版でGitHubトークンを保存すると2台で同期）'}</p><button class="sub" onclick="syncNow()">今すぐ同期</button></div>`}
+ <div class="card"><h2>同期設定</h2><p class="note">記録はスロット版・パチンコ版の同期データ（GitHub）から読みます。ホーム画面から開いた場合は保存領域が別になるので、ここにもトークンを入れてください（スロット版と同じトークン）。</p>
+ <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" style="width:170px" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div><button onclick="saveTok()">保存して同期</button><button class="sub" onclick="syncNow()">今すぐ同期</button>
+ <p class="note" id="sy">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'未設定（この端末の記録だけで表示中）'}</p></div>`}
+window.saveTok=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow()};
 window.setTab=k=>{tab=k;LS.set('cd_tab',k);render()};
 window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);render();syncSoon()};
 // ===== 同期：記録は読むだけ（pachinko.json / data.json）、タバコ交換は chodama.json に保存 =====
