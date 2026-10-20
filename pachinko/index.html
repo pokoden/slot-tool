@@ -291,15 +291,15 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  update();$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:'';renderH();banner();scrollTo(0,0)}
 window.showMore=v=>{more=v==null?!more:!!v;for(let i=ROWS0;i<ROWS;i++)$('tr'+i).classList.toggle('hidden',!more);$('moreBtn').textContent=more?'閉じる（10回目まで表示）':'さらに表示（11〜30回目）';if(!more)$('moreBtn').scrollIntoView({block:'center'})};
 window.rb=(i,R,d)=>{const x=$('r'+i+'_R'+R);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);read({target:{id:'btn'}})};
-function read(ev){for(const f of['store','memo','date','ratio','adj','out','inv','usv','uhb','tS','tE'])st[f]=$('f_'+f).value;
+function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','ratio','adj','out','inv','usv','uhb','tS','tE'])st[f]=$('f_'+f).value;
  const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';
  // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
- if(tid&&tid!=='f_tE'&&tid!=='f_tS')st.tL=nowHM();if(!st.tEman&&st.tL&&st.tE!==st.tL){st.tE=st.tL;$('f_tE').value=st.tE}$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:''
  st.bx={};for(const t of['k','m','y'])for(const j of['0','1'])st.bx[t+j]=$('bx_'+t+j).value;
  const m=M[mid];let any=false;for(let i=0;i<ROWS;i++){const w=blankRow();for(const[k,,,x]of [...COLS,['d0'],['d1']]){if(x)continue;w[k]=$('r'+i+'_'+k).value;if(w[k]!=='')any=true}for(const R of m.R){const v=$('r'+i+'_R'+R).value;if(v!==''){w.r[R]=Math.max(0,parseInt(v)||0);any=true}}st.rows[i]=w;
   $('r'+i+'_b0').placeholder=w.s0;$('r'+i+'_b1').placeholder=w.s1}
  if(!any)for(const f of['out','inv','usv','uhb'])if(st[f]!=='')any=true;
  if(any&&!st.tS){st.tS=nowHM();$('f_tS').value=st.tS}
+if(ev&&tid!=='f_tE'&&tid!=='f_tS'&&_snap()!==_b)st.tL=nowHM();if(!st.tEman&&st.tL&&st.tE!==st.tL){st.tE=st.tL;$('f_tE').value=st.tE}$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:'';
  LS.set('p1_cur_'+mid,st);update()}
 function setO(id,v,c){const e=$(id);if(!e)return;e.textContent=v;e.style.color=c>0?'#1e5bd6':c<0?'#d62828':''}
 function timeLine(c,end){const h=hours(st.tS,end);if(h==null||!(h>0))return'';const a=c.work!=null?c.work/h:null,b=c.pl!=null?c.pl/h:null;

@@ -102,16 +102,19 @@ function exOf(s){return s&&+s.ex>0?+s.ex:(s&&+s.rate>0?Math.round(100/s.rate*100
 function money(st,stores){const N=x=>x===''||x==null?0:+x||0;const s=(stores||[]).find(x=>x.name===(st.store||'').trim())||null;
  const lend=s&&+s.lend>0?+s.lend:null,ex=exOf(s),rate=ex?100/ex:null;
  // 回収−使用貯メダル−使用所持メダル（回収空欄＝0扱い→(所持後−所持前)+(貯後−貯前)と同じ）
- const iy=N(st.invYen),usv=N(st.sv0)-N(st.sv1),uhb=N(st.hb0)-N(st.hb1),net=N(st.out)-usv-uhb,any=[st.invYen,st.sv0,st.sv1,st.hb0,st.hb1,st.out].some(x=>x!==''&&x!=null);
+ // 使った現金＝サンド投入現金−サンド残り現金（残り空欄＝投入そのまま）
+ const E0=x=>x===''||x==null,iy=!E0(st.y0)||!E0(st.y1)?N(st.y0)-N(st.y1):N(st.invYen),usv=N(st.sv0)-N(st.sv1),uhb=N(st.hb0)-N(st.hb1),net=N(st.out)-usv-uhb,any=[st.invYen,st.y0,st.y1,st.sv0,st.sv1,st.hb0,st.hb1,st.out].some(x=>x!==''&&x!=null);
  const lent=iy>0?(lend==null?null:iy/1000*lend):0;
  const diff=!any||lent==null?null:net-lent;
  const yen=!any?null:(net!==0&&rate==null)?null:net*(rate||0)-iy;
- return{any,lend,ex,rate,lent,diff,yen,usv,uhb}}
+ return{any,lend,ex,rate,lent,diff,yen,usv,uhb,iy}}
 function migrate(st){if(!st)return st;if('unit' in st||'inv' in st){if(st.unit==='円'){st.invYen=st.invYen??st.inv??'';st.retYen=st.retYen??st.ret??''}else{st.invMai=st.invMai??st.inv??'';st.retMai=st.retMai??st.ret??''}delete st.unit;delete st.inv;delete st.ret}
  for(const f of['invYen','invMai','retMai','retYen'])if(st[f]==null)st[f]='';
  // 旧：最初の所持メダル/残った持ちメダル/回収枚数 → 新：所持メダル使用前/使用後/回収
  const E=x=>x===''||x==null;if(E(st.hb0)&&E(st.hb1)&&E(st.out)&&(!E(st.invMai)||!E(st.retMai)||!E(st.retOut))){st.hb0=st.invMai;if(!E(st.retOut)){st.out=st.retOut;st.hb1=''}else{st.hb1=st.retMai;st.out=''}st.invMai='';st.retMai='';st.retOut=''}
- for(const f of['sv0','sv1','hb0','hb1','out'])if(st[f]==null)st[f]='';
+ for(const f of['sv0','sv1','hb0','hb1','out','y0','y1','tL'])if(st[f]==null)st[f]='';
+ // r16：現金投資合計→サンド投入現金（残り空欄＝投入そのままなので結果は同じ）
+ if(!E(st.invYen)&&E(st.y0)&&E(st.y1)){st.y0=st.invYen;st.invYen=''}
  const c={};for(const k in st.checks||{}){const n=st.checks[k]===true?1:+st.checks[k]||0;if(n)c[k]=n}st.checks=c;st.v=st.v||{};return st}
 function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else if(typeof crypto!=='undefined'&&crypto.getRandomValues){const b=crypto.getRandomValues(new Uint8Array(16));r=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
 if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate,genId};
@@ -119,7 +122,7 @@ if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate
 function canon(mid,st){const n=x=>x===''||x==null?'':String(+x===+x&&String(x).trim()!==''?+x:String(x).trim());
  const v={};Object.keys(st.v||{}).sort().forEach(k=>{if(+st.v[k])v[k]=+st.v[k]});
  const c={};Object.keys(st.checks||{}).sort().forEach(k=>{if(+st.checks[k])c[k]=+st.checks[k]});
- return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen),n(st.invMai),n(st.retMai),n(st.retYen),v,c].concat(n(st.tstart)||n(st.ttotal)||n(st.retOut)?[n(st.tstart),n(st.ttotal)]:[]).concat(n(st.retOut)?[n(st.retOut)]:[]).concat([st.sv0,st.sv1,st.hb0,st.hb1,st.out].some(x=>n(x)!=='')?[[n(st.sv0),n(st.sv1),n(st.hb0),n(st.hb1),n(st.out)]]:[]))}
+ return JSON.stringify([mid,n(st.date),n(st.store),n(st.memo),n(st.start),n(st.total),st.gmode||'all',n(st.invYen)+'|'+n(st.y0)+'|'+n(st.y1),n(st.invMai),n(st.retMai),n(st.retYen),v,c].concat(n(st.tstart)||n(st.ttotal)||n(st.retOut)?[n(st.tstart),n(st.ttotal)]:[]).concat(n(st.retOut)?[n(st.retOut)]:[]).concat([st.sv0,st.sv1,st.hb0,st.hb1,st.out].some(x=>n(x)!=='')?[[n(st.sv0),n(st.sv1),n(st.hb0),n(st.hb1),n(st.out)]]:[]))}
 function fingerprint(mid,st){const s=canon(mid,st);let h1=0x811c9dc5,h2=0x01000193^s.length;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822519)^(h2>>>13)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
 if(typeof module!=='undefined')Object.assign(module.exports,{fingerprint,canon});
 // ===== UI =====
@@ -127,7 +130,7 @@ if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const today=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
-const blank=()=>({start:'',total:'',tstart:'',ttotal:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',invMai:'',retMai:'',retYen:'',retOut:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',v:{},checks:{},tS:'',tE:''});
+const blank=()=>({start:'',total:'',tstart:'',ttotal:'',gmode:'all',store:'',memo:'',date:today(),invYen:'',y0:'',y1:'',invMai:'',retMai:'',retYen:'',retOut:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',v:{},checks:{},tS:'',tE:'',tL:'',tEman:false});
 let mid=null,st=null;
 // 同期対応：localStorageには削除済み(tombstone)も含めて保存し、表示用は除外して返す
 const rawStores=()=>LS.get('v2_stores',[]),rawHist=()=>LS.get('v2_hist',[]);
@@ -265,20 +268,23 @@ function machine(k){mid=k;const m=M[k];st=migrate(Object.assign(blank(),LS.get('
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');
  let h=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">${esc(m.name)}</h1>
  <div class="card"><h2>台情報</h2>
- <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select id="sel_store" aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read()}this.value=''">${storeOpts()}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
+ <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select id="sel_store" aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read(event)}this.value=''">${storeOpts()}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
 ${blocks(m)}
  <div class="row"><label>自分が回したG${m.at?'（通常）':''}</label><b id="mine">-</b></div>
  </div>
  <div class="card"><h2>収支</h2>
- <div class="row"><label>現金投資合計（円）<small>打ってる間にサンドに入れたお金の合計を入力</small></label>${inp('f_invYen',st.invYen)}</div>
- <div class="row"><label>貯メダル数使用前<small>打ち始める段階の貯メダル数を入力</small></label>${inp('f_sv0',st.sv0??'')}</div>
- <div class="row"><label>貯メダル使用後<small>打ち終わりの段階の残った貯メダル数を入力</small></label>${inp('f_sv1',st.sv1??'')}</div>
- <div class="row"><label>所持メダル使用前<small>打ち始める段階の所持メダル数を入力</small></label>${inp('f_hb0',st.hb0??'')}</div>
- <div class="row"><label>所持メダル使用後<small>打ち終わりの段階の残った所持メダル数を入力</small></label>${inp('f_hb1',st.hb1??'')}</div>
+ <div class="row"><label>サンド投入現金（円）<small>サンドに入れたお金の合計</small></label>${inp('f_y0',st.y0??'')}</div>
+ <div class="row"><label>サンド残り現金（円）<small>空欄＝残りなし</small></label>${inp('f_y1',st.y1??'')}</div>
+ <div class="row"><label>貯メダル開始</label>${inp('f_sv0',st.sv0??'')}</div>
+ <div class="row"><label>貯メダル終了</label>${inp('f_sv1',st.sv1??'')}</div>
+ <div class="row"><label>持ちメダル開始</label>${inp('f_hb0',st.hb0??'')}</div>
+ <div class="row"><label>持ちメダル終了</label>${inp('f_hb1',st.hb1??'')}</div>
  <div class="row"><label>回収<small>最後に流したメダル数を入力</small></label>${inp('f_out',st.out??'')}</div>
- <div class="row"><label>使用貯メダル数／使用所持メダル数</label><b id="usedM">-</b></div>
+ <div class="row"><label>使った現金</label><b id="usedY">-</b></div>
+ <div class="row"><label>使用貯メダル数／使用持ちメダル数</label><b id="usedM">-</b></div>
+ <div class="row"><label>稼働時間</label><b id="o_time">-</b></div>
  <div id="money" class="note"></div></div>
  <div class="card"><h2>カウント</h2>`;
  for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row"><label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
@@ -288,16 +294,20 @@ ${blocks(m)}
  m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">${esc(g[0])}</p>`;g[1].forEach((x,hi)=>{h+=`<div class="row"><label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`})});
  h+=`</div><div class="card res"><h2>結果</h2><div id="out"></div></div>
  <div class="card"><h2>確率表と実測</h2><p class="note">オレンジ＝実測値に最も近い設定</p><div class="tw" id="tbl"></div></div>
- <div class="card"><h2>この台を保存</h2><button onclick="saveH()">この台を保存</button><button class="sub" onclick="resetM()">リセット</button><button class="sub" onclick="location.hash='hist'">全機種の履歴</button><div id="hist" style="margin-top:10px"></div></div>
+ <div class="card"><h2>この台を保存</h2><div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝最終更新時刻に自動で合わせます（手で入力した時刻が優先、消すと自動に戻る）</small></label></div>
+ <div class="row"><label style="text-align:right">開始</label>${inp('f_tS',st.tS??'','time','style="width:110px"')}<label style="text-align:right">終了</label>${inp('f_tE',st.tE??'','time','style="width:110px"')}</div>
+ <p class="note" id="o_tL"></p><div style="display:flex;gap:8px"><button style="flex:1" onclick="saveH('last')">最終更新時間で保存</button><button style="flex:1" onclick="saveH('now')">現在の時刻で保存</button></div><button class="sub" onclick="resetM()">リセット</button><button class="sub" onclick="location.hash='hist'">全機種の履歴</button><div id="hist" style="margin-top:10px"></div></div>
  <div class="card"><h2>注意・出典</h2><p class="note">※各要素を独立とみなして掛け合わせる簡易計算です（例：初当たりにはCZ・ボーナス経由分が含まれるなど重複があるため、結果はやや強めに出ます）。事前確率は各設定均等。</p>
  ${m.notes.map(n=>`<p class="note">・${esc(n)}</p>`).join('')}<p class="note">出典：<br>${m.src.map(u=>`<a href="${u}" target="_blank">${u}</a>`).join('<br>')}</p></div>`;
  el.innerHTML=h;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
  update();renderH();banner();scrollTo(0,0)}
-function read(){for(const f of['store','memo','date','start','total','invYen','sv0','sv1','hb0','hb1','out','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
+function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','start','total','y0','y1','tS','tE','sv0','sv1','hb0','hb1','out','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
  const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
  const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
- if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.value!==''))st.tS=nowHM();
+ if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.id!=='f_tS'&&x.id!=='f_tE'&&x.value!=='')){st.tS=nowHM();$('f_tS').value=st.tS}
+ // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
+ const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';if(ev&&tid!=='f_tE'&&tid!=='f_tS'&&_snap()!==_b)st.tL=nowHM();if(!st.tEman&&st.tL&&st.tE!==st.tL){st.tE=st.tL;$('f_tE').value=st.tE}
  LS.set('v2_cur_'+mid,st);update()}
 const nowHM=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return p(d.getHours())+':'+p(d.getMinutes())};
 function hrs(a,b){const f=t=>{const x=String(t||'').match(/^(\d{1,2}):(\d{2})/);return x?+x[1]*60+ +x[2]:null};const x=f(a),y=f(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d/60}
@@ -308,9 +318,10 @@ const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',r1=x=>M
 function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
  $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
  
- const mo=money(st,stores());if($('usedM'))$('usedM').textContent=mo.any?mo.usv.toLocaleString()+'枚／'+mo.uhb.toLocaleString()+'枚':'-';
- $('money').innerHTML=!mo.any?'金額を入力すると収支を計算します':`<div class="row"><label>貸出枚</label><b>${mo.lent==null?'店舗レート未設定':Math.round(mo.lent).toLocaleString()+'枚'}</b></div><div class="row"><label>差枚</label><b${pc(mo.diff)}>${mo.diff==null?'店舗レート未設定':sg(mo.diff)+'枚'}</b></div>${(()=>{const h=hrs(st.tS,st.tE);return st.tS&&st.tE&&h>0?`<div class="row"><label>稼働時間</label><b>${st.tS}〜${st.tE}（${h.toFixed(1)}時間）</b></div>`:''})()}<div class="row"><label>収支</label><b${pc(mo.yen)}>${mo.yen==null?'店舗レート未設定':sg(mo.yen)+'円'}</b></div>${(()=>{const h=hrs(st.tS,st.tE);if(!(st.tS&&st.tE&&h>0))return'';const a=mo.yen==null?null:mo.yen/h,b=mo.diff==null?null:mo.diff/h;return`<div class="row"><label>　時給</label><b${pc(a??b)}>${a==null?'-':sg(a)+'円'}／${b==null?'-':sg(b)+'枚'}</b></div>`})()}${mo.ex?`<small>貸出${mo.lend}枚/1000円・交換${mo.ex}枚/100円（1枚${mo.rate.toFixed(2)}円）</small>`:'<small>店舗設定（トップ画面）に店舗名を登録すると計算できます</small>'}`;
+ const mo=money(st,stores());{const h=hrs(st.tS,st.tE);$('o_time').textContent=st.tS&&st.tE&&h>0?`${st.tS}〜${st.tE}（${h.toFixed(1)}時間）`:st.tS?`${st.tS}〜`:'-';$('usedY').textContent=mo.any?mo.iy.toLocaleString()+'円':'-';$('o_tL').textContent=st.tL?'最終更新時刻 '+st.tL:''}if($('usedM'))$('usedM').textContent=mo.any?mo.usv.toLocaleString()+'枚／'+mo.uhb.toLocaleString()+'枚':'-';
+ $('money').innerHTML=!mo.any?'金額を入力すると収支を計算します':`<div class="row"><label>貸出枚</label><b>${mo.lent==null?'店舗レート未設定':Math.round(mo.lent).toLocaleString()+'枚'}</b></div><div class="row"><label>差枚</label><b${pc(mo.diff)}>${mo.diff==null?'店舗レート未設定':sg(mo.diff)+'枚'}</b></div><div class="row"><label>収支</label><b${pc(mo.yen)}>${mo.yen==null?'店舗レート未設定':sg(mo.yen)+'円'}</b></div>${(()=>{const h=hrs(st.tS,st.tE);if(!(st.tS&&st.tE&&h>0))return'';const a=mo.yen==null?null:mo.yen/h,b=mo.diff==null?null:mo.diff/h;return`<div class="row"><label>　時給</label><b${pc(a??b)}>${a==null?'-':sg(a)+'円'}／${b==null?'-':sg(b)+'枚'}</b></div>`})()}${mo.ex?`<small>貸出${mo.lend}枚/1000円・交換${mo.ex}枚/100円（1枚${mo.rate.toFixed(2)}円）</small>`:'<small>店舗設定（トップ画面）に店舗名を登録すると計算できます</small>'}`;
  {const pm=payoutMine(m,st,mo),h=hrs(st.tS,st.tE);let x='';{const gm=gMine(st),tg=m.at&&st.ttotal!==''&&st.ttotal!=null?Math.max(0,+st.ttotal-(+st.tstart||0)):null;
+  {const hh=st.tS&&st.tE?hrs(st.tS,st.tE):null;x+=`<div class="row"><label>1時間あたりの回転数</label><b>${hh>0&&gm?(gm/hh).toFixed(0)+'G/時間':'-'}</b></div>`}
   x+=m.at?`<div class="row"><label>通常回転数</label><b>${gm??0}G</b></div><div class="row"><label>総回転数</label><b>${tg??'-'}${tg!=null?'G':''}</b></div>`:`<div class="row"><label>総回転数</label><b>${gm??0}G</b></div>`;
   const ks=m.at?['xbig','xreg']:(m.els.some(e=>e.k==='big')?['big','reg']:null);
   if(ks){const c=k=>st.v[k]!=null&&st.v[k]!==''?Math.max(0,(+st.v[k]||0)-(+st.v[k+'_s']||0)):0,b=c(ks[0]),r=c(ks[1]),g=gm||0,pr=n=>n>0&&g>0?'1/'+(g/n).toFixed(1):'-';
@@ -332,7 +343,7 @@ if(x)$('money').innerHTML+=x}
  $('tbl').innerHTML=`<table><tr><th>項目</th>${S.map(s=>`<th>設${s}</th>`).join('')}<th>実測</th></tr>${rows.map(r=>`<tr><td style="text-align:left">${esc(r[0])}</td>${r[1].map((x,i)=>`<td class="${i===r[3]?'hit':''}">${x}</td>`).join('')}<td class="me">${r[2]}</td></tr>`).join('')}</table>
  <p class="note">機械割の実測は（投入3枚×計算G数＋合算差枚）÷投入の概算（合算差枚が出るときのみ）。${m.at?'AT機は総回転数を入れると（総回転数−打ち始め総回転数）で計算。':''}</p>`}
 function hintText(m,ch){const t=[];m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>{const n=+ch[gi+'_'+hi]||0;if(n)t.push(x[0]+'('+x[1]+')×'+n)}));return t.join(' / ')}
-window.saveH=()=>{read();st.tE=nowHM();LS.set('v2_cur_'+mid,st);const m=M[mid],sm=summary(m,st),fp=fingerprint(mid,st);const h=hist();
+window.saveH=mode=>{read();st.tE=mode==='now'?nowHM():(st.tL||st.tE||nowHM());st.tEman=false;$('f_tE').value=st.tE;LS.set('v2_cur_'+mid,st);const m=M[mid],sm=summary(m,st),fp=fingerprint(mid,st);const h=hist();
  if(h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
  const mo=money(st,stores());
  h.unshift({id:genId(),mid,machine:m.name,store:st.store,memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,
