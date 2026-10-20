@@ -122,7 +122,7 @@ const TOK='v2_token';// スロット版と同じ鍵を共有
 const rawStores=()=>LS.get('p1_stores',[]),rawHist=()=>LS.get('p1_hist',[]);
 const stores=()=>rawStores().filter(x=>!x.deleted),hist=()=>rawHist().filter(x=>!x.deleted);
 const putStores=s=>{LS.set('p1_stores',applyChanges(rawStores(),s,storeKey,new Date().toISOString()));syncSoon()};
-const putHist=h=>{LS.set('p1_hist',applyChanges(rawHist(),h,entryKey,new Date().toISOString()));syncSoon()};
+const putHist=h=>{LS.set('p1_hist',applyChanges(rawHist(),dedupeLive(h),entryKey,new Date().toISOString()));syncSoon()};
 const DEF_STORES=['柏マル','柏USA','五所ジャム','石渡マル','五所マル'];
 function seedStores(list){const have=new Set((list||[]).map(storeKey));const add=DEF_STORES.filter(n=>!have.has('n:'+n)).map(name=>({id:'def-'+name,name,updatedAt:'2000-01-01T00:00:00.000Z'}));return add.length?[...(list||[]),...add]:list}
 (function(){const sd=seedStores(rawStores());if(sd!==rawStores())LS.set('p1_stores',sd)})();
@@ -130,10 +130,11 @@ const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',sg=x=>(
 function banner(){const n=hist().filter(e=>!e.exported).length;$('banner').classList.toggle('hidden',!n);$('banner').innerHTML=`未書き出し <b>${n}</b> 件 <button class="sm" onclick="exportCSV(false)">書き出し</button>`}
 function thumb(k,w){const m=M[k];return m?`<img src="img/${k}.jpg" alt="" width="${w}" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px" onerror="this.outerHTML='<span style=&quot;display:inline-block;width:${w}px;padding:6px 0;border-radius:6px;background:#2b6fe8;color:#fff;font-size:11px;text-align:center&quot;>${esc(m.name.slice(0,6))}</span>'">`:''}
 const eLine=e=>`${esc(e.date||'')} ${esc(e.store||'店舗未入力')}${e.memo?' 台'+esc(e.memo):''} ${(e.G??0).toLocaleString()}回転${e.rate!=null?' 回転率'+f2(e.rate):''}<br>仕事量 ${e.work!=null?`<span${pc(e.work)}>${sg(e.work)}円</span>`:'-'} / 収支 ${e.yen!=null?`<span${pc(e.yen)}>${sg(e.yen)}円</span>`:'-'}${e.hours?` / ${e.hours.toFixed(1)}h`:''}${e.exported?' ・書出済':''}`;
+const BADGE=(t,c,b)=>`<span style="display:inline-block;font-size:.75em;font-weight:bold;padding:1px 7px;border-radius:9px;margin-right:4px;background:${b};color:${c}">${t}</span>`,BS=BADGE('保存済み','#1b7a34','#e3f4e6'),BP=BADGE('保存前','#a35a00','#ffefd6');
 function histPage(){mid=null;$('mach').classList.add('hidden');const el=$('home');el.classList.remove('hidden');
  const h=hist().slice().sort((a,b)=>String(b.saved||'').localeCompare(String(a.saved||'')));
- el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">全機種の履歴</h1><div class="card"><p class="note">${h.length}件・タップで読み込み（同期データ含む）</p>`+(h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;gap:8px">${thumb(e.mid,36)}<label style="cursor:pointer;flex:1" onclick="loadAll('${e.id}')"><b>${esc((M[e.mid]||{}).name||e.machine||'')}</b><small>${eLine(e)}</small></label><button class="sub sm" onclick="delAll('${e.id}')">削除</button></div>`).join(''):'<p class="note">保存データはありません</p>')+`</div>`;banner();scrollTo(0,0)}
-window.loadAll=id=>{const e=hist().find(x=>x.id===id);if(!e||!M[e.mid])return;LS.set('p1_cur_'+e.mid,JSON.parse(JSON.stringify(e.st)));location.hash='m='+e.mid};
+ el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">全機種の履歴</h1><div class="card"><p class="note">${h.length}件・タップで読み込み（同期データ含む）</p>`+(()=>{let o='';for(const k of Object.keys(M)){const c=LS.get('p1_cur_'+k,null);if(!c||c.locked||!c.tS)continue;o+=`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;align-items:center;gap:8px">${thumb(k,36)}<label style="cursor:pointer;flex:1" onclick="location.hash='m=${k}'">${BP}<b>${esc(M[k].name)}</b><small>${esc(c.date||'')} ${esc(c.store||'店舗未入力')}${c.memo?' 台'+esc(c.memo):''} ・入力中（まだ保存していません）</small></label></div>`}return o})()+(h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;gap:8px">${thumb(e.mid,36)}<label style="cursor:pointer;flex:1" onclick="loadAll('${e.id}')">${BS}<b>${esc((M[e.mid]||{}).name||e.machine||'')}</b><small>${eLine(e)}</small></label><button class="sub sm" onclick="delAll('${e.id}')">削除</button></div>`).join(''):'<p class="note">保存データはありません</p>')+`</div>`;banner();scrollTo(0,0)}
+window.loadAll=id=>{const e=hist().find(x=>x.id===id);if(!e||!M[e.mid])return;{const x=lockMig((JSON.parse(JSON.stringify(e.st))));x.recId=x.recId||e.id;if(e.tE){x.locked=1;x.tSaved=e.tE;x.tE=e.tE;x.tEman=false}LS.set('p1_cur_'+e.mid,x)}location.hash='m='+e.mid};
 window.delAll=id=>{if(!confirm('この保存データを削除しますか？'))return;putHist(hist().filter(x=>x.id!==id));histPage()};
 // ===== 分析 =====
 const AN_MET=[['yen','収支(円)'],['work','仕事量(円)'],['rate','回転率'],['wh','時給(仕事量)'],['n','打った回数'],['G','総回転数'],['win','勝率']];
@@ -188,10 +189,10 @@ function anDetailHtml(D){setRate(null);const m=M[D.mid];if(!m)return'';const ids
 // 本日の収支（保存日付が今日の記録）
 function todayCard(){// 同じ記録の再保存は最新の1件だけ数える（recId）
  const seen=new Set(),L=[];for(const e of hist().filter(e=>e.date===today())){const k=(e.st&&e.st.recId)||e.id;if(seen.has(k))continue;seen.add(k);L.push(e)}
- // 打ち中：未保存（locked以外）で今日の入力がある現在データ。保存済みを編集中のものは保存済みの記録だけを数える
+ // 保存前：未保存（locked以外）で今日の入力がある現在データ。保存済みを編集中のものは保存済みの記録だけを数える
  let play=0;for(const id of Object.keys(M)){const c=LS.get('p1_cur_'+id,null);if(!c||c.locked||!c.tS||(c.date||today())!==today())continue;const x=(()=>{try{const s=lockMig(migP(Object.assign(blank(),c)));const r=calc(M[id],s);return{yen:r.pl,store:s.store,G:r.spT,hours:hours(s.tS,s.tEman?s.tE:(s.tL||s.tE))}}catch(e){return null}})();if(x){L.push(x);play++}}let yen=0,yn=0,df=0,dn=0,G=0,h=0;for(const e of L){if(e.yen!=null){yen+=e.yen;yn++}const d=e.yen==null?null:e.yen/(setRate(rateOf(e.store)).val);if(d!=null){df+=d;dn++}G+=+e.G||0;if(e.hours>0)h+=e.hours}setRate(null);
  const rw=(l,v,c)=>`<div class="row"><label>${l}</label><b${c==null?'':pc(c)}>${v}</b></div>`;
- return`<div class="card"><h2>本日の収支 <small class="note">${today()}</small></h2>${L.length?rw('合計収支',yn?sg(yen)+'円':'-',yn?yen:null)+rw('台数',L.length+'台'+(play?`（うち打ち中${play}台）`:''))+rw('差玉',dn?sg(df)+'玉':'-',dn?df:null)+rw('合計回転数',G.toLocaleString()+'回転')+rw('合計稼働時間',h.toFixed(1)+'時間'):'<p class="note">今日の保存データはまだありません</p>'}</div>`}
+ return`<div class="card"><h2>本日の収支 <small class="note">${today()}</small></h2>${L.length?rw('合計収支',yn?sg(yen)+'円':'-',yn?yen:null)+rw('台数',L.length+'台'+(play?`（うち保存前${play}台）`:''))+rw('差玉',dn?sg(df)+'玉':'-',dn?df:null)+rw('合計回転数',G.toLocaleString()+'回転')+rw('合計稼働時間',h.toFixed(1)+'時間'):'<p class="note">今日の保存データはまだありません</p>'}</div>`}
 function home(){setRate(null);$('mach').classList.add('hidden');$('home').classList.remove('hidden');
  if(location.hash==='#hist')return histPage();if(location.hash.startsWith('#an'))return anPage();
  const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}
@@ -230,7 +231,7 @@ async function ghPut(tok,data,sha){const body={message:'pachinko sync '+new Date
 window.syncNow=async manual=>{const tok=LS.get(TOK,'');if(!tok){if(manual)syncStatus();return}
  if(syncing){again=true;return}syncing=true;syncStatus('同期中…');
  try{if(navigator.onLine===false)throw new Error('オフライン（あとで自動で同期します）');
-  for(let i=0;i<4;i++){const rm=await ghGet(tok);const mg=mergeData({stores:rawStores(),entries:rawHist()},rm.data);
+  for(let i=0;i<4;i++){const rm=await ghGet(tok);const mg=mergeData({stores:rawStores(),entries:rawHist()},rm.data);mg.entries=dedupeRaw(mg.entries,new Date().toISOString());
    LS.set('p1_stores',seedStores(mg.stores));LS.set('p1_hist',mg.entries);
    if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
    const d=new Date();syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);refreshView();break}
@@ -342,11 +343,11 @@ function update(){const m=M[mid],c=calc(m,st);{const cnt=RATE.mode==='count';$('
  {const h=st.tS&&endT()?hours(st.tS,endT()):null,ok=h>0,yb2=x=>x==null?'-':sg(x)+'円／'+sg(x/EXC)+'玉';$('o_time').textContent=ok?`${st.tS}〜${endT()}（${h.toFixed(1)}時間）`:st.tS?`${st.tS}〜（保存で終了）`:'-';
   const a=ok&&c.pl!=null?c.pl/h:null,b=ok&&c.work!=null?c.work/h:null;setO('o_plh',yb2(a),a);setO('o_wkh',yb2(b),b)}return c}
 window.saveH=mode=>{read();const m=M[mid];const fv=$('f_tE').value;let end;if(mode==='input')end=st.locked&&!st.tEman?(st.tSaved||st.tE):(fv||nowHM());else end=st.locked?(st.tSaved||st.tE):(st.tL||fv||nowHM());st.tE=end;st.tSaved=end;st.locked=1;st.recId=st.recId||genId();st.tEman=false;$('f_tE').value=end;LS.set('p1_cur_'+mid,st);const c=update(),fp=fingerprint(mid,st),h=hist();
- if(h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
+ if(!h.some(e=>e.id===st.recId||(e.st&&e.st.recId===st.recId))&&h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
  const hr=hours(st.tS,st.tE);
- h.unshift({id:genId(),mid,machine:m.name,store:st.store,memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,st:JSON.parse(JSON.stringify(st)),
-  G:c.spT,adj:c.adj,r1m:c.r1m,r1p:c.r1p,borderSpins:c.sp,k:c.k,rate:c.rate,ratio:Math.round(c.r*100),work:c.work,yen:c.pl,cashYen:c.yen,ballsUsed:c.balls,hits:c.hits,rounds:c.rounds,firsts:c.firsts,exp:c.exp,tS:st.tS,tE:st.tE,tL:st.tL||'',hours:hr,exported:false});putHist(h);renderH();banner();update();alert('保存しました')};
-function renderH(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><small>${eLine(e)}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
+ const rec=({id:genId(),mid,machine:m.name,store:st.store,memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,st:JSON.parse(JSON.stringify(st)),
+  G:c.spT,adj:c.adj,r1m:c.r1m,r1p:c.r1p,borderSpins:c.sp,k:c.k,rate:c.rate,ratio:Math.round(c.r*100),work:c.work,yen:c.pl,cashYen:c.yen,ballsUsed:c.balls,hits:c.hits,rounds:c.rounds,firsts:c.firsts,exp:c.exp,tS:st.tS,tE:st.tE,tL:st.tL||'',hours:hr,exported:false});const ix=h.findIndex(e=>e.id===st.recId||(e.st&&e.st.recId===st.recId));if(ix>=0){rec.id=h[ix].id;h[ix]=rec}else{rec.id=st.recId;h.unshift(rec)}putHist(h);renderH();banner();update();alert('保存しました')};
+function renderH(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label>${BS}<small>${eLine(e)}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
 window.loadH=id=>{const e=hist().find(x=>x.id===id);if(!e)return;{const x=lockMig(JSON.parse(JSON.stringify(e.st)));x.recId=x.recId||e.id;if(e.tE){x.locked=1;x.tSaved=e.tE;x.tE=e.tE;x.tEman=false}LS.set('p1_cur_'+mid,x)}machine(mid)};
 window.delH=id=>{if(!confirm('この保存データを削除しますか？'))return;putHist(hist().filter(x=>x.id!==id));renderH();banner()};
 window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('p1_cur_'+mid);machine(mid)};
@@ -356,8 +357,12 @@ window.exportCSV=async all=>{const h=hist(),list=all?h:h.filter(e=>!e.exported);
  if(!ok){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
  const ids=new Set(list.map(e=>e.id));putHist(h.map(e=>ids.has(e.id)?{...e,exported:true}:e));banner();if(mid&&!$('mach').classList.contains('hidden'))renderH();else home()};
 function route(){const m=location.hash.match(/m=(\w+)/);if(m&&M[m[1]])machine(m[1]);else{mid=null;home()}}
-addEventListener('hashchange',route);route();syncNow(false)}
+{const r=rawHist(),d=dedupeRaw(r,new Date().toISOString()),n=d.filter((x,i)=>x.deleted&&!r[i].deleted).length;if(n){LS.set('p1_hist',d);LS.set('p1_hist_dedup',(LS.get('p1_hist_dedup',0)||0)+n)}}addEventListener('hashchange',route);route();syncNow(false)}
 // ===== 同期用の純粋関数（nodeでテスト可） =====
+// 同じ記録（recId、無ければid）の重複は最新(saved)の1件だけ残す。残りは削除扱い(tombstone)にして同期でも復活させない（何度実行しても同じ結果）
+function recKey(e){return(e.st&&e.st.recId)||e.id}
+function dedupeLive(list){const best=new Map();for(const e of list){const k=recKey(e),o=best.get(k);if(!o||String(e.saved||'')>String(o.saved||''))best.set(k,e)}return list.filter(e=>best.get(recKey(e))===e)}
+function dedupeRaw(raw,now){const live=raw.filter(x=>!x.deleted),keep=new Set(dedupeLive(live));return raw.map(x=>x.deleted||keep.has(x)?x:{id:x.id,deleted:true,updatedAt:now})}
 function storeKey(x){return 'n:'+String(x.name||'').trim()}
 function entryKey(x){return x.id}
 function strip(x){const{updatedAt,...r}=x;return JSON.stringify(r)}
@@ -381,5 +386,5 @@ function buildCSV(list){const Rs=[...new Set(MACHINES.flatMap(m=>m.R))].sort((a,
  const lines=[head.map(q).join(',')];for(const e of list){const s=e.st||{};const row=[e.id,e.date,e.store,e.machine,e.memo,e.G,r2(e.rate),e.ratio,e.cashYen,e.ballsUsed,r1(e.yen),r1(e.work),e.exp?r1(e.exp.ratio):'',e.exp?r1(e.exp.cash):'',e.exp?r1(e.exp.ball):'',e.tS,e.tE,r2(e.hours),e.hours>0&&e.work!=null?Math.round(e.work/e.hours):'',e.hours>0&&e.yen!=null?Math.round(e.yen/e.hours):'',...Rs.map(R=>(e.hits||{})[R]??''),e.saved||''];
   for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};RF.forEach(k=>row.push(w[k]??''));Rs.forEach(R=>row.push((w.r||{})[R]??''))}row.push(s.bOut??'');row.push(N(s.adj)??DEF_ADJ,e.r1m!=null?Math.round(e.r1m*10)/10:'',e.r1p!=null?Math.round(e.r1p*1000)/10:'');for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};row.push(w.d0??'',w.d1??'')}row.push(s.sv0??'',s.sv1??'',s.hb0??'',s.hb1??'',s.out??'');lines.push(row.map(q).join(','))}
  return '\ufeff'+lines.join('\r\n')}
-if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,mergeData});
+if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,mergeData,dedupeRaw,dedupeLive});
 </script></body></html>
