@@ -89,11 +89,12 @@ function calc(m,st){const adj=N(st.adj)??DEF_ADJ,P=P_(m,adj),r=(N(st.ratio)??def
  // 収支：現金投資・最初/最後の持ち玉（空欄なら表から自動）
  const filled=(st.rows||[]).filter(w=>w&&Object.values(w).some(v=>v!==''&&v!=null&&typeof v!=='object'));
  const autoInv=yen,autoB0=filled.length?N(filled[0].m0):null,autoB1=filled.length?N(filled[filled.length-1].m1):null;
- const inv=N(st.inv)??autoInv,b0=N(st.bStart)??autoB0??0,b1=N(st.bOut)??N(st.bEnd)??autoB1;
- const any=[st.inv,st.bEnd,st.bOut].some(x=>N(x)!=null)||k>0;
- const pl=any?((b1??0)-b0)*EXC-inv:null;
+ // 収支＝(回収−使用貯玉−使用所持玉)×3.57−現金投資合計（回収空欄＝0扱い→(所持後−所持前)+(貯後−貯前)）
+ const Z=x=>N(x)??0,inv=N(st.inv)??autoInv,usv=Z(st.sv0)-Z(st.sv1),uhb=Z(st.hb0)-Z(st.hb1),net=Z(st.out)-usv-uhb;
+ const any=[st.inv,st.sv0,st.sv1,st.hb0,st.hb1,st.out].some(x=>N(x)!=null)||k>0;
+ const pl=any?net*EXC-inv:null,b0=null,b1=null;
  const rounds=m.R.reduce((a,R)=>a+R*(hits[R]||0),0),firsts=rows.filter(x=>x.anyHit&&Object.values(x.hits).some(v=>v>0)).length,expR=spT/m.total;
- return{adj,r1e:r1e(m,adj),spT,r1m,r1p,rounds,firsts,expR,P,r,B,rows,sp,yen,balls,cs,bs,k,rate,work,exp,hits,inv,autoInv,autoB0,autoB1,b0,b1,pl}}
+ return{adj,r1e:r1e(m,adj),spT,r1m,r1p,rounds,firsts,expR,P,r,B,rows,sp,yen,balls,cs,bs,k,rate,work,exp,hits,inv,autoInv,autoB0,autoB1,b0,b1,usv,uhb,net,pl}}
 function hm2min(t){const x=String(t||'').match(/^(\d{1,2}):(\d{2})/);return x?+x[1]*60+ +x[2]:null}
 function hours(a,b){const x=hm2min(a),y=hm2min(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d/60}
 function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
@@ -105,7 +106,7 @@ const $=id=>document.getElementById(id),esc=t=>String(t??'').replace(/[&<>"]/g,c
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const pad=n=>String(n).padStart(2,'0'),today=()=>{const d=new Date();return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`},nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
 const blankRow=()=>({s0:'',s1:'',b0:'',b1:'',m0:'',m1:'',y0:'',y1:'',c0:'',c1:'',d0:'',d1:'',r:{}});
-const blank=()=>({store:'',memo:'',date:today(),ratio:'',inv:'',bStart:'',bEnd:'',bOut:'',adj:'',tS:'',tE:'',tEman:false,rows:Array.from({length:ROWS},blankRow)});
+const blank=()=>({store:'',memo:'',date:today(),ratio:'',inv:'',bStart:'',bEnd:'',bOut:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',adj:'',tS:'',tE:'',tEman:false,rows:Array.from({length:ROWS},blankRow)});
 let mid=null,st=null,more=false;
 const TOK='v2_token';// スロット版と同じ鍵を共有
 const rawStores=()=>LS.get('p1_stores',[]),rawHist=()=>LS.get('p1_hist',[]);
@@ -214,11 +215,14 @@ window.$=$;
 function adjBump(d){const e=document.getElementById('f_adj');const v=e.value===''?DEF_ADJ:+e.value;e.value=Math.round((v+d)*10)/10;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}))}
 function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
 const COLS=[['s0','打ち始め<br>回転数'],['s1','当たり時<br>回転数'],['ds','回した<br>回転数',null,1],['b0','打ち始め<br>回転数','bd'],['b1','打ち終わり<br>回転数','bd'],['m0','打ち始め<br>持ち玉','bd'],['m1','現在の<br>持ち玉','bd'],['y0','サンド投入<br>合計現金','bd'],['y1','現在サンド<br>表示現金','bd'],['c0','サンド打ち始<br>玉回数','bd'],['c1','サンド現在<br>玉回数','bd']];
+// 旧：最初の持ち玉/残った持ち玉/回収出玉 → 新：所持玉使用前/使用後/回収（旧の自動値も引き継ぐ）
+function migP(s){const E=x=>x===''||x==null;if(!s._p2&&E(s.hb0)&&E(s.hb1)&&E(s.out)){const f=(s.rows||[]).filter(w=>w&&Object.values(w).some(v=>v!==''&&v!=null&&typeof v!=='object'));
+ s.hb0=E(s.bStart)?(f.length?f[0].m0??'':''):s.bStart;if(!E(s.bOut)){s.out=s.bOut;s.hb1=''}else{s.hb1=E(s.bEnd)?(f.length?f[f.length-1].m1??'':''):s.bEnd;s.out=''}s.bStart='';s.bEnd='';s.bOut=''}s._p2=1;return s}
 function rowHtml(m,i){const w=st.rows[i]||blankRow();return`<tr id="tr${i}"${i>=ROWS0&&!more?' class="hidden"':''}><th>${i+1}回目</th>${COLS.map(([k,,c,x])=>x?`<td class="c" id="o${i}_ds">-</td>`:`<td class="${c||''}"><input id="r${i}_${k}" type="number" inputmode="numeric" value="${esc(w[k])}"${k==='b0'||k==='b1'?` placeholder="${esc(w[k==='b0'?'s0':'s1'])}"`:''}></td>`).join('')}<td class="c" id="o${i}_rate">-</td><td class="c" id="o${i}_dr">-</td><td class="c" id="o${i}_dc">-</td><td class="c" id="o${i}_db">-</td>${m.R.map(R=>`<td style="white-space:nowrap"><button class="sub sm" onclick="rb(${i},${R},-1)">−</button><input id="r${i}_R${R}" type="number" inputmode="numeric" value="${esc((w.r||{})[R]??'')}" style="width:40px;text-align:center"><button class="sub sm" onclick="rb(${i},${R},1)">＋</button></td>`).join('')}<td class="bd"><input id="r${i}_d0" type="number" inputmode="numeric" value="${esc(w.d0??'')}"></td><td class="bd"><input id="r${i}_d1" type="number" inputmode="numeric" value="${esc(w.d1??'')}"></td><td class="c" id="o${i}_r1">-</td><td class="c" id="o${i}_r1p">-</td></tr>`}
-function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'+k,{}));while(st.rows.length<ROWS)st.rows.push(blankRow());
+function machine(k){mid=k;const m=M[k];st=migP(Object.assign(blank(),LS.get('p1_cur_'+k,{})));while(st.rows.length<ROWS)st.rows.push(blankRow());
  more=st.rows.slice(ROWS0).some(w=>Object.entries(w).some(([a,v])=>a==='r'?Object.values(v||{}).some(x=>x!==''&&x!=null):v!==''&&v!=null));
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');const B0=borders(m,defRatio(m)/100);
- el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px;display:flex;gap:10px;align-items:center">${thumb(k,40)}<span>${esc(m.name)}<br><small class="note">初当たり1/${m.first}・トータル1/${m.total}（${esc(m.cond||'残保留あり')}）・1R ${m.r1}玉・1回転 ${P_(m).toFixed(2)}玉</small></span></h1>
+ el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px;display:flex;gap:10px;align-items:center">${thumb(k,40)}<span>${esc(m.name)}<br><small class="note">初当たり1/${m.first}・トータル1/${m.total}（${esc(m.cond||'残保留あり')}）・1R ${m.r1}玉・1回転 ${(m.r1/m.total).toFixed(2)}玉</small></span></h1>
  <div class="card"><h2>台情報</h2>
  <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read()}this.value=''"><option value="">▼</option>${stores().map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
@@ -235,10 +239,13 @@ function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'
  <tr style="background:#eef2fa;font-weight:bold"><th>合計</th><td colspan="3" id="o_sp">-</td><td colspan="3" class="bd" id="o_used">-</td><td colspan="5" class="bd" id="o_k">-</td><td class="c" id="o_rate">-</td><td class="c" id="o_dr">-</td><td class="c" id="o_dc">-</td><td class="c" id="o_db">-</td>${m.R.map(R=>`<td id="o_R${R}">0</td>`).join('')}<td colspan="2" class="bd" id="o_dg">-</td><td class="c" id="o_r1">-</td><td class="c" id="o_r1p">-</td></tr></table></div>
  <button class="sub" id="moreBtn" onclick="showMore()"${more?' style="display:none"':''}>さらに表示（11〜20回目）</button></div>
  <div class="card"><h2>収支</h2>
- <div class="row"><label>現金投資（円）<small>空欄＝表の現金合計</small></label>${inp('f_inv',st.inv)}</div>
- <div class="row"><label>最初の持ち玉<small>空欄＝1回目の打ち始め持ち玉</small></label>${inp('f_bStart',st.bStart)}</div>
- <div class="row"><label>残った持ち玉<small>空欄＝最後の行の現在の持ち玉</small></label>${inp('f_bEnd',st.bEnd)}</div>
- <div class="row"><label>回収出玉<small>入れると残った持ち玉の代わりに収支に使います</small></label>${inp('f_bOut',st.bOut??'')}</div>
+ <div class="row"><label>現金投資合計（円）<small>打ってる間にサンドに入れたお金の合計を入力</small></label>${inp('f_inv',st.inv)}</div>
+ <div class="row"><label>貯玉数使用前<small>打ち始める段階の貯玉数を入力</small></label>${inp('f_sv0',st.sv0??'')}</div>
+ <div class="row"><label>貯玉使用後<small>打ち終わりの段階の残った貯玉数を入力</small></label>${inp('f_sv1',st.sv1??'')}</div>
+ <div class="row"><label>所持玉使用前<small>打ち始める段階の所持玉数を入力</small></label>${inp('f_hb0',st.hb0??'')}</div>
+ <div class="row"><label>所持玉使用後<small>打ち終わりの段階の残った所持玉数を入力</small></label>${inp('f_hb1',st.hb1??'')}</div>
+ <div class="row"><label>回収<small>最後に流した玉数を入力</small></label>${inp('f_out',st.out??'')}</div>
+ <div class="row"><label>使用貯玉数／使用所持玉数</label><b id="o_used2">-</b></div>
  <div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝保存を押した時刻（手で直せます）</small></label></div>
  <div class="row"><label style="text-align:right">開始</label>${inp('f_tS',st.tS,'time','style="width:110px"')}<label style="text-align:right">終了</label>${inp('f_tE',st.tE,'time','style="width:110px"')}</div>
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div>
@@ -252,11 +259,11 @@ function machine(k){mid=k;const m=M[k];st=Object.assign(blank(),LS.get('p1_cur_'
  update();renderH();banner();scrollTo(0,0)}
 window.showMore=()=>{more=true;for(let i=ROWS0;i<ROWS;i++)$('tr'+i).classList.remove('hidden');$('moreBtn').style.display='none'};
 window.rb=(i,R,d)=>{const x=$('r'+i+'_R'+R);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);read()};
-function read(ev){for(const f of['store','memo','date','ratio','adj','inv','bStart','bEnd','bOut','tS','tE'])st[f]=$('f_'+f).value;
+function read(ev){for(const f of['store','memo','date','ratio','adj','inv','sv0','sv1','hb0','hb1','out','tS','tE'])st[f]=$('f_'+f).value;
  if(ev&&ev.target&&ev.target.id==='f_tE')st.tEman=true;
  const m=M[mid];let any=false;for(let i=0;i<ROWS;i++){const w=blankRow();for(const[k,,,x]of [...COLS,['d0'],['d1']]){if(x)continue;w[k]=$('r'+i+'_'+k).value;if(w[k]!=='')any=true}for(const R of m.R){const v=$('r'+i+'_R'+R).value;if(v!==''){w.r[R]=Math.max(0,parseInt(v)||0);any=true}}st.rows[i]=w;
   $('r'+i+'_b0').placeholder=w.s0;$('r'+i+'_b1').placeholder=w.s1}
- if(!any)for(const f of['inv','bStart','bEnd','bOut'])if(st[f]!=='')any=true;
+ if(!any)for(const f of['inv','sv0','sv1','hb0','hb1','out'])if(st[f]!=='')any=true;
  if(any&&!st.tS){st.tS=nowHM();$('f_tS').value=st.tS}
  LS.set('p1_cur_'+mid,st);update()}
 function setO(id,v,c){const e=$(id);if(!e)return;e.textContent=v;e.style.color=c>0?'#1e5bd6':c<0?'#d62828':''}
@@ -273,7 +280,7 @@ function update(){const m=M[mid],c=calc(m,st);setO('o_br',f2(c.B.ratio));setO('o
  setO('o_sp',c.spT.toLocaleString()+'回転');setO('o_used',c.balls.toLocaleString()+'玉');setO('o_k',c.yen.toLocaleString()+'円');setO('o_rate',f2(c.rate));
  const d=b=>c.rate==null?null:c.rate-b;setO('o_dr',sg2(d(c.B.ratio)),d(c.B.ratio));setO('o_dc',sg2(d(c.B.cash)),d(c.B.cash));setO('o_db',sg2(d(c.B.ball)),d(c.B.ball));
  m.R.forEach(R=>setO('o_R'+R,c.hits[R]));
- $('f_inv').placeholder=c.autoInv||'';$('f_bStart').placeholder=c.autoB0??'';$('f_bEnd').placeholder=c.autoB1??'';
+ $('f_inv').placeholder=c.autoInv||'';$('o_used2').textContent=c.usv.toLocaleString()+'玉／'+c.uhb.toLocaleString()+'玉';
  const yb=x=>x==null?'-':sg(x)+'円（'+sg(x/EXC)+'玉）';setO('o_pl',yb(c.pl),c.pl);setO('o_work',yb(c.work),c.work);
  {const cr=c.k>0?(c.yen/1000)/c.k*100:null,dd=b=>c.rate==null?null:c.rate-b,rw=(l,v,col)=>`<div class="row"><label>${l}</label><b${col==null?'':pc(col)}>${v}</b></div>`,dR=c.rounds-c.expR;
   $('o_res').innerHTML=rw('総回転数',c.spT.toLocaleString()+'回転')+rw('回転率',f2(c.rate)+' 回転/k')+rw('比率ボーダー±',sg2(dd(c.B.ratio)),dd(c.B.ratio))+rw('現金ボーダー±',sg2(dd(c.B.cash)),dd(c.B.cash))+rw('持ち玉ボーダー±',sg2(dd(c.B.ball)),dd(c.B.ball))
@@ -320,9 +327,9 @@ function buildCSV(list){const Rs=[...new Set(MACHINES.flatMap(m=>m.R))].sort((a,
  const nr=Math.max(0,...list.map(e=>((e.st||{}).rows||[]).reduce((a,w,i)=>w&&Object.entries(w).some(([k,v])=>k==='r'?Object.keys(v||{}).length:v!==''&&v!=null)?i+1:a,0)));
  const r1=x=>x==null?'':Math.round(x*10)/10,r2=x=>x==null?'':Math.round(x*100)/100;
  const head=['id','日付','店舗','機種','台番号/メモ','総回転数','回転率','持ち玉比率%','現金投資(円)','使った持ち玉','収支(円)','仕事量(円)','見込み(比率)','見込み(現金)','見込み(持ち玉)','開始','終了','時間','仕事量時給','収支時給',...Rs.map(R=>R+'R回数'),'保存日時'];
- for(let i=0;i<nr;i++){RL.forEach(l=>head.push((i+1)+'回目:'+l));Rs.forEach(R=>head.push((i+1)+'回目:'+R+'R'))}head.push(...ex2,'1R出玉増減率%(設定)','実測1R出玉','実測1R増減率%');for(let i=0;i<nr;i++)head.push((i+1)+'回目:出玉計算開始持ち玉',(i+1)+'回目:出玉計算終わり持ち玉');
+ for(let i=0;i<nr;i++){RL.forEach(l=>head.push((i+1)+'回目:'+l));Rs.forEach(R=>head.push((i+1)+'回目:'+R+'R'))}head.push(...ex2,'1R出玉増減率%(設定)','実測1R出玉','実測1R増減率%');for(let i=0;i<nr;i++)head.push((i+1)+'回目:出玉計算開始持ち玉',(i+1)+'回目:出玉計算終わり持ち玉');head.push('貯玉数使用前','貯玉使用後','所持玉使用前','所持玉使用後','回収');
  const lines=[head.map(q).join(',')];for(const e of list){const s=e.st||{};const row=[e.id,e.date,e.store,e.machine,e.memo,e.G,r2(e.rate),e.ratio,e.cashYen,e.ballsUsed,r1(e.yen),r1(e.work),e.exp?r1(e.exp.ratio):'',e.exp?r1(e.exp.cash):'',e.exp?r1(e.exp.ball):'',e.tS,e.tE,r2(e.hours),e.hours>0&&e.work!=null?Math.round(e.work/e.hours):'',e.hours>0&&e.yen!=null?Math.round(e.yen/e.hours):'',...Rs.map(R=>(e.hits||{})[R]??''),e.saved||''];
-  for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};RF.forEach(k=>row.push(w[k]??''));Rs.forEach(R=>row.push((w.r||{})[R]??''))}row.push(s.bOut??'');row.push(N(s.adj)??DEF_ADJ,e.r1m!=null?Math.round(e.r1m*10)/10:'',e.r1p!=null?Math.round(e.r1p*1000)/10:'');for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};row.push(w.d0??'',w.d1??'')}lines.push(row.map(q).join(','))}
+  for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};RF.forEach(k=>row.push(w[k]??''));Rs.forEach(R=>row.push((w.r||{})[R]??''))}row.push(s.bOut??'');row.push(N(s.adj)??DEF_ADJ,e.r1m!=null?Math.round(e.r1m*10)/10:'',e.r1p!=null?Math.round(e.r1p*1000)/10:'');for(let i=0;i<nr;i++){const w=(s.rows||[])[i]||{};row.push(w.d0??'',w.d1??'')}row.push(s.sv0??'',s.sv1??'',s.hb0??'',s.hb1??'',s.out??'');lines.push(row.map(q).join(','))}
  return '\ufeff'+lines.join('\r\n')}
 if(typeof module!=='undefined')Object.assign(module.exports,{buildCSV,mergeData});
 </script></body></html>
