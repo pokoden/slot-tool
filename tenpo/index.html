@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>店舗データ</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="店舗データ"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
+<style>
+*{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
+h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:8px}
+.row label{flex:1;font-size:.92em}.row small,.note{color:#777;font-size:.78em}.row small{display:block}
+input,select{width:96px;padding:8px;font-size:1em;border:1px solid #ccd;border-radius:8px;text-align:right;background:#fff}
+input[type=text],input[type=date]{width:160px;text-align:left}
+button{width:100%;padding:13px;font-size:1.05em;border:0;border-radius:10px;background:#2b6fe8;color:#fff;font-weight:bold;margin-top:8px;cursor:pointer}
+button.sub{background:#e4e8f0;color:#333}button.sm{width:auto;padding:7px 10px;font-size:.85em;margin:0}
+.mbtn{text-align:left;background:#fff;color:#222;border:2px solid #2b6fe8;font-size:1.05em}
+.bar{height:20px;background:#e8edf6;border-radius:10px;overflow:hidden;flex:2}.bar div{height:100%;background:#2b6fe8}
+.res .row span{width:58px;text-align:right;font-weight:bold}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.76em;white-space:nowrap}td,th{border:1px solid #dde;padding:4px;text-align:center}th{background:#eef2fa}
+td.hit{background:#ff9f2e;color:#fff;font-weight:bold}td.me{background:#fff7e6;font-weight:bold}
+.chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:.9em}.chk input{width:22px;height:22px;flex:none}
+.tag{font-size:.72em;padding:1px 6px;border-radius:6px;background:#eef2fa;color:#2b6fe8;margin-left:4px}
+.warn{background:#ffe9e9;color:#c00;padding:8px;border-radius:8px;font-size:.9em}
+.banner{background:#fff3d6;color:#8a5a00;padding:10px;border-radius:10px;margin-bottom:12px;font-size:.92em}
+.seg{display:flex;gap:6px}.seg button{margin:0;padding:9px;font-size:.88em}
+a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
+.pt{font-size:.8em}.pt input{width:64px;padding:6px 4px;font-size:16px;text-align:right}.pt td,.pt th{padding:3px}.pt th{font-size:.85em;white-space:normal;min-width:56px}
+.pt td.c{font-weight:bold;min-width:56px}.pt .bd{background:#f6f8fc}.pt button.sm{width:30px;height:32px;padding:0}.pt th.g{background:#fff3d6}.mbtn.ytm{border-color:#d62828}.ytb{color:#d62828;font-weight:bold}.pt td.yt input{border:2px solid #2b6fe8}.pt th.yt,.pt td.yt{background:#e6f0ff}.pt th.grp{background:#dde6f5;font-size:.85em}.bx td input{width:80px}
+.big{font-size:1.15em}
+</style><style>#all td,#sum td{font-size:1.05em}button.sm:disabled{opacity:.4}</style></head><body><div id="app"><p class="note">読み込み中…</p></div><script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const COLS=[['機種','機種','s'],['台番','台番','n'],['差枚','差枚','n'],['G数','G数','n'],['出率','出率','n'],['BB','BB','n'],['RB','RB','n'],['合成','合成','r'],['BB率','BB率','r'],['RB率','RB率','r']];
+const SC=[['name','機種','s'],['n','台数','n'],['avgD','平均差枚','n'],['avgG','平均G数','n'],['sumD','合計差枚','n']];
+let stores=[],idx=null,data=null,S=Object.assign({store:'',date:'',sort:'台番',dir:1,ssort:'n',sdir:-1,mach:''},LS.get('tp_s',{}));
+const save=()=>LS.set('tp_s',{store:S.store,sort:S.sort,dir:S.dir,ssort:S.ssort,sdir:S.sdir});
+const sgn=x=>x==null?'-':(x>0?'+':'')+Math.round(x).toLocaleString(),pc=x=>x>0?' style="color:#1e5bd6;font-weight:bold"':x<0?' style="color:#d62828;font-weight:bold"':'';
+const fmt=(k,v)=>v==null?'-':k==='差枚'?sgn(v):k==='出率'?v+'%':typeof v==='number'?v.toLocaleString():esc(v);
+const rv=v=>{if(v==null)return null;const m=String(v).match(/^1\/(\d+(?:\.\d+)?)$/);return m?+m[1]:null};// 1/xxx は分母で比較
+async function J(u){const r=await fetch(u+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error(r.status);return r.json()}
+async function init(){try{stores=await J('data/stores.json')}catch(e){stores=[]}if(!stores.length){$('app').innerHTML=head()+'<div class="card"><p class="note">データがまだありません</p></div>';return}
+ if(!stores.some(s=>s.key===S.store))S.store=stores[0].key;await loadStore()}
+async function loadStore(){idx=await J('data/'+S.store+'/index.json');if(!idx.dates.includes(S.date))S.date=idx.dates[0];await loadDate()}
+async function loadDate(){data=await J('data/'+S.store+'/'+S.date+'.json');if(S.mach&&!data.rows.some(r=>r.機種===S.mach))S.mach='';render()}
+const head=()=>`<h1>📊 店舗データ</h1>`;
+function sortRows(rows,k,dir,type){return rows.slice().sort((a,b)=>{let x=a[k],y=b[k];if(type==='r'){x=rv(x);y=rv(y)}if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return-1;return(typeof x==='string'?x.localeCompare(y,'ja'):x-y)*dir})}
+function render(){const di=idx.dates.indexOf(S.date),rows=data.rows;
+ const g=new Map();for(const r of rows){if(!g.has(r.機種))g.set(r.機種,{name:r.機種,n:0,d:0,dn:0,G:0,gn:0});const o=g.get(r.機種);o.n++;if(r.差枚!=null){o.d+=r.差枚;o.dn++}if(r.G数!=null){o.G+=r.G数;o.gn++}}
+ let sum=[...g.values()].map(o=>({name:o.name,n:o.n,avgD:o.dn?o.d/o.dn:null,avgG:o.gn?o.G/o.gn:null,sumD:o.dn?o.d:null}));sum=sortRows(sum,S.ssort,S.sdir,(SC.find(c=>c[0]===S.ssort)||[])[2]);
+ const tot={n:rows.length,d:rows.reduce((a,r)=>a+(r.差枚||0),0),G:rows.reduce((a,r)=>a+(r.G数||0),0)};
+ const list=sortRows(S.mach?rows.filter(r=>r.機種===S.mach):rows,S.sort,S.dir,(COLS.find(c=>c[0]===S.sort)||[])[2]);
+ const ar=(k,cur,dir)=>k===cur?(dir>0?' ▲':' ▼'):'';
+ $('app').innerHTML=head()+`<div class="card"><div class="row"><label>店舗</label><select id="sel_store" style="flex:1;font-size:16px;text-align:left" onchange="setStore(this.value)">${stores.map(s=>`<option value="${esc(s.key)}"${s.key===S.store?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+ <div class="row"><button class="sub sm" id="d_prev" onclick="step(1)"${di>=idx.dates.length-1?' disabled':''}>◀ 前日</button><select id="sel_date" style="flex:1;font-size:16px;text-align:center" onchange="setDate(this.value)">${idx.dates.map(d=>`<option${d===S.date?' selected':''}>${d}</option>`).join('')}</select><button class="sub sm" id="d_next" onclick="step(-1)"${di<=0?' disabled':''}>翌日 ▶</button></div>
+ <p class="note">${g.size}機種・${tot.n}台・合計差枚 <b${pc(tot.d)}>${sgn(tot.d)}</b>・平均G数 ${tot.n?Math.round(tot.G/tot.n).toLocaleString():'-'}　出典：<a href="${esc(data.source)}" target="_blank">みんレポ</a></p></div>
+ <div class="card"><h2>機種ごとのまとめ <small class="note">列名タップで並べ替え・機種名タップで絞り込み</small></h2><div class="tw"><table id="sum"><tr>${SC.map(([k,l])=>`<th style="cursor:pointer" onclick="ssort('${k}')">${l}${ar(k,S.ssort,S.sdir)}</th>`).join('')}</tr>${sum.map(o=>`<tr${o.name===S.mach?' style="background:#fff7e6"':''}><td style="text-align:left;white-space:normal;color:#2b6fe8;cursor:pointer" onclick="setMach(${JSON.stringify(o.name).replace(/"/g,'&quot;')},1)">${esc(o.name)}</td><td>${o.n}</td><td${pc(o.avgD)}>${sgn(o.avgD)}</td><td>${o.avgG==null?'-':Math.round(o.avgG).toLocaleString()}</td><td${pc(o.sumD)}>${sgn(o.sumD)}</td></tr>`).join('')}</table></div></div>
+ <div class="card"><h2>全台 <small class="note">${list.length}台</small></h2><div class="row"><label>機種で絞り込み</label><select id="sel_mach" style="flex:1;font-size:16px;text-align:left;min-width:0" onchange="setMach(this.value)"><option value="">全機種</option>${[...g.keys()].sort((a,b)=>a.localeCompare(b,'ja')).map(n=>`<option${n===S.mach?' selected':''}>${esc(n)}</option>`).join('')}</select></div>
+ <div class="tw"><table id="all"><tr>${COLS.map(([k,l])=>`<th style="cursor:pointer" onclick="sort('${k}')">${l}${ar(k,S.sort,S.dir)}</th>`).join('')}</tr>${list.map(r=>`<tr>${COLS.map(([k])=>`<td${k==='機種'?' style="text-align:left;max-width:150px;overflow:hidden;text-overflow:ellipsis"':k==='差枚'?pc(r[k]):''}>${fmt(k,r[k])}</td>`).join('')}</tr>`).join('')}</table></div></div>
+ <p class="note">データ：みんレポ（min-repo.com）から毎日取得。取得 ${esc(data.fetchedAt||'')}</p>`}
+window.setStore=async k=>{S.store=k;S.mach='';save();await loadStore()};
+window.setDate=async d=>{S.date=d;await loadDate()};
+window.step=async d=>{const i=idx.dates.indexOf(S.date)+d;if(i>=0&&i<idx.dates.length){S.date=idx.dates[i];await loadDate()}};
+window.setMach=(m,t)=>{S.mach=t&&S.mach===m?'':m;render();if(t)$('all').scrollIntoView({block:'start'})};
+window.sort=k=>{if(S.sort===k)S.dir=-S.dir;else{S.sort=k;S.dir=(COLS.find(c=>c[0]===k)[2]==='s'||k==='台番')?1:-1}save();const y=scrollY;render();scrollTo(0,y)};
+window.ssort=k=>{if(S.ssort===k)S.sdir=-S.sdir;else{S.ssort=k;S.sdir=k==='name'?1:-1}save();const y=scrollY;render();scrollTo(0,y)};
+init().catch(e=>{$('app').innerHTML=head()+'<div class="card"><p class="warn">読み込みに失敗しました：'+esc(e.message)+'</p></div>'});
+</script></body></html>
