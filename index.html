@@ -308,7 +308,7 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
   const ks=m.at?['xbig','xreg']:(m.els.some(e=>e.k==='big')?['big','reg']:null);
   if(ks){const c=k=>st.v[k]!=null&&st.v[k]!==''?Math.max(0,(+st.v[k]||0)-(+st.v[k+'_s']||0)):0,b=c(ks[0]),r=c(ks[1]),g=gm||0,pr=n=>n>0&&g>0?'1/'+(g/n).toFixed(1):'-';
    x+=[['BB',b],['RB',r],['合成',b+r]].map(([l,n])=>`<div class="row"><label>${l}</label><b>${n}回　${pr(n)}</b></div>`).join('')}}
-  if(mo.any)x+=`<div class="row"><label>機械割</label><b${pc(pm==null?null:pm-100)}>${pm==null?'-':r1(pm)+'%'}</b></div>`;
+  if(mo.any)x+=`<div class="row"><label>機械割</label><b${pc(pm==null?null:pm-100)}>${pm==null?'-':pm.toFixed(1)+'%'}</b></div>`;
 if(x)$('money').innerHTML+=x}
  const sm=summary(m,st);let o='';
  if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
