@@ -239,13 +239,14 @@ function home(){$('mach').classList.add('hidden');$('home').classList.remove('hi
  <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
  <div class="card"><h2>同期設定（2台で共有）</h2><p class="note">GitHubの鍵（トークン）を入れると、店舗設定と保存データが他のiPhoneと自動で同期されます。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" placeholder="${LS.get('v2_token','')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div>
- <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button><button class="sub sm" onclick="clearToken()">鍵を削除</button>
+ <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button><button class="sub" onclick="copyToken()">トークンをコピー</button><button class="sub sm" onclick="clearToken()">鍵を削除</button>
  <p class="note" id="sy_st"></p></div>`;renderStores();banner();syncStatus()}
 // ===== GitHub同期 =====
 const SYNC_URL='https://api.github.com/repos/pokoden/slot-data/contents/data.json';
 let syncing=false,again=false,syncT=null;
 function syncStatus(t){if(t!=null)LS.set('v2_sync_msg',t);const el=$('sy_st');if(!el)return;const tok=LS.get('v2_token','');el.textContent=!tok?'未設定（この端末だけに保存中）':LS.get('v2_sync_msg','')}
 window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set('v2_token',v);$('sy_tok').value='';syncNow(true)};
+window.copyToken=async()=>{const t=LS.get('v2_token','');if(!t){alert('この端末にはトークンが入ってないよ');return}try{await navigator.clipboard.writeText(t);alert('コピーしたよ。貯玉管理のトークン欄に貼ってね')}catch(e){prompt('長押しでコピーしてね',t)}};
 window.clearToken=()=>{if(!confirm('この端末の同期キーを削除しますか？（データは残ります）'))return;LS.del('v2_token');home()};
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
 async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
