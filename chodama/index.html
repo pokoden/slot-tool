@@ -55,7 +55,8 @@ function netOf(k,e){const s=e.st||{};
 const CASH='cd_cash',cashList=()=>LS.get(CASH,[])||[],cashOf=id=>{const x=cashList().find(t=>t.id===id);return x&&x.v!==''&&x.v!=null&&isFinite(+x.v)?+x.v:null};
 const tobList=()=>LS.get(TOB,[])||[],tobOn=id=>{const x=tobList().find(t=>t.id===id);return!!(x&&x.on)};
 function mergeTob(a,b){const m=new Map();for(const x of[...(a||[]),...(b||[])]){const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}return[...m.values()]}
-function calcKind(k){const rows=new Map();for(const e of records(k)){const st=sk(e.store),d=e.date||String(e.saved||'').slice(0,10),key=st+'|'+d;if(!rows.has(key))rows.set(key,{store:st,date:d,net:0,n:0});const r=rows.get(key);r.net+=netOf(k,e);r.n++}
+function calcKind(k){const rows=new Map();for(const e of records(k)){if(e.src==='excel')continue;// エクセル取込分は貯玉計算に入れない
+ const st=sk(e.store),d=e.date||String(e.saved||'').slice(0,10),key=st+'|'+d;if(!rows.has(key))rows.set(key,{store:st,date:d,net:0,n:0});const r=rows.get(key);r.net+=netOf(k,e);r.n++}
  const out=[...rows.values()].map(r=>{const id=k+'|'+r.store+'|'+r.date,yp=yenPer(k,r.store),on=tobOn(id),tob=on&&yp?Math.round(TOB_YEN/yp):0;return{...r,id,yp,on,tob,res:r.net-tob}});
  // 同じ店舗は日付の古い順に累積：増減→タバコ→（現金換金の入力があれば）残高をその数に置き換え
  const bal=new Map();for(const r of[...out].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0)){const o=bal.get(r.store)||{store:r.store,bal:0,yp:r.yp};o.bal+=r.res;r.cash=cashOf(r.id);if(r.cash!=null)o.bal=r.cash;r.after=o.bal;bal.set(r.store,o)}
