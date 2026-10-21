@@ -10,7 +10,7 @@
 #wrap{position:fixed;inset:0;touch-action:none}svg{width:100%;height:100%;display:block}
 .nd rect.b{rx:12;stroke-width:1.6}.nd.m rect.b{fill:#e6f0fd;stroke:#5b8fd9}.nd.f rect.b{fill:#fdeaf1;stroke:#d9719a}.nd.u rect.b{fill:#f0f0f0;stroke:#aaa}
 .nd.dead{opacity:.55}.nd.gh rect.b{fill:#fff;stroke-dasharray:5 4}.nd.me rect.b{stroke:#e0a400;stroke-width:3.2}
-.nd text{font-size:13px;fill:#222}.nd .s{font-size:10.5px;fill:#666}.nd .r{font-size:10px;fill:#a0731a;font-weight:bold}
+.nd text{font-size:13px;fill:#222}.nd .s{font-size:10.5px;fill:#666}.nd .r{font-size:10.5px;fill:#a0731a;font-weight:bold}
 .ln{stroke:#9c8f78;stroke-width:1.6;fill:none}.mar{stroke:#c0577f;stroke-width:2.2}.gl{stroke:#bbb;stroke-dasharray:4 4}
 .ab rect{fill:#3b6fd6;rx:11}.ab text{fill:#fff;font-size:11.5px;font-weight:bold;text-anchor:middle}.nd.sel rect.b{stroke:#3b6fd6;stroke-width:3.2}.tg circle{fill:#fff;stroke:#9c8f78;stroke-width:1.4}.tg text{font-size:11px;fill:#6b5d43;text-anchor:middle}
 .hl rect.b{animation:hl 1s ease-in-out 4;stroke:#ff9800!important;stroke-width:4!important}@keyframes hl{50%{fill:#fff3c4}}
@@ -112,9 +112,16 @@ function layout(){const L=plan(),seen=new Set();POS=new Map();GH=[];LN=[];TG=[];
 // ---- 描画 ----
 let TR=LS.get('kz_tr',null)||{x:20,y:80,k:1},hlId=null;
 function card(p,x,y,cls,extra){const s=p.sex==='m'?'m':p.sex==='f'?'f':'u',dead=isDead(p),a=ageAt(p.birth,p.death),yr=pp(p.birth)?pp(p.birth).y:'?',dy=pp(p.death)?pp(p.death).y:'',r=relC.get(p.id)??(relC.set(p.id,relOf(p.id)),relC.get(p.id));
- const n=nm(p),nn=n.length>8?n.slice(0,8)+'…':n,sub=dead?`${yr}–${dy||'?'}${a!=null?' ('+a+'歳)':''}`:(pp(p.birth)?`${yr}年生 ${a}歳`:'');const bt=boTxt(p);const sub2=bt?(sub?sub+' ・'+bt:bt):sub;
+ const n=nm(p),nn=n.length>8?n.slice(0,8)+'…':n,since=dead&&p.death?ageAt(p.death,null):null,sub2=dead?(pp(p.birth)||p.death?`${yr}–${dy||'?'}`:'')+(since!=null?(since===0?' 死後1年未満':` 死後${since}年`):''):(a!=null?`${yr}年生 ${pd(p.birth)?'':'約'}${a}歳`:'');const bt=sibOrd(p),r2=r?(bt?`${r}（${bt}）`:r):(bt?`（${bt}）`:'');
  return`<g class="nd ${s}${dead?' dead':''}${cls||''}${p.id===D.meta.self?' me':''}${p.id===hlId?' hl':''}" data-id="${p.id}"${extra||''} transform="translate(${x},${y})"><rect class="b" width="${W}" height="${H}"/>${p.photo?`<clipPath id="c${p.id}${cls?'g':''}"><circle cx="20" cy="${H/2}" r="15"/></clipPath><image href="${p.photo}" x="5" y="${H/2-15}" width="30" height="30" clip-path="url(#c${p.id}${cls?'g':''})" preserveAspectRatio="xMidYMid slice"/>`:''}
- <text x="${p.photo?40:10}" y="22" font-weight="bold">${dead?'✝ ':''}${esc(nn)}${cls?' ⇢':''}</text><text class="s" x="${p.photo?40:10}" y="38">${esc(sub2)}</text>${r?`<text class="r" x="${p.photo?40:10}" y="53">${esc(r)}</text>`:''}</g>`}
+ <text x="${p.photo?40:10}" y="22" font-weight="bold">${dead?'✝ ':''}${esc(nn)}${cls?' ⇢':''}</text><text class="s" x="${p.photo?40:10}" y="38"${fitT(sub2,10.5,p.photo)}>${esc(sub2)}</text>${r2?`<text class="r" x="${p.photo?40:10}" y="53"${fitT(r2,10.5,p.photo)}>${esc(r2)}</text>`:''}</g>`}
+// 文字がカードからはみ出す時だけ横に詰める
+function fitT(t,fs,ph){const w=[...String(t)].reduce((a,c)=>a+(c.charCodeAt(0)<256?.58:1),0)*fs,mx=W-(ph?46:16);return w>mx?` textLength="${mx}" lengthAdjust="spacingAndGlyphs"`:''}
+// 親から見た生まれ順（同じ性別の兄弟の中で）。順番が分からなければ''
+const ORDN=['','長','次','三','四','五','六','七','八','九','十'];
+function sibOrd(p){if(p.bo==='only')return'一人っ子';if(p.sex!=='m'&&p.sex!=='f')return'';if(!p.father&&!p.mother)return'';const known=x=>(x.bo&&x.bo!=='unk')||x.order||pp(x.birth);
+ const sib=P().filter(x=>x.sex===p.sex&&((p.father&&x.father===p.father)||(p.mother&&x.mother===p.mother)));if(!sib.every(known))return'';sib.sort((a,b)=>{const ka=x=>x.bo==='only'?0:x.bo==='last'?999:(+x.bo>0?+x.bo:null),A=ka(a),B=ka(b);if(A!=null&&B!=null&&A!==B)return A-B;if(a.order&&b.order&&a.order!==b.order)return a.order-b.order;return bsort(a,b)});const i=sib.findIndex(x=>x.id===p.id);if(i<0)return'';
+ return(ORDN[i+1]||(i+1)+'番目の')+(p.sex==='m'?'男':'女')}
 function draw(){const L=layout(),svgs=[];
  if(!hasTok()){$('vp').innerHTML='';$('empty').style.display='flex';$('empty').innerHTML='<div><p style="font-size:1.1em">🔒 同期の設定が必要です</p><p style="font-size:.9em">右上の ⚙ からトークンを入れると、家系図を読み込みます。</p></div>';return}
  if(!P().length){$('empty').style.display='flex';$('empty').innerHTML='<div><p>まだ誰もいません</p><button class="btn p" onclick="addFirst()">最初の人を追加</button></div>'}else $('empty').style.display='none';
