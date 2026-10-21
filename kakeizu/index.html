@@ -12,9 +12,9 @@
 .nd.dead{opacity:.55}.nd.gh rect.b{fill:#fff;stroke-dasharray:5 4}.nd.me rect.b{stroke:#e0a400;stroke-width:3.2}
 .nd text{font-size:13px;fill:#222}.nd .s{font-size:10.5px;fill:#666}.nd .r{font-size:10px;fill:#a0731a;font-weight:bold}
 .ln{stroke:#9c8f78;stroke-width:1.6;fill:none}.mar{stroke:#c0577f;stroke-width:2.2}.gl{stroke:#bbb;stroke-dasharray:4 4}
-.tg circle{fill:#fff;stroke:#9c8f78;stroke-width:1.4}.tg text{font-size:11px;fill:#6b5d43;text-anchor:middle}
+.ab rect{fill:#3b6fd6;rx:11}.ab text{fill:#fff;font-size:11.5px;font-weight:bold;text-anchor:middle}.nd.sel rect.b{stroke:#3b6fd6;stroke-width:3.2}.tg circle{fill:#fff;stroke:#9c8f78;stroke-width:1.4}.tg text{font-size:11px;fill:#6b5d43;text-anchor:middle}
 .hl rect.b{animation:hl 1s ease-in-out 4;stroke:#ff9800!important;stroke-width:4!important}@keyframes hl{50%{fill:#fff3c4}}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 22px rgba(0,0,0,.2);max-height:82vh;overflow:auto;transform:translateY(105%);transition:transform .25s;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 22px rgba(0,0,0,.2);max-height:58vh;overflow:auto;transform:translateY(105%);transition:transform .25s;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
 #sheet.on{transform:none}.hd{display:flex;gap:12px;align-items:center}.ph{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#eee;flex:none;display:flex;align-items:center;justify-content:center;font-size:26px;color:#bbb}
 .rel{display:inline-block;background:#fff4d6;color:#8a5f00;border-radius:8px;padding:2px 8px;font-size:.8em;margin-top:3px}
 .f{display:flex;align-items:center;gap:8px;margin:7px 0}.f label{flex:0 0 88px;font-size:.85em;color:#666}.f input,.f select,.f textarea{flex:1;min-width:0;font-size:16px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;background:#fff;font-family:inherit}
@@ -25,8 +25,8 @@
 #modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px}#modal>div{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:360px}
 #empty{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#777}
 #sy{position:fixed;bottom:6px;left:8px;font-size:11px;color:#998;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
-</style></head><body>
-<div id="top"><h1>🌳 家系図</h1><input id="q" type="search" placeholder="名前で検索" autocomplete="off"><button class="ib" onclick="openList()">一覧</button><button class="ib" onclick="fitAll()">全体</button><button class="ib" onclick="centerFam()">🏠</button><button class="ib" onclick="openSet()">⚙</button></div>
+@media(max-width:400px){#top h1 span{display:none}}</style></head><body>
+<div id="top"><h1>🌳<span> 家系図</span></h1><input id="q" type="search" placeholder="名前で検索" autocomplete="off"><button class="ib" onclick="openList()">一覧</button><button class="ib" onclick="fitAll()">全体</button><button class="ib" onclick="centerFam()">🏠</button><button class="ib" onclick="openSet()">⚙</button></div>
 <div id="res"></div><div id="wrap"><svg id="svg"><g id="vp"></g></svg></div><div id="empty" style="display:none"></div>
 <div id="sheet"></div><div id="list"></div><div id="modal"></div><div id="sy"></div>
 <script>
@@ -61,7 +61,7 @@ function blood(me,t){if(me===t)return'自分';const A=ups(me),B=ups(t);let best=
  const older=()=>T.birth&&M.birth?T.birth<M.birth:null;
  if(b===0){if(a===1)return g('父','母','親');if(a===2)return side+g('祖父','祖母','祖父母');if(a===3)return side+g('曾祖父','曾祖母','曾祖父母');if(a===4)return side+g('高祖父','高祖母','高祖父母');return a+'代前の先祖'}
  if(a===0){return['',g('息子','娘','子'),'孫','ひ孫','玄孫'][b]||b+'代下の子孫'}
- if(a===1&&b===1){const sh=parentsB(T).filter(x=>parentsB(M).includes(x)).length;const o=older();const w=o==null?g('兄弟','姉妹','きょうだい'):o?g('兄','姉','きょうだい'):g('弟','妹','きょうだい');if(sh===1&&parentsB(T).length===2&&parentsB(M).length===2){const c=parentsB(T).find(x=>parentsB(M).includes(x));return(c===M.father?'異母':'異父')+w}return w}
+ if(a===1&&b===1){const sh=parentsB(T).filter(x=>parentsB(M).includes(x)).length;const o=older();const w=o==null?g('兄か弟','姉か妹','きょうだい'):o?g('兄','姉','きょうだい'):g('弟','妹','きょうだい');if(sh===1&&parentsB(T).length===2&&parentsB(M).length===2){const c=parentsB(T).find(x=>parentsB(M).includes(x));return(c===M.father?'異母':'異父')+w}return w}
  if(a===2&&b===1)return side+g('おじ','おば','おじ・おば');if(a===1&&b===2)return g('甥','姪','甥・姪');if(a===2&&b===2)return side+'いとこ';
  if(a===3&&b===1)return side+g('大おじ','大おば','大おじ・大おば');if(a===1&&b===3)return'甥・姪の子';if(a===2&&b===3)return'いとこの子';if(a===3&&b===2)return side+'親のいとこ';if(a===3&&b===3)return side+'はとこ';
  return(a+b)+'親等の親戚'}
@@ -111,7 +111,10 @@ function draw(){const L=layout(),svgs=[];
  if(!P().length){$('empty').style.display='flex';$('empty').innerHTML='<div><p>まだ誰もいません</p><button class="btn p" onclick="addFirst()">最初の人を追加</button></div>'}else $('empty').style.display='none';
  svgs.push(LN.join(''));for(const g of GH){const p=byId.get(g.id);svgs.push(card(p,g.x,g.y,' gh',` data-go="${g.id}"`))}for(const [id,o] of POS)svgs.push(card(byId.get(id),o.x,o.y,''));
  for(const t of TG)svgs.push(`<g class="tg" data-tg="${t.h}" transform="translate(${t.x},${t.y})"><circle r="10"/><text y="4">${t.c?'+'+t.n:'−'}</text></g>`);
- $('vp').innerHTML=svgs.join('');apply()}
+ $('vp').innerHTML=svgs.join('')+'<g id="ab"></g>';drawAdd();apply()}
+// 選んだ人のまわりに ＋父・＋母・＋兄弟・＋配偶者・＋子
+function drawAdd(){const g=$('ab');if(!g)return;document.querySelectorAll('.nd.sel').forEach(n=>n.classList.remove('sel'));const o=cur&&POS.get(cur);if(!o){g.innerHTML='';return}const n=document.querySelector(`.nd[data-id="${cur}"]:not(.gh)`);if(n)n.classList.add('sel');const p=byId.get(cur),b=(k,l,x,y)=>`<g class="ab" data-add="${k}" transform="translate(${x},${y})"><rect x="-27" y="-11" width="54" height="22" rx="11"/><text y="4">${l}</text></g>`;
+ g.innerHTML=(p.father?'':b('father','＋父',o.x+W*.25,o.y-16))+(p.mother?'':b('mother','＋母',o.x+W*.75,o.y-16))+b('sib','＋兄弟',o.x-30,o.y+H/2)+b('spouse','＋配偶者',o.x+W+30,o.y+H/2)+b('child','＋子',o.x+W/2+40,o.y+H+16)}
 function apply(){$('vp').setAttribute('transform',`translate(${TR.x},${TR.y}) scale(${TR.k})`)}
 let trT=null;const keepTR=()=>{clearTimeout(trT);trT=setTimeout(()=>LS.set('kz_tr',TR),400)};
 // ---- 指で動かす・拡大縮小 ----
@@ -122,8 +125,10 @@ wrap.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const o=
  else if(pts.size===1){moved+=Math.abs(dx)+Math.abs(dy);TR.x+=dx;TR.y+=dy;apply();keepTR()}});
 const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null};wrap.addEventListener('pointerup',e=>{const was=moved;up(e);if(was<8&&pts.size===0)tap(e)});wrap.addEventListener('pointercancel',up);
 wrap.addEventListener('wheel',e=>{e.preventDefault();const k=Math.min(3,Math.max(.12,TR.k*(e.deltaY<0?1.1:.9)));TR.x=e.clientX-(e.clientX-TR.x)*k/TR.k;TR.y=e.clientY-(e.clientY-TR.y)*k/TR.k;TR.k=k;apply();keepTR()},{passive:false});
-function tap(e){const el=document.elementFromPoint(e.clientX,e.clientY);if(!el)return;const t=el.closest('[data-tg]');if(t){const h=t.dataset.tg;col.has(h)?col.delete(h):col.add(h);LS.set('kz_col',[...col]);draw();return}
- const g=el.closest('[data-go]');if(g){jump(g.dataset.go);return}const n=el.closest('[data-id]');if(n){openP(n.dataset.id);return}closeSheet()}
+function tap(e){const el=document.elementFromPoint(e.clientX,e.clientY);if(!el)return;const ad=el.closest('[data-add]');if(ad&&cur){addRel(ad.dataset.add);return}const t=el.closest('[data-tg]');if(t){const h=t.dataset.tg;col.has(h)?col.delete(h):col.add(h);LS.set('kz_col',[...col]);draw();return}
+ const g=el.closest('[data-go]');if(g){jump(g.dataset.go);return}const n=el.closest('[data-id]');if(n){openP(n.dataset.id);centerOn(n.dataset.id);return}closeSheet()}
+// タップした人を画面の中央（詳しい欄の上）へなめらかに寄せる
+function centerOn(id){const o=POS.get(id)||GH.find(g=>g.id===id);if(!o)return;const k=Math.max(TR.k,.8),tx=innerWidth/2-(o.x+W/2)*k,ty=innerHeight*.2-(o.y+H/2)*k,s={...TR},t0=performance.now();const st=t=>{const a=Math.min(1,(t-t0)/280),e=1-Math.pow(1-a,3);TR={x:s.x+(tx-s.x)*e,y:s.y+(ty-s.y)*e,k:s.k+(k-s.k)*e};apply();if(a<1)requestAnimationFrame(st);else keepTR()};requestAnimationFrame(st)}
 // ---- 検索・飛ぶ ----
 function jump(id){idx();// たたまれていれば祖先を開く
  for(const s of [id,...spouses(id)])for(const k of ups(s).keys())if(k!==id)col.delete(k);LS.set('kz_col',[...col]);
@@ -146,7 +151,7 @@ function openP(id){idx();const p=byId.get(id);if(!p)return;cur=id;const a=ageAt(
  ${F('oldName','旧姓')}${F('addr','住所')}${F('tel','電話','tel')}${p.tel?`<div class="age"><a href="tel:${esc(p.tel)}">📞 電話をかける</a></div>`:''}<div class="f"><label>メモ</label><textarea onchange="setF('memo',this.value)" onblur="setF('memo',this.value)">${esc(p.memo||'')}</textarea></div>
  <div class="f"><label>写真</label><input type="file" accept="image/*" onchange="setPhoto(this)">${p.photo?'<button class="ib" onclick="setF(\'photo\',\'\',1)">消す</button>':''}</div>
  <div class="btns"><button class="btn" onclick="addRel('parent')">＋ 親</button><button class="btn" onclick="addRel('child')">＋ 子</button><button class="btn" onclick="addRel('spouse')">＋ 配偶者</button><button class="btn" onclick="addRel('sib')">＋ 兄弟姉妹</button>
- <button class="btn p" onclick="setSelf()">${D.meta.self===id?'★ 自分（設定済み）':'☆ この人を「自分」にする'}</button><button class="btn d" onclick="delP()">この人を消す</button></div>`;$('sheet').classList.add('on')}
+ <button class="btn p" onclick="setSelf()">${D.meta.self===id?'★ 自分（設定済み）':'☆ この人を「自分」にする'}</button><button class="btn d" onclick="delP()">この人を消す</button></div>`;$('sheet').classList.add('on');drawAdd()}
 window.openP=openP;
 function conn(p){const id=p.id,rs=(k)=>`<select style="flex:0 0 64px" onchange="setPR('${k}',this.value)">${['bio','step','adopt'].map(r=>`<option value="${r}"${(p[k+'Rel']||'bio')===r?' selected':''}>${RELN[r]}</option>`).join('')}</select>`;
  const par=(k,l)=>`<div class="f cn"><label>${l}</label>${p[k]&&byId.has(p[k])?`<span style="flex:1;min-width:0">${lk(p[k])}</span>${rs(k==='father'?'father':'mother')}<button class="ib" onclick="unPar('${k}')">外す</button>`:'<span style="flex:1;color:#aaa">未設定</span>'}<button class="ib" onclick="pickPar('${k}')">選ぶ</button></div>`;
@@ -169,7 +174,7 @@ window.pickSp=()=>{const p=byId.get(cur);picker(`${nm(p)} の配偶者を選ぶ`
 window.pickKid=()=>{const p=byId.get(cur),anc=[...ups(p.id).keys()];picker(`${nm(p)} の子を選ぶ`,[p.id,...anc,...kids(p.id).map(c=>c.id)],x=>{const c=byId.get(x),k=p.sex==='f'||(c.father&&!c.mother)?'mother':'father';if(c[k]&&!confirm(`${nm(c)} の${k==='father'?'父':'母'}は ${nm(byId.get(c[k]))} になっています。置き換えますか？`))return;c[k]=p.id;touch(c);redo()})};
 window.setRel=v=>{const p=byId.get(cur);v=String(v||'').trim();p.relOv=v;p.relOvSelf=v?D.meta.self:'';touch(p);redo()};
 // 配偶者をつないだとき、片親だけの子がいれば、その子の親にもするか聞く（継母と出る原因の予防）
-function linkKids(p,q){if(!q)return;const k=q.sex==='f'?'mother':q.sex==='m'?'father':(p.sex==='m'?'mother':'father');const ks=kids(p.id).filter(c=>!c[k]);if(ks.length&&confirm(`${ks.map(nm).join('・')} の${k==='mother'?'母':'父'}を ${nm(q)} にしますか？`)){for(const c of ks){c[k]=q.id;touch(c)}}}window.closeSheet=()=>{$('sheet').classList.remove('on');cur=null};
+function linkKids(p,q){if(!q)return;const k=q.sex==='f'?'mother':q.sex==='m'?'father':(p.sex==='m'?'mother':'father');const ks=kids(p.id).filter(c=>!c[k]);if(ks.length&&confirm(`${ks.map(nm).join('・')} の${k==='mother'?'母':'父'}を ${nm(q)} にしますか？`)){for(const c of ks){c[k]=q.id;touch(c)}}}window.closeSheet=()=>{$('sheet').classList.remove('on');cur=null;drawAdd()};
 // 入力が終わったとき（change/blur）だけ保存。詳しい欄は作り直さない（カレンダーが閉じないように）。rebuild=1 は「消す」など欄の形が変わるときだけ
 window.setF=(k,v,rebuild)=>{const p=byId.get(cur);if(!p)return;if((p[k]||'')===(v||''))return;p[k]=v;touch(p);save();relC=new Map();draw();if(rebuild)openP(cur);else refreshHead()};
 function ageTxt(p,k){const a=ageAt(p.birth,p.death);if(k==='birth')return p.birth&&!isDead(p)&&a!=null?`今 ${a}歳`:'';return p.death&&a!=null?`亡くなったとき ${a}歳`:''}
@@ -191,7 +196,7 @@ function mk(o){const p={id:nid(),name:o.name,sex:o.sex||'',father:o.father||null
 function marry(a,b){if(U().some(u=>(u.a===a&&u.b===b)||(u.a===b&&u.b===a)))return;D.unions.push({id:'u'+nid(),a,b,updatedAt:now()})}
 window.addFirst=()=>ask('最初の人',{},o=>{const p=mk(o);D.meta.self=D.meta.self||p.id;save();draw();jump(p.id)});
 window.addRel=t=>{const p=byId.get(cur);if(!p)return;
- if(t==='parent'){const need=!p.father?'m':!p.mother?'f':null;if(!need){alert('両親とも入っています');return}ask(`${nm(p)} の${need==='m'?'父':'母'}`,{sex:need},o=>{const q=mk(o);if(q.sex==='f'&&!p.mother)p.mother=q.id;else if(!p.father)p.father=q.id;else p.mother=q.id;const other=byId.get(q.id===p.father?p.mother:p.father);if(other)marry(q.id,other.id);touch(p);save();draw();openP(cur)});return}
+ if(t==='parent'||t==='father'||t==='mother'){const need=t==='father'?(p.father?null:'m'):t==='mother'?(p.mother?null:'f'):!p.father?'m':!p.mother?'f':null;if(!need){alert('両親とも入っています');return}ask(`${nm(p)} の${need==='m'?'父':'母'}`,{sex:need},o=>{const q=mk(o);if(q.sex==='f'&&!p.mother)p.mother=q.id;else if(!p.father)p.father=q.id;else p.mother=q.id;const other=byId.get(q.id===p.father?p.mother:p.father);if(other)marry(q.id,other.id);touch(p);save();draw();openP(cur)});return}
  if(t==='spouse'){ask(`${nm(p)} の配偶者`,{sex:p.sex==='m'?'f':p.sex==='f'?'m':''},o=>{const q=mk(o);marry(p.id,q.id);linkKids(p,q);redo()});return}
  if(t==='child'){const sp=spouses(p.id);const extra=sp.length?`<div class="f"><label>もう一人の親</label><select id="m_x">${sp.map(s=>`<option value="${s}">${esc(nm(byId.get(s)))}</option>`).join('')}<option value="">（入れない）</option></select></div>`:'';
   ask(`${nm(p)} の子`,{extra},o=>{const other=o.ex?byId.get(o.ex):null,mf=x=>x&&x.sex==='f'?'mother':'father';const c={name:o.name,sex:o.sex};if(p.sex==='f'){c.mother=p.id;if(other)c.father=other.id}else{c.father=p.id;if(other)c.mother=other.id}if(p.sex===''&&other&&other.sex==='m'){c.mother=p.id;c.father=other.id}mk(c);save();draw();openP(cur)});return}
