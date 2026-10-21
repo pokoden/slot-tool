@@ -26,7 +26,7 @@
 #empty{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#777}
 #sy{position:fixed;bottom:6px;left:8px;font-size:11px;color:#998;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
 </style></head><body>
-<div id="top"><h1>🌳 家系図</h1><input id="q" type="search" placeholder="名前で検索" autocomplete="off"><button class="ib" onclick="openList()">一覧</button><button class="ib" onclick="fitAll()">全体</button><button class="ib" onclick="openSet()">⚙</button></div>
+<div id="top"><h1>🌳 家系図</h1><input id="q" type="search" placeholder="名前で検索" autocomplete="off"><button class="ib" onclick="openList()">一覧</button><button class="ib" onclick="fitAll()">全体</button><button class="ib" onclick="centerFam()">🏠</button><button class="ib" onclick="openSet()">⚙</button></div>
 <div id="res"></div><div id="wrap"><svg id="svg"><g id="vp"></g></svg></div><div id="empty" style="display:none"></div>
 <div id="sheet"></div><div id="list"></div><div id="modal"></div><div id="sy"></div>
 <script>
@@ -75,7 +75,7 @@ function relAuto(t){const me=D.meta.self;if(!me||!byId.has(me)||!byId.has(t))ret
  for(const s of spouses(t)){const x=blood(me,s);if(x){const mp={'息子':'義理の娘（嫁）','娘':'義理の息子（婿）','兄':'義姉','弟':'義妹','姉':'義兄','妹':'義弟','兄弟':'義理のきょうだい','姉妹':'義理のきょうだい','父':(M.mother?'継母':'父の配偶者（母の欄が未設定）'),'母':(M.father?'継父':'母の配偶者（父の欄が未設定）')};if(mp[x]&&((x==='兄'||x==='弟')?T.sex!=='m':(x==='姉'||x==='妹')?T.sex!=='f':true))return mp[x];return x+'の'+g('夫','妻','配偶者')}}
  return''}
 // ---- 配置：上の先祖から下へ。夫婦は横並び（他家出身の配偶者は点線の「⇢」で出身の家へ） ----
-const W=124,H=62,HG=16,SG=26,LV=124;let POS=new Map(),GH=[],LN=[],TG=[],relC=new Map();
+const W=124,H=62,HG=16,SG=26,LV=124;let CBOX=null,POS=new Map(),GH=[],LN=[],TG=[],relC=new Map();
 function plan(){idx();const all=P(),head=new Map(),beside=new Map();for(const p of all)if(parents(p).length)head.set(p.id,1);
  for(const p of all){if(head.has(p.id))continue;const h=spouses(p.id).find(s=>head.has(s));if(h)beside.set(p.id,h)}
  const roots=[];for(const p of all.sort(bsort)){if(head.has(p.id)||beside.has(p.id))continue;const grp=[p.id,...spouses(p.id).filter(s=>!head.has(s)&&!beside.has(s))];const h=grp.map(i=>byId.get(i)).sort((a,b)=>(a.sex==='m'?0:1)-(b.sex==='m'?0:1))[0].id;head.set(h,1);for(const g of grp)if(g!==h&&!beside.has(g))beside.set(g,h);roots.push(h)}
@@ -92,7 +92,11 @@ function layout(){const L=plan(),seen=new Set();POS=new Map();GH=[];LN=[];TG=[];
   const grp=new Map();for(const o of cxs){const op=[o.c.father,o.c.mother].find(z=>z&&z!==h&&xs[z]!=null);const key=op||'';if(!grp.has(key))grp.set(key,[]);grp.get(key).push(o)}
   let gi=0;for(const [op,arr] of grp){const x0=op?(Math.min(xs[op],xs[h])+Math.max(xs[op],xs[h])+W)/2:hx,y0=op?y+H/2:y+H,yb=y+H+(LV-H)/2+gi*7-4;gi++;
    const xa=Math.min(x0,...arr.map(o=>o.x)),xb=Math.max(x0,...arr.map(o=>o.x));LN.push(`<path class="ln" d="M${x0} ${y0}V${yb}M${xa} ${yb}H${xb}${arr.map(o=>`M${o.x} ${yb}V${y+LV}`).join('')}"/>`)}}
- let left=0;for(const r of L.roots){if(seen.has(r))continue;seen.add(r);M(r,0);place(r,left,0);left+=meas.get(r).w+SG*2}
+ // 中心の家（初期は傳法家）の枝を真ん中に、ほかの家を左右に交互に置く
+ const fam=String(D.meta.center||'傳法').trim(),norm=x=>String(x||'').replace(/傳/g,'伝'),fm=norm(fam),isF=p=>fm&&(norm(p.name).startsWith(fm)||norm(p.oldName).startsWith(fm));
+ const score=r=>{let n=0;const st=[r],vs=new Set();while(st.length){const c=st.pop();if(vs.has(c))continue;vs.add(c);const p=byId.get(c);if(p&&isF(p))n++;for(const s2 of spouses(c))if(L.beside.get(s2)===c&&isF(byId.get(s2)))n++;for(const k of(L.ch.get(c)||[]))st.push(k.id)}return n};
+ const rs=L.roots.map(r=>({r,s:score(r)})).sort((a,b)=>b.s-a.s),ord=[];rs.forEach((o,i)=>{if(i===0)ord.push(o);else if(i%2)ord.unshift(o);else ord.push(o)});
+ let left=0;CBOX=null;for(const {r,s:sc} of ord){if(seen.has(r))continue;seen.add(r);M(r,0);place(r,left,0);if(rs[0]&&r===rs[0].r&&sc>0)CBOX={x0:left,x1:left+meas.get(r).w};left+=meas.get(r).w+SG*2}
  // ループなどで置けなかった人も端に出す
  for(const p of P())if(!POS.has(p.id)&&!hid.has(p.id)&&!L.beside.has(p.id)&&!GH.some(g=>g.id===p.id)){if(!meas.has(p.id)){seen.add(p.id);M(p.id,0)}place(p.id,left,0);left+=(meas.get(p.id)||{w:W}).w+SG*2}
  return L}
@@ -127,6 +131,7 @@ function jump(id){idx();// たたまれていれば祖先を開く
 $('q').addEventListener('input',()=>{const q=$('q').value.trim().toLowerCase(),r=$('res');if(!q){r.style.display='none';return}idx();const hit=P().filter(p=>(nm(p)+' '+(p.kana||'')+' '+(p.oldName||'')).toLowerCase().includes(q)).slice(0,30);
  r.innerHTML=hit.map(p=>`<div onclick="pick('${p.id}')">${esc(nm(p))}<small>${esc(p.kana||'')} ${esc(relOf(p.id))}</small></div>`).join('')||'<div style="color:#999">見つかりません</div>';r.style.display='block'});
 window.pick=id=>{$('res').style.display='none';$('q').blur();jump(id)};
+window.centerFam=()=>{if(!CBOX){fitAll();return}const k=Math.min(1,Math.max(.35,(innerWidth-20)/(CBOX.x1-CBOX.x0)));TR={k,x:innerWidth/2-(CBOX.x0+CBOX.x1)/2*k,y:70};apply();keepTR()};
 window.fitAll=()=>{const xs=[...POS.values(),...GH];if(!xs.length)return;const x0=Math.min(...xs.map(o=>o.x)),x1=Math.max(...xs.map(o=>o.x+W)),y0=Math.min(...xs.map(o=>o.y)),y1=Math.max(...xs.map(o=>o.y+H));const k=Math.min(1.2,(innerWidth-20)/(x1-x0),(innerHeight-90)/(y1-y0+20));TR={k,x:(innerWidth-(x1-x0)*k)/2-x0*k,y:66-y0*k};apply();keepTR()};
 window.openList=()=>{idx();const l=P().sort((a,b)=>String(a.kana||nm(a)).localeCompare(String(b.kana||nm(b)),'ja'));$('list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:4px 0">名前の一覧（${l.length}人）</h2><button class="ib" onclick="$('list').style.display='none'">閉じる</button></div>`+l.map(p=>`<div class="it" onclick="$('list').style.display='none';jump('${p.id}')"><b>${p.death?'✝ ':''}${esc(nm(p))}</b> <small style="color:#888">${esc(p.kana||'')} ${esc(relOf(p.id))}</small></div>`).join('');$('list').style.display='block'};
 // ---- 詳しい欄 ----
@@ -192,8 +197,8 @@ window.addRel=t=>{const p=byId.get(cur);if(!p)return;
   ask(`${nm(p)} の子`,{extra},o=>{const other=o.ex?byId.get(o.ex):null,mf=x=>x&&x.sex==='f'?'mother':'father';const c={name:o.name,sex:o.sex};if(p.sex==='f'){c.mother=p.id;if(other)c.father=other.id}else{c.father=p.id;if(other)c.mother=other.id}if(p.sex===''&&other&&other.sex==='m'){c.mother=p.id;c.father=other.id}mk(c);save();draw();openP(cur)});return}
  if(t==='sib'){ask(`${nm(p)} の兄弟姉妹`,{},o=>{if(!parents(p).length){const f=mk({name:'不明',sex:'m'});p.father=f.id;touch(p)}mk({name:o.name,sex:o.sex,father:p.father,mother:p.mother});save();draw();openP(cur)})}};
 // ---- 設定・同期（トークンは画面にもログにも出さない） ----
-window.openSet=()=>{const m=$('modal');m.innerHTML=`<div><h3 style="margin:0 0 6px">⚙ 同期</h3><p style="font-size:.82em;color:#666">データは非公開の保存場所（slot-data の kakeizu.json）にだけ保存します。スロット版と同じトークンを使います。</p><div class="f"><label>トークン</label><input id="s_t" type="password" autocomplete="off" placeholder="${hasTok()?'保存済み（変更時のみ）':'github_pat_…'}"></div><p style="font-size:.8em;color:#888" id="s_m">${esc(LS.get('kz_msg',''))}</p><div class="btns"><button class="btn" onclick="$('modal').style.display='none'">閉じる</button><button class="btn p" onclick="saveTok()">保存して同期</button></div></div>`;m.style.display='flex'};
-window.saveTok=()=>{const v=$('s_t').value.trim();if(v)LS.set(TOK,v);$('modal').style.display='none';draw();syncNow()};
+window.openSet=()=>{const m=$('modal');m.innerHTML=`<div><h3 style="margin:0 0 6px">⚙ 同期</h3><p style="font-size:.82em;color:#666">データは非公開の保存場所（slot-data の kakeizu.json）にだけ保存します。スロット版と同じトークンを使います。</p><div class="f"><label>トークン</label><input id="s_t" type="password" autocomplete="off" placeholder="${hasTok()?'保存済み（変更時のみ）':'github_pat_…'}"></div><div class="f"><label>中心の家</label><input id="s_c" value="${esc(D.meta.center||'傳法')}" placeholder="傳法"></div><p style="font-size:.75em;color:#888;margin:-2px 0 6px">この姓の人がいちばん多い家の枝を真ん中に出し、ほかの家を左右に置きます。</p><p style="font-size:.8em;color:#888" id="s_m">${esc(LS.get('kz_msg',''))}</p><div class="btns"><button class="btn" onclick="$('modal').style.display='none'">閉じる</button><button class="btn p" onclick="saveTok()">保存して同期</button></div></div>`;m.style.display='flex'};
+window.saveTok=()=>{const v=$('s_t').value.trim();if(v)LS.set(TOK,v);const c=$('s_c').value.trim()||'傳法';if(c!==(D.meta.center||'傳法')){D.meta.center=c;D.meta.selfAt=now();LS.set(DK,D)}setTimeout(centerFam,50);$('modal').style.display='none';draw();syncNow()};
 const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
 const H_=t=>({Authorization:'Bearer '+t,Accept:'application/vnd.github+json'});
 async function ghGet(t){const r=await fetch(REPO+'?t='+Date.now(),{headers:H_(t),cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error(r.status===401?'トークンが無効':'取得失敗 '+r.status);const j=await r.json();let txt=j.content?b64d(j.content):'';
@@ -209,5 +214,5 @@ async function syncNow(){const t=LS.get(TOK,'');if(!t||LOCAL)return;if(busy){aga
   const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);draw();if(cur){const ae=document.activeElement;if(ae&&$('sheet').contains(ae)&&ae.tagName!=='BUTTON')refreshHead();else openP(cur)}}catch(e){msg('同期エラー：'+(e.message||e))}finally{busy=false;if(again){again=false;syncSoon()}}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});
 // トークンが無い端末ではデータを出さない（この端末の保存分も表示しない）
-draw();if(hasTok()){if(!LS.get('kz_tr',null))fitAll();syncNow()}
+draw();if(hasTok()){centerFam();syncNow()}
 </script></body></html>
