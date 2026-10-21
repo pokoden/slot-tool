@@ -9,7 +9,7 @@ h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
 input,select{width:96px;padding:8px;font-size:1em;border:1px solid #ccd;border-radius:8px;text-align:right;background:#fff}
 input[type=text],input[type=date]{width:160px;text-align:left}
 button{width:100%;padding:13px;font-size:1.05em;border:0;border-radius:10px;background:#2b6fe8;color:#fff;font-weight:bold;margin-top:8px;cursor:pointer}
-button.sub{background:#e4e8f0;color:#333}button.sm{width:auto;padding:7px 10px;font-size:.85em;margin:0}
+button.sub{background:#e4e8f0;color:#333}button.phb{width:30px;height:30px;padding:0;flex:none;margin-right:4px}#phov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:99;display:none;align-items:center;justify-content:center}#phbox{background:#fff;border-radius:10px;padding:8px;width:96vw;max-width:520px;text-align:center}#phx{float:right}#phwrap{clear:both;display:flex;align-items:center;gap:4px}#phimg{flex:1;min-width:0;max-width:100%;max-height:60vh;object-fit:contain}.phn{width:30px;height:60px;padding:0;flex:none}#phcap{margin-top:6px;font-size:.9em;font-weight:bold}button.sm{width:auto;padding:7px 10px;font-size:.85em;margin:0}
 .mbtn{text-align:left;background:#fff;color:#222;border:2px solid #2b6fe8;font-size:1.05em}
 .bar{height:20px;background:#e8edf6;border-radius:10px;overflow:hidden;flex:2}.bar div{height:100%;background:#2b6fe8}
 .res .row span{width:58px;text-align:right;font-weight:bold}
@@ -51,9 +51,24 @@ tg:{at:1,kind:'AT',intro:'2025年2月3日',name:'L 東京喰種',sub:'スマス�
   ['獲得枚数表示',[['456OVER','設定4以上',[4,5,6]],['666OVER','設定6',[6]],['1000-7OVER','設定6',[6]]]],
   ['エンディングカード',[['白(弱)','奇数示唆(弱)',null],['白(強)','奇数示唆(強)',null],['青(弱)','偶数示唆(弱)',null],['青(強)','偶数示唆(強)',null],['赤(弱)','高設定示唆(弱)',null],['赤(強)','高設定示唆(強)',null],
    ['銅 鈴屋什造','設定1否定',[2,3,4,5,6]],['銅 高槻泉','設定2否定',[1,3,4,5,6]],['銅 梟','設定3否定',[1,2,4,5,6]],['銅 エト','設定4否定',[1,2,3,5,6]],['銀 金木研','設定3以上',[3,4,5,6]],['金 神代利世','設定4以上',[4,5,6]],['金 隻眼の梟','設定5以上',[5,6]],['虹 有馬貴将','設定6',[6]]]],
-  ['ナミちゃんトロフィー（※他機種参考の示唆）',[['銅','設定2以上',[2,3,4,5,6]],['銀','設定3以上',[3,4,5,6]],['金','設定4以上',[4,5,6]],['特殊(喰)','設定5以上',[5,6]],['虹','設定6',[6]]]]],
+  ['ナミちゃんトロフィー（※他機種参考の示唆）',[['銅','設定2以上',[2,3,4,5,6]],['銀','設定3以上',[3,4,5,6]],['金','設定4以上',[4,5,6]],['特殊(喰)','設定5以上',[5,6]],['虹','設定6',[6]]]],
+  ['月山招待状（G数示唆・設定計算に使わない）',[['心配しなくとも最悪の事態には','600G否定',null],['2時46分に下記の場所で','残り200/400/600G以内',null],['1時35分に下記の場所で','残り100/300/500G以内',null],['喰うか喰われるかは君次第','200G以内or500G以上',null],['3時までに僕のもとに','300G以内',null],['2時までに僕のもとに','200G以内',null],['今すぐ僕のもとに','100G以内',null]]],
+  ['CZ終了画面（モード示唆・設定計算に使わない）',[['霧嶋董香','通常B以上示唆',null],['笛口雛実','通常B以上示唆',null],['亜門鋼太朗','通常B以上濃厚',null],['真戸呉緒','通常C以上濃厚',null],['金木研（喰種）','チャンス以上濃厚',null],['霧嶋董香（喰種）','チャンス以上濃厚',null],['月山習','天国準備以上濃厚',null],['神代利世','天国濃厚',null]]]],
+ cards:4,
+ ph:{'e:at':[['at','AT「東京喰種咬」']],'e:rem':[['rem','CZ「レミニセンス」']],'e:rize':[['rize','上位CZ「大喰いの利世」']],'e:ep':[['ep','エピソードボーナス（金木/リゼ）']],'e:c100':[['c100','CZ当選演出の例']],'e:choku':[['choku','通常時のリプレイ成立']],'e:ura':[['ura','裏AT（ネガポジの画面）']],'e:hb':[['hb','AT後の夜更けステージ（引き戻し抽選）']],'e:sei':[['sei','超高確「精神世界」（継続G数は画面では分からない）']],'e:gerep':[['gerep','下段リプレイの停止形']],
+  'h:0_0':[['czend_suzuya','鈴屋什造＝偶数設定濃厚']],'h:0_1':[['czend_fukuro','梟＝設定4以上濃厚']],'h:0_2':[['czend_arima','有馬貴将＝設定6濃厚']],
+  'g:1':[['atend_kaneki','金木研＝デフォルト（示唆なし）']],'h:1_0':[['atend_amon','亜門鋼太朗&真戸暁＝奇数示唆'],['atend_kaneki','参考：デフォルトの金木研']],'h:1_1':[['atend_suzuya','鈴屋什造&篠原幸紀＝偶数示唆']],'h:1_2':[['atend_rize','神代利世＝設定1否定']],'h:1_3':[['atend_fueguchi','笛口雛実&笛口リョーコ＝高設定示唆(弱)']],'h:1_4':[['atend_uta','ウタ&イトリ&四方蓮示＝高設定示唆(強)']],'h:1_5':[['atend_kanetou','金木研&霧嶋董香＝設定4以上濃厚']],'h:1_6':[['atend_anteiku','あんていく全員集合＝設定6濃厚']],
+  'g:2':[['letter_def1','今夜ディナーを楽しもう＝デフォルト'],['letter_def2','パーティの時間は未定だ＝デフォルト']],'h:2_0':[['letter_s_guu','偶にはディナーでもどうだい？＝偶数示唆']],'h:2_1':[['letter_s_1hitei','不思議な香りだ…＝設定1否定']],'h:2_2':[['letter_s_2hitei','君はなかなかの活字中毒らしいね＝設定2否定']],'h:2_3':[['letter_s_3hitei','本は良いよね…＝設定3否定']],'h:2_4':[['letter_s_4hitei','僕としたことがすまない＝設定4否定']],'h:2_5':[['letter_s_4ijo','存分に楽しもうじゃないか＝設定4以上濃厚']],'h:2_6':[['letter_s_6','特別な夜を楽しもうじゃないか＝設定6濃厚']],
+  'h:3_0':[['mai_456','456OVER（456枚到達時の一部）＝設定4以上']],'h:3_1':[['mai_666','666OVER（666枚到達時の一部）＝設定6']],'h:3_2':[['mai_1000-7','1000-7OVER（993枚到達時の一部）＝設定6']],
+  'g:4':[['edcard_scene','エンディング中のカード獲得画面'],['edcard_sample','見本：金木(白)／笛口(青)／ヤモリ(赤)／有馬(虹)']],
+  'h:4_0':[['edcard_white','白＝奇数示唆　弱：金木・董香・雛実・永近・西尾・月山／強：芳村・四方・ウタ・イトリ・古間・入見']],'h:4_1':[['edcard_white','白＝奇数示唆　弱：金木・董香・雛実・永近・西尾・月山／強：芳村・四方・ウタ・イトリ・古間・入見']],
+  'h:4_2':[['edcard_blue','青＝偶数示唆　弱：金木・董香・雛実・ナキ・西尾・月山／強：亜門・篠原・滝澤・真戸暁・真戸呉緒・丸手']],'h:4_3':[['edcard_blue','青＝偶数示唆　弱：金木・董香・雛実・ナキ・西尾・月山／強：亜門・篠原・滝澤・真戸暁・真戸呉緒・丸手']],
+  'h:4_4':[['edcard_red','赤＝高設定示唆　弱：金木・董香・ヤモリ・絢都／強：鯱・亜門・篠原・鈴屋']],'h:4_6':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_7':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_8':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_9':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_10':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_11':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_12':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_13':[['edcard_special','銅：鈴屋1否定／高槻2否定／梟3否定／エト4否定　銀：金木3以上　金：利世4以上・隻眼の梟5以上　虹：有馬6']],'h:4_5':[['edcard_red','赤＝高設定示唆　弱：金木・董香・ヤモリ・絢都／強：鯱・亜門・篠原・鈴屋']],
+  'h:5_0':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考。銅以外の個別画像は未入手）'],['trophy_st','ナミちゃんトロフィー']],'h:5_1':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考。銅以外の個別画像は未入手）'],['trophy_st','ナミちゃんトロフィー']],'h:5_2':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考。銅以外の個別画像は未入手）'],['trophy_st','ナミちゃんトロフィー']],'h:5_3':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考。銅以外の個別画像は未入手）'],['trophy_st','ナミちゃんトロフィー']],'h:5_4':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考。銅以外の個別画像は未入手）'],['trophy_st','ナミちゃんトロフィー']],'g:5':[['trophy_bronze','銅トロフィー＝設定2以上（他機種参考）'],['trophy_st','ナミちゃんトロフィー（AT終了画面に出現）']],
+  'h:6_0':[['letter_g_shinpai','心配しなくとも最悪の事態にはならないだろう＝600G否定']],'h:6_1':[['letter_g_0246','2時46分に下記の場所で待っている＝残り200/400/600G以内']],'h:6_2':[['letter_g_0135','1時35分に下記の場所で待っている＝残り100/300/500G以内']],'h:6_3':[['letter_g_kuu','喰うか喰われるかは君次第だ＝200G以内or500G以上']],'h:6_4':[['letter_g_3ji','3時までに僕のもとにきてくれ＝300G以内']],'h:6_5':[['letter_g_2ji','2時までに僕のもとにきてくれ＝200G以内']],'h:6_6':[['letter_g_imasugu','今すぐ僕のもとにきてくれ＝100G以内']],
+  'h:7_6':[['extra_czend_tsukiyama','月山習＝天国準備以上濃厚']]},
  src:['https://nana-press.com/kaiseki/machine/889/27249/','https://altema.jp/pachimo/ltokyoghoulseetei','https://data.hazuse.com/?genre=208&machine_code=4S1320','https://slot-toolbox.com/tokyo-ghoul-setting/'],
- notes:['精神世界（超高確）中の弱チェCZ当選率は設定1(40.27%)のみ判明のため未使用。','スイカ・チャンス目・強チェの当選率、有馬乱入率は設定1のみ判明のため未使用。','エンディングカード銅「梟」は出典ページの表記どおり（CZ終了画面の「梟」と同名）。']},
+ notes:['精神世界（超高確）中の弱チェCZ当選率は設定1(40.27%)のみ判明のため未使用。','スイカ・チャンス目・強チェの当選率、有馬乱入率は設定1のみ判明のため未使用。','エンディングカード銅「梟」は出典ページの表記どおり（CZ終了画面の「梟」と同名）。','サイト間で示唆の表記が違うものは nana-press に合わせています（銅エト＝設定4否定、「不思議な香りだ」＝設定1否定、CZ終了の鈴屋＝偶数濃厚など）。','G数示唆の招待状・CZ終了画面のモード示唆は回数の記録と意味の表示だけで、設定の計算には使いません。','見本画像：nana-press.com（一部 slot-toolbox.com）より。']},
 kb:{at:1,kind:'AT',intro:'2026年3月2日',name:'スマスロ 甲鉄城のカバネリ 海門決戦',sub:'サミー / AT機',
  payout:[97.5,98.5,100.8,106.0,111.0,114.9],
  els:[
@@ -342,11 +357,11 @@ ${blocks(m)}
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div>
  <div id="money" class="note"></div></div>
  <div class="card"><h2>カウント</h2>`;
- for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row"><label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
-  else if(e.t==='pct')h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
-  else{h+=`<div class="row"><label>${esc(e.l)}<small>${esc(e.s)}</small></label></div>`;e.c.forEach((c,j)=>{h+=`<div class="row"><label style="padding-left:12px">${c}</label>${step('v_'+e.k+'_'+j,st.v[e.k+'_'+j]??'')}</div>`})}}
+ const pb=k=>m.ph&&m.ph[k]?`<button class="sub sm phb" onclick="phShow('${k}')" aria-label="見本画像">📷</button>`:'';for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
+  else if(e.t==='pct')h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
+  else{h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div>`;e.c.forEach((c,j)=>{h+=`<div class="row"><label style="padding-left:12px">${c}</label>${step('v_'+e.k+'_'+j,st.v[e.k+'_'+j]??'')}</div>`})}}
  h+=`</div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`;
- m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">${esc(g[0])}</p>`;g[1].forEach((x,hi)=>{h+=`<div class="row"><label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`})});
+ m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em">${esc(g[0])}${pb('g:'+gi)}</p>`;g[1].forEach((x,hi)=>{h+=`<div class="row">${pb('h:'+gi+'_'+hi)}<label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`});if(m.cards===gi)h+=cardBox()});
  h+=`</div><div class="card res"><h2>結果</h2><div id="out"></div></div>
  <div class="card"><h2>確率表と実測</h2><p class="note">オレンジ＝実測値に最も近い設定</p><div class="tw" id="tbl"></div></div>
  <div class="card"><h2>この台を保存</h2><div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝現在時刻を自動表示（手で入力した時刻が優先、消すと自動に戻る）。保存前の稼働時間・時給は最終更新時刻までで計算。保存後は時刻を固定</small></label></div>
@@ -369,6 +384,29 @@ function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delet
  // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
  const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';if(ev&&_snap()!==_b)delete st.gone;if(!st.locked&&ev&&tid!=='f_tE'&&tid!=='f_tS'&&_snap()!==_b)st.tL=nowHM();tickE();
  LS.set('v2_cur_'+mid,st);update()}
+
+// ===== 見本画像ビューア（タップ時に読み込み） =====
+let PH={l:[],i:0};
+window.phShow=k=>{const m=M[mid];if(!m.ph||!m.ph[k])return;PH={l:m.ph[k],i:0};let o=$('phov');if(!o){o=document.createElement('div');o.id='phov';o.innerHTML=`<div id="phbox"><button class="sub sm" id="phx" onclick="phClose()">✕ 閉じる</button><div id="phwrap"><button class="sub sm phn" onclick="phGo(-1)">‹</button><img id="phimg" alt=""><button class="sub sm phn" onclick="phGo(1)">›</button></div><div id="phcap"></div><div id="phno" class="note"></div></div>`;o.onclick=e=>{if(e.target===o)phClose()};document.body.appendChild(o);let sx=null;const w=$('phwrap');w.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});w.addEventListener('touchend',e=>{if(sx==null)return;const d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>40)phGo(d<0?1:-1);sx=null})}o.style.display='flex';phGo(0)};
+window.phGo=d=>{const n=PH.l.length;PH.i=(PH.i+d+n)%n;const x=PH.l[PH.i];$('phimg').src='img/'+mid+'/'+x[0]+'.jpg';$('phcap').textContent=x[1];$('phno').textContent=n>1?(PH.i+1)+' / '+n+'（左右にめくれます）':'';document.querySelectorAll('.phn').forEach(b=>b.style.visibility=n>1?'visible':'hidden')};
+window.phClose=()=>{const o=$('phov');if(o){o.style.display='none';$('phimg').removeAttribute('src')}};
+// ===== エンディングカードまとめて貼り付け（足し算） =====
+const CARD={白:[['金木研','霧嶋董香','笛口雛実','永近英良','西尾錦','月山習'],['芳村','四方蓮示','ウタ','イトリ','古間円児','入見カヤ']],青:[['金木研','霧嶋董香','笛口雛実','ナキ','西尾錦','月山習'],['亜門鋼太朗','篠原幸紀','滝澤政道','真戸暁','真戸呉緒','丸手斎']],赤:[['金木研','霧嶋董香','ヤモリ','霧嶋絢都'],['鯱','亜門鋼太朗','篠原幸紀','鈴屋什造']]};
+const CARDSP={銅:['鈴屋什造','高槻泉','梟','エト'],銀:['金木研'],金:['神代利世','隻眼の梟'],虹:['有馬貴将']};
+function cardIdx(col,name){const nm=name.replace(/霧島/g,'霧嶋').replace(/滝沢/g,'滝澤').replace(/齋/g,'斎').replace(/和泉/g,'泉').replace(/鋼太郎/g,'鋼太朗').replace(/\s/g,'');
+ let c=[];if(CARD[col])CARD[col].forEach((l,si)=>l.forEach(f=>c.push([f,['白','青','赤'].indexOf(col)*2+si])));else{const b={銅:6,銀:10,金:11,虹:13}[col];CARDSP[col].forEach((f,j)=>c.push([f,b+j]))}
+ let h=c.filter(x=>x[0]===nm);if(!h.length)h=c.filter(x=>x[0].includes(nm)||nm.includes(x[0]));if(h.length>1&&new Set(h.map(x=>x[1])).size===1)h=[h[0]];return h.length===1?h[0]:null}
+function cardParse(t){let s=String(t).replace(/[０-９]/g,d=>String.fromCharCode(d.charCodeAt(0)-65248)).replace(/[：]/g,':').replace(/[、，]/g,',').replace(/[×xX＊*]/g,'').replace(/　/g,' ').trim();const err=[],add={},det=[];if(!s)return{err:['空です']};
+ const re=/(白|青|赤|銅|銀|金|虹)\s*:/g;let ms=[...s.matchAll(re)];if(!ms.length)return{err:['「青:」のような色の指定がありません']};if(s.slice(0,ms[0].index).trim())err.push('読めない：「'+s.slice(0,ms[0].index).trim()+'」');
+ ms.forEach((m,i)=>{const col=m[1],body=s.slice(m.index+m[0].length,i+1<ms.length?ms[i+1].index:s.length);body.split(/[,\s]+/).filter(x=>x).forEach(it=>{const r=it.match(/^(.+?)(\d+)?$/);const n=r[2]?parseInt(r[2]):1;const hit=cardIdx(col,r[1]);if(!hit||!(n>0)){err.push('読めない：'+col+'「'+it+'」');return}add[hit[1]]=(add[hit[1]]||0)+n;det.push([col,hit[0],n,hit[1]])})});return{err,add,det}}
+function cardBox(){const L=st.cardLog||[],sum={};L.forEach(e=>e.det.forEach(d=>{const k=d[0]+' '+d[1];sum[k]=(sum[k]||0)+d[2]}));
+ return`<div class="cardpaste" style="margin:10px 0;padding:8px;border:1px dashed #99a;border-radius:8px"><b style="font-size:.9em">カードをまとめて貼り付け（足し算）</b><p class="note">例：青:月山習3,ナキ2 白:笛口雛実2 赤:霧嶋絢都1（色は白・青・赤・銅・銀・金・虹）。上の回数に足されます。</p><div style="display:flex;gap:6px"><input id="cardTxt" style="flex:1;min-width:0" placeholder="青:月山習3,ナキ2 白:笛口雛実2"><button class="sm" onclick="cardAdd()">足す</button></div><div id="cardMsg" class="note" style="color:#d62828"></div>
+ ${Object.keys(sum).length?`<p class="note" style="margin-top:6px">キャラ内訳（貼り付け分）：${Object.entries(sum).map(([k,v])=>esc(k)+'×'+v).join('、')}</p>`:''}
+ ${L.map((e,i)=>`<div class="row" style="font-size:.85em"><label>${i+1}回目 ${esc(e.t)}　${esc(e.det.map(d=>d[0]+':'+d[1]+d[2]).join(' '))}</label><button class="sub sm" onclick="cardUndo(${i})">取り消し</button></div>`).join('')}</div>`}
+function cardRe(){const b=document.querySelector('.cardpaste');if(b)b.outerHTML=cardBox()}
+window.cardAdd=()=>{const m=M[mid],g=m.cards,r=cardParse($('cardTxt').value);if(r.err.length){$('cardMsg').textContent=r.err.join(' / ')+'　→ 足していません';return}
+ Object.entries(r.add).forEach(([i,n])=>{const x=$('c_'+g+'_'+i);x.value=(parseInt(x.value)||0)+n});st.cardLog=[...(st.cardLog||[]),{t:nowHM(),txt:$('cardTxt').value,det:r.det}];read({target:{id:'cardTxt'}});cardRe()};
+window.cardUndo=i=>{const m=M[mid],g=m.cards,L=st.cardLog||[],e=L[i];if(!e||!confirm((i+1)+'回目の貼り付けを取り消しますか？'))return;e.det.forEach(d=>{const x=$('c_'+g+'_'+d[3]);x.value=Math.max(0,(parseInt(x.value)||0)-d[2])||''});st.cardLog=L.filter((_,j)=>j!==i);read({target:{id:'cardTxt'}});cardRe()};
 const nowHM=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return p(d.getHours())+':'+p(d.getMinutes())};
 function hrs(a,b){const f=t=>{const x=String(t||'').match(/^(\d{1,2}):(\d{2})/);return x?+x[1]*60+ +x[2]:null};const x=f(a),y=f(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d/60}
 function ownG(m,st){if(m.at&&st.ttotal!==''&&st.ttotal!=null)return Math.max(0,+st.ttotal-(+st.tstart||0));return gMine(st)||0}
