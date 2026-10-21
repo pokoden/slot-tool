@@ -52,7 +52,16 @@ function save(){D.meta.updatedAt=now();LS.set(DK,D);syncSoon()}
 function touch(p){p.updatedAt=now()}
 // ---- 年齢 ----
 const pd=s=>{const m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?{y:+m[1],m:+m[2],d:+m[3]}:null};
-function ageAt(b,e){const x=pd(b);if(!x)return null;const t=e?pd(e):(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()+1,d:n.getDate()}})();if(!t)return null;let a=t.y-x.y;if(t.m<x.m||(t.m===x.m&&t.d<x.d))a--;return a}
+// 年だけ・年月だけも読む（YYYY / YYYY-MM / YYYY-MM-DD）
+const pp=s=>{const m=String(s||'').match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);return m?{y:+m[1],m:m[2]?+m[2]:0,d:m[3]?+m[3]:0}:null};
+const mdays=(y,m)=>new Date(y,m,0).getDate();
+const ERA=[['明治',1868,'1868-01-01','1912-07-29'],['大正',1912,'1912-07-30','1926-12-24'],['昭和',1926,'1926-12-25','1989-01-07'],['平成',1989,'1989-01-08','2019-04-30'],['令和',2019,'2019-05-01','9999-12-31']];
+const eraOf=n=>ERA.find(e=>e[0]===n);
+function fmtD(p,k){const x=pp(p[k]);if(!x)return'';const md=(x.m?x.m+'月':'')+(x.d?x.d+'日':''),w=x.y+'年'+md,e=eraOf(p[k+'E']);if(!e)return w;const n=x.y-e[1]+1;return`${e[0]}${n===1?'元':n}年${md}<small style="color:#999;margin-left:6px">${w}</small>`}
+function ageAt(b,e){if(!pd(b)||(e&&!pd(e))){const x=pp(b);if(!x)return null;const t=e?pp(e):null;if(e&&!t)return null;const n=new Date(),E=t||{y:n.getFullYear(),m:n.getMonth()+1,d:n.getDate()};
+  const lo=o=>({y:o.y,m:o.m||1,d:o.d||1}),hi=o=>({y:o.y,m:o.m||12,d:o.d||mdays(o.y,o.m||12)}),ex=(B,T)=>{let a=T.y-B.y;if(T.m<B.m||(T.m===B.m&&T.d<B.d))a--;return a};
+  const a1=ex(hi(x),lo(E)),a2=ex(lo(x),hi(E)),mn=Math.max(0,a1);return mn===a2?mn:mn+'〜'+a2}
+ const x=pd(b);if(!x)return null;const t=e?pd(e):(()=>{const n=new Date();return{y:n.getFullYear(),m:n.getMonth()+1,d:n.getDate()}})();if(!t)return null;let a=t.y-x.y;if(t.m<x.m||(t.m===x.m&&t.d<x.d))a--;return a}
 const jd=s=>{const x=pd(s);return x?`${x.y}年${x.m}月${x.d}日`:''};
 // ---- 続柄（「自分」から見て） ----
 function ups(id){const m=new Map([[id,{d:0,via:null}]]),q=[id];while(q.length){const c=q.shift(),o=m.get(c),p=byId.get(c);if(!p||o.d>8)continue;for(const x of parentsB(p))if(!m.has(x)){m.set(x,{d:o.d+1,via:o.d===0?x:o.via});q.push(x)}}return m}
@@ -102,8 +111,8 @@ function layout(){const L=plan(),seen=new Set();POS=new Map();GH=[];LN=[];TG=[];
  return L}
 // ---- 描画 ----
 let TR=LS.get('kz_tr',null)||{x:20,y:80,k:1},hlId=null;
-function card(p,x,y,cls,extra){const s=p.sex==='m'?'m':p.sex==='f'?'f':'u',dead=isDead(p),a=ageAt(p.birth,p.death),yr=pd(p.birth)?pd(p.birth).y:'?',dy=pd(p.death)?pd(p.death).y:'',r=relC.get(p.id)??(relC.set(p.id,relOf(p.id)),relC.get(p.id));
- const n=nm(p),nn=n.length>8?n.slice(0,8)+'…':n,sub=dead?`${yr}–${dy||'?'}${a!=null?' ('+a+'歳)':''}`:(pd(p.birth)?`${yr}年生 ${a}歳`:'');const bt=boTxt(p);const sub2=bt?(sub?sub+' ・'+bt:bt):sub;
+function card(p,x,y,cls,extra){const s=p.sex==='m'?'m':p.sex==='f'?'f':'u',dead=isDead(p),a=ageAt(p.birth,p.death),yr=pp(p.birth)?pp(p.birth).y:'?',dy=pp(p.death)?pp(p.death).y:'',r=relC.get(p.id)??(relC.set(p.id,relOf(p.id)),relC.get(p.id));
+ const n=nm(p),nn=n.length>8?n.slice(0,8)+'…':n,sub=dead?`${yr}–${dy||'?'}${a!=null?' ('+a+'歳)':''}`:(pp(p.birth)?`${yr}年生 ${a}歳`:'');const bt=boTxt(p);const sub2=bt?(sub?sub+' ・'+bt:bt):sub;
  return`<g class="nd ${s}${dead?' dead':''}${cls||''}${p.id===D.meta.self?' me':''}${p.id===hlId?' hl':''}" data-id="${p.id}"${extra||''} transform="translate(${x},${y})"><rect class="b" width="${W}" height="${H}"/>${p.photo?`<clipPath id="c${p.id}${cls?'g':''}"><circle cx="20" cy="${H/2}" r="15"/></clipPath><image href="${p.photo}" x="5" y="${H/2-15}" width="30" height="30" clip-path="url(#c${p.id}${cls?'g':''})" preserveAspectRatio="xMidYMid slice"/>`:''}
  <text x="${p.photo?40:10}" y="22" font-weight="bold">${dead?'✝ ':''}${esc(nn)}${cls?' ⇢':''}</text><text class="s" x="${p.photo?40:10}" y="38">${esc(sub2)}</text>${r?`<text class="r" x="${p.photo?40:10}" y="53">${esc(r)}</text>`:''}</g>`}
 function draw(){const L=layout(),svgs=[];
@@ -179,13 +188,26 @@ function linkKids(p,q){if(!q)return;const k=q.sex==='f'?'mother':q.sex==='m'?'fa
 window.setF=(k,v,rebuild)=>{const p=byId.get(cur);if(!p)return;if((p[k]||'')===(v||''))return;p[k]=v;touch(p);save();relC=new Map();draw();if(rebuild)openP(cur);else refreshHead()};
 function ageTxt(p,k){const a=ageAt(p.birth,p.death);if(k==='birth')return p.birth&&!isDead(p)&&a!=null?`今 ${a}歳`:'';return p.death&&a!=null?`亡くなったとき ${a}歳`:''}
 function refreshHead(){const p=byId.get(cur);if(!p)return;const h=$('sheet').querySelector('.hd div div');if(h)h.textContent=(isDead(p)?'✝ ':'')+nm(p);for(const k of['birth','death']){const e=$('age_'+k);if(e)e.textContent=ageTxt(p,k)}}
-function DF(p,k,l){const x=pd(p[k])||{};return`<div class="f"><label>${l}</label><input type="date" id="d_${k}" value="${esc(p[k]||'')}" onchange="dateNative('${k}',this.value)" onblur="dateNative('${k}',this.value)">${p[k]?`<button class="ib" onclick="dateClear('${k}')">消す</button>`:''}</div>
- <div class="f"><label></label><input type="number" inputmode="numeric" id="y_${k}" placeholder="年" value="${x.y||''}" style="flex:1.4" onchange="dateYMD('${k}')"><input type="number" inputmode="numeric" id="m_${k}" placeholder="月" value="${x.m||''}" min="1" max="12" onchange="dateYMD('${k}')"><input type="number" inputmode="numeric" id="dd_${k}" placeholder="日" value="${x.d||''}" min="1" max="31" onchange="dateYMD('${k}')"></div>`}
+function DF(p,k,l){const x=pp(p[k])||{},full=pd(p[k]),E=eraOf(p[k+'E']),yy=x.y?(E?x.y-E[1]+1:x.y):'';return`<div class="f"><label>${l}</label><input type="date" id="d_${k}" value="${esc(full?p[k]:'')}" onchange="dateNative('${k}',this.value,'${p.id}')" onblur="dateNative('${k}',this.value,'${p.id}')">${p[k]?`<button class="ib" onclick="dateClear('${k}')">消す</button>`:''}</div>
+ <div class="f"><label></label><select id="e_${k}" style="flex:0 0 68px;padding:7px 2px" onchange="dateYMD('${k}',1,'${p.id}')"><option value="">西暦</option>${ERA.map(e=>`<option${E&&E[0]===e[0]?' selected':''}>${e[0]}</option>`).join('')}</select><input type="text" inputmode="numeric" id="y_${k}" placeholder="${E?'年(元年は1)':'年'}" value="${yy===1&&E?'元':yy}" style="flex:1.2" onchange="dateYMD('${k}',0,'${p.id}')"><input type="number" inputmode="numeric" id="m_${k}" placeholder="月" value="${x.m||''}" min="1" max="12" onchange="dateYMD('${k}',0,'${p.id}')"><input type="number" inputmode="numeric" id="dd_${k}" placeholder="日" value="${x.d||''}" min="1" max="31" onchange="dateYMD('${k}',0,'${p.id}')"></div>
+ <div class="age" id="fd_${k}">${fmtD(p,k)}</div><div class="age" id="er_${k}" style="color:#d62828"></div>`}
 const p2=n=>String(n).padStart(2,'0');
-window.dateNative=(k,v)=>{const x=pd(v);if(x){$('y_'+k).value=x.y;$('m_'+k).value=x.m;$('dd_'+k).value=x.d}if(v===''||x){const had=!!(byId.get(cur)||{})[k];setF(k,v||'',had!==!!v)}};
-window.dateYMD=k=>{const y=+$('y_'+k).value,m=+$('m_'+k).value,d=+$('dd_'+k).value;if(!(y>=1800&&y<=2200&&m>=1&&m<=12&&d>=1&&d<=31))return;const dt=new Date(y,m-1,d);if(dt.getMonth()!==m-1){alert('その日はありません');return}const v=`${y}-${p2(m)}-${p2(d)}`;$('d_'+k).value=v;const had=!!(byId.get(cur)||{})[k];setF(k,v,!had)};
-window.dateClear=k=>{const p=byId.get(cur);if(!p)return;p[k]='';if(k==='death')p.dead=false;touch(p);save();relC=new Map();draw();openP(cur)};
-window.setDead=on=>{const p=byId.get(cur);if(!p)return;p.dead=!!on;if(!on)p.death='';touch(p);save();relC=new Map();draw();openP(cur)};
+window.dateNative=(k,v,id)=>{if(id&&id!==cur)return;const x=pd(v);if(x){const e=$('e_'+k);if(e)e.value='';$('y_'+k).value=x.y;$('m_'+k).value=x.m;$('dd_'+k).value=x.d}if(v===''||x){const p=byId.get(cur)||{},had=!!p[k];if(x&&p[k+'E']){p[k+'E']='';touch(p);save()}setF(k,v||'',had!==!!v);dateShow(k)}};
+function dateShow(k){const p=byId.get(cur);if(!p)return;const f=$('fd_'+k);if(f)f.innerHTML=fmtD(p,k);const r=$('er_'+k);if(r)r.textContent=''}
+// 西暦/和暦 → 西暦文字列（YYYY / YYYY-MM / YYYY-MM-DD）。範囲外はエラー文
+function toW(en,ys,m,d){ys=String(ys).trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248));if(!ys)return{v:''};let n=ys==='元'?1:/^\d+$/.test(ys)?+ys:NaN;if(!(n>=1))return{err:'年が読めません'};
+ if(d&&!m)return{err:'日だけでなく月も入れてください'};if(m&&!(m>=1&&m<=12))return{err:'月は1〜12'};
+ const e=eraOf(en),y=e?e[1]+n-1:n;if(!(y>=1800&&y<=2200))return{err:'年は1800〜2200年の範囲で'};
+ if(d){if(!(d>=1&&d<=mdays(y,m)))return{err:'その日はありません'}}
+ const v=d?`${y}-${p2(m)}-${p2(d)}`:m?`${y}-${p2(m)}`:`${y}`;
+ if(e){const lo=d?v:m?`${y}-${p2(m)}-${p2(mdays(y,m))}`:`${y}-12-31`,hi=d?v:m?`${y}-${p2(m)}-01`:`${y}-01-01`;if(lo<e[2]||hi>e[3])return{err:`${e[0]}${n===1?'元':n}年${m?m+'月':''}${d?d+'日':''}はありません（${e[0]}は${e[2].replace(/-/g,'/')}〜${e[3]>'9000'?'':e[3].replace(/-/g,'/')}）`}}
+ return{v}}
+window.dateYMD=(k,eraChg,id)=>{if(id&&id!==cur)return;const p=byId.get(cur);if(!p)return;const en=$('e_'+k).value,ys=$('y_'+k).value,m=+$('m_'+k).value||0,d=+$('dd_'+k).value||0;
+ if(eraChg){$('y_'+k).placeholder=en?'年(元年は1)':'年';const x=pp(p[k]);if(x&&String(ys).trim()){const e=eraOf(en);const yy=e?x.y-e[1]+1:x.y;if(!e||(yy>=1&&toW(en,String(yy),x.m,x.d).v)){$('y_'+k).value=e&&yy===1?'元':yy;if((p[k+'E']||'')!==en){p[k+'E']=en;touch(p);save()}dateShow(k);return}$('er_'+k).textContent=`${x.y}年は${en}では表せません`;return}}
+ if(!String(ys).trim())return;const r=toW(en,ys,m,d);if(r.err){$('er_'+k).textContent=r.err+'　→ 保存していません';return}
+ const v=r.v,had=!!p[k];$('d_'+k).value=pd(v)?v:'';if((p[k+'E']||'')!==en){p[k+'E']=en;if(p[k]===v){touch(p);save()}}setF(k,v,!had);dateShow(k)};
+window.dateClear=k=>{const p=byId.get(cur);if(!p)return;p[k]='';p[k+'E']='';if(k==='death')p.dead=false;touch(p);save();relC=new Map();draw();openP(cur)};
+window.setDead=on=>{const p=byId.get(cur);if(!p)return;p.dead=!!on;if(!on){p.death='';p.deathE=''}touch(p);save();relC=new Map();draw();openP(cur)};
 window.setPhoto=inp=>{const f=inp.files&&inp.files[0];if(!f)return;const img=new Image(),u=URL.createObjectURL(f);img.onload=()=>{const S=160,c=document.createElement('canvas'),s=Math.min(img.width,img.height);c.width=c.height=S;c.getContext('2d').drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,S,S);URL.revokeObjectURL(u);setF('photo',c.toDataURL('image/jpeg',.72),1)};img.src=u};
 window.setSelf=()=>{D.meta.self=cur;D.meta.selfAt=now();save();draw();openP(cur)};
 window.delP=()=>{const p=byId.get(cur);if(!p||!confirm(`「${nm(p)}」を消しますか？\nつながり（親子・夫婦）も外れます。`))return;p.deleted=true;touch(p);for(const c of D.people)if(c.father===p.id||c.mother===p.id){if(c.father===p.id)c.father=null;if(c.mother===p.id)c.mother=null;touch(c)}for(const u of D.unions)if(u.a===p.id||u.b===p.id){u.deleted=true;u.updatedAt=now()}closeSheet();save();draw()};
