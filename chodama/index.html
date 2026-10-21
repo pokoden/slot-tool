@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>収支管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="収支管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
@@ -28,6 +28,10 @@ a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
 <style>.tob{width:auto;margin:0;padding:6px 10px;font-size:.85em}.tob.on{background:#d62828}.tob.off{background:#e4e8f0;color:#333}</style></head><body>
 <div id="app"></div>
 <script>
+// ===== 版の確認：開いたとき・戻ったときにサーバーの最新版と比べ、古ければ読み込み直す（ホーム画面のキャッシュ対策） =====
+const APPV='r50';
+async function verCheck(){try{if(location.protocol==='file:')return;const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/const APPV='([^']+)'/);if(!m||m[1]===APPV)return;const k='cd_vtry_'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');location.replace(location.pathname+'?v='+m[1]+'&t='+Date.now()+location.hash)}catch(e){}}
+verCheck();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verCheck()});
 // ===== 貯玉管理（パチンコ＝貯玉 / スロット＝貯メダル）。データは各ツールの保存記録（localStorage＋同期データ）から計算 =====
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -138,36 +142,41 @@ const OV='cd_ov',ovList=()=>LS.get(OV,[])||[],ovOf=id=>{const x=ovList().find(t=
 let czAutoC=null;function czAuto(){if(czAutoC)return czAutoC;const m=new Map();for(const k of['p','s'])for(const e of records(k)){let n=null,o=null;
   if(e.src==='excel'){if(k==='p'&&e.retBalls!=null&&e.ballsUsed!=null&&isFinite(+e.retBalls)&&isFinite(+e.ballsUsed)){n=+e.retBalls-(+e.ballsUsed);o=+e.retBalls}}else{n=netOf(k,e);o=Z((e.st||{}).out)}
   if(n==null||!isFinite(n))continue;const d=e.date||String(e.saved||'').slice(0,10);if(!d)continue;const id=k+'|'+sk(e.store)+'|'+d;const a=m.get(id)||{net:0,out:0};a.net+=n;a.out+=o;m.set(id,a)}return czAutoC=m}
-// 1店・1種類の累積：日付順。各日＝その日の増減（上書きがあればその値）＋調整 → その日の手入力・引き出し（その数に置き換え）・タバコ（6,000円分を引く）を入力順
-function czCalc(st,k){const days=new Map(),get=d=>{if(!days.has(d))days.set(d,{date:d,auto:null,ov:null,adj:0,list:[]});return days.get(d)};
+// 1店・1種類の累積：日付順。各日＝その日の増減（回収−投資）→ 置き換え・引き出し（その数に置き換え）・r46のタバコを入力順 → 行の「累積を直す」(fix) → 行のタバコ(tobd)
+function czCalc(st,k){const days=new Map(),get=d=>{if(!days.has(d))days.set(d,{date:d,auto:null,adj:0,list:[],fix:null,tobd:null});return days.get(d)};
  for(const [id,a] of czAuto()){const [kk,ss,d]=id.split('|');if(kk===k&&ss===st){const g=get(d);g.auto=a.net;g.out=a.out;g.inv=a.out-a.net}}
- for(const x of evLive().filter(x=>x.store===st&&x.k===k).sort((a,c)=>String(a.at)<String(c.at)?-1:1)){if(x.t==='adj')get(x.date).adj+=+x.n||0;else get(x.date).list.push(x)}
- let b=0;const out=new Map();for(const d of [...days.values()].sort((a,c)=>a.date<c.date?-1:1)){d.start=b;d.net=d.auto||0;b+=d.net+d.adj;for(const x of d.list){if(x.t==='tob')b-=+x.n||0;else b=+x.n||0}d.end=b;out.set(d.date,d)}const f0=[...out.values()].find(d=>d.list.some(x=>x.t==='set'));if(f0)for(const k of[...out.keys()])if(k<f0.date)out.delete(k);return{bal:b,days:out,from:f0?f0.date:null}}
+ for(const x of evLive().filter(x=>x.store===st&&x.k===k).sort((a,c)=>String(a.at)<String(c.at)?-1:1)){const g=get(x.date);if(x.t==='adj')g.adj+=+x.n||0;else if(x.t==='fix')g.fix=x;else if(x.t==='tobd')g.tobd=x;else g.list.push(x)}
+ let b=0;const out=new Map();for(const d of [...days.values()].sort((a,c)=>a.date<c.date?-1:1)){d.start=b;d.net=d.auto||0;b+=d.net+d.adj;for(const x of d.list){if(x.t==='tob')b-=+x.n||0;else b=+x.n||0}if(d.fix)b=+d.fix.n||0;if(d.tobd)b-=+d.tobd.n||0;d.end=b;out.set(d.date,d)}
+ // 隠すのは r48 で最初に置き換えた日より前だけ（行の「累積を直す」では隠さない）
+ const base=[...out.values()].find(d=>d.list.some(x=>x.t==='set'&&String(x.id).startsWith('set-r48-')))||[...out.values()].find(d=>d.list.some(x=>x.t==='set'));if(base)for(const k of[...out.keys()])if(k<base.date)out.delete(k);if(base){const d=base;d.ch=d.net-d.list.filter(x=>x.t==='tob').reduce((a,x)=>a+(+x.n||0),0)-(d.tobd?+d.tobd.n||0:0)}return{bal:b,days:out,from:base?base.date:null}}
 function czPage(){const yc=(n,y)=>`<td${pc(n)}><b>${sg(n)}</b><br><small>${y?sg(n*y)+'円':'レート未設定'}</small></td>`;let T={p:0,s:0,py:0,sy:0};
  const rows=czStores().map(st=>{const p=czCalc(st,'p').bal,s=czCalc(st,'s').bal,py=p*czYp('p',st),sy=s*czYp('s',st);T.p+=p;T.s+=s;T.py+=py;T.sy+=sy;return`<tr class="czr" onclick="czOpen(${esc(JSON.stringify(st))})" style="cursor:pointer"><td style="text-align:left;color:#2b6fe8"><b>${esc(st)}</b></td>${yc(p,czYp('p',st))}${yc(s,czYp('s',st))}<td${pc(py+sy)}><b>${sg(py+sy)}円</b></td></tr>`}).join('');
  if(czS)return czDetail();
  return`<div class="card"><h2>全店の合計</h2><div class="tw"><table id="czTot"><tr><th>パチンコ</th><th>スロット</th><th>合計金額</th></tr><tr><td${pc(T.p)}><b>${sg(T.p)}玉</b><br><small>${sg(T.py)}円</small></td><td${pc(T.s)}><b>${sg(T.s)}枚</b><br><small>${sg(T.sy)}円</small></td><td${pc(T.py+T.sy)}><b>${sg(T.py+T.sy)}円</b></td></tr></table></div></div>
  <div class="card"><h2>店ごと <small class="note">タップで日ごとの一覧</small></h2><div class="tw"><table id="czSt"><tr><th style="text-align:left">店</th><th>パチンコ<br><small>玉</small></th><th>スロット<br><small>枚</small></th><th>合計金額</th></tr>${rows}</table></div>
- <p class="note">金額＝玉(枚)数×換金率。パチンコ＝パチンコ版の店舗の1玉の価値、スロット＝スロット版の店舗の換金額（円/枚）。</p></div>${czForm()}`}
-function czForm(){const f=czF,E=czEd?evList().find(x=>x.id===czEd):null,seg=(v,l)=>`<button class="${f.k===v?'':'sub'}" onclick="czSetF('k','${v}')">${l}</button>`,u=czU(f.k),tb=czTob(f.k,f.store);
- return`<div class="card" id="czForm"><h2>${E?'✎ 編集中（'+(E.t==='wd'?'引き出し':E.t==='tob'?'タバコ':'置き換え')+'）':'入力'}</h2>
- <div class="row"><label>店</label><select id="cz_st" style="width:160px;font-size:16px" onchange="czSetF('store',this.value)">${czStores().map(s=>`<option${s===f.store?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+ <p class="note">金額＝玉(枚)数×換金率。パチンコ＝パチンコ版の店舗の1玉の価値、スロット＝スロット版の店舗の換金額（円/枚）。</p></div>`}
+function czForm(){const f=czF,E=czEd?evList().find(x=>x.id===czEd):null,seg=(v,l)=>`<button class="${f.k===v?'':'sub'}" onclick="czSetF('k','${v}')">${l}</button>`,u=czU(f.k);
+ return`<div class="card" id="czForm"><h2>${E?'✎ 引き出しを編集中':'💴 引き出し'}（${esc(czS)}）</h2>
+ <div class="seg" style="margin:8px 0">${seg('p','パチンコ（玉）')}${seg('s','スロット（メダル）')}</div>
  <div class="row"><label>日付</label><input type="date" id="cz_dt" style="font-size:16px" value="${esc(f.date||todayS())}" onchange="czSetF('date',this.value)"></div>
- <div class="seg" style="margin:8px 0">${seg('p','玉（パチンコ）')}${seg('s','メダル（スロット）')}</div>
- ${!E||E.t==='wd'?`<h2 style="margin-top:14px">引き出し（${f.k==='p'?'パチンコ・玉':'スロット・メダル'}）</h2><div class="row"><label>下ろした金額（円）</label><input type="number" inputmode="numeric" id="cz_y" style="font-size:16px" value="${E?E.yen??'':''}"></div><div class="row"><label>残った${f.k==='p'?'玉数':'枚数'}</label><input type="number" inputmode="numeric" id="cz_r" style="font-size:16px" value="${E?E.n:''}"></div><button id="cz_wd" onclick="czSave('wd')">${E?'更新':'引き出しを保存'}</button>`:''}
- ${!E||E.t==='tob'?`<h2 style="margin-top:14px">タバコ（${f.k==='p'?'パチンコ・玉':'スロット・メダル'}）</h2><button id="cz_tob" style="background:#d62828" onclick="czSave('tob')"${tb?'':' disabled'}>🚬 タバコあり（−${tb.toLocaleString()}${u}＝${TOB_YEN.toLocaleString()}円分）</button>`:''}
+ <div class="row"><label>下ろした金額（円）</label><input type="number" inputmode="numeric" id="cz_y" style="font-size:16px" value="${E?E.yen??'':''}"></div><div class="row"><label>残った${f.k==='p'?'玉数':'枚数'}</label><input type="number" inputmode="numeric" id="cz_r" style="font-size:16px" value="${E?E.n:''}"></div><button id="cz_wd" onclick="czSave('wd')">${E?'更新':'引き出しを保存'}</button>
  ${E?`<button class="sub" onclick="czCancel()">編集をやめる</button><button class="sub" style="color:#d62828" onclick="czDel()">この記録を消す</button>`:''}
- <p class="note">引き出しの残り＝その数がそのまま新しい累積値。タバコ＝その店の換金率で${TOB_YEN.toLocaleString()}円分（四捨五入）を引きます。</p></div>`}
-function czDays(st,k){const yp=czYp(k,st),u=czU(k),n0=x=>Math.round(x||0).toLocaleString(),L=k==='p'?'差玉':'差枚',md=d=>{const q=d.split('-');return +q[1]+'月'+(+q[2])+'日'};
- const ev=x=>x.t==='set'?`<span class="tag">置き換え</span> 残り ${(+x.n).toLocaleString()}${u}`:x.t==='wd'?`<span class="tag" style="background:#fff3d6;color:#a35a00">引き出し</span> ${x.yen!=null?(+x.yen).toLocaleString()+'円 ':''}→ 残り ${(+x.n).toLocaleString()}${u}`:`<span class="tag" style="background:#ffe9e9;color:#d62828">タバコ</span> −${(+x.n).toLocaleString()}${u}（${TOB_YEN.toLocaleString()}円分）`;
- return[...czCalc(st,k).days.values()].sort((a,b)=>a.date<b.date?1:-1).map(d=>`<div class="card czd" style="padding:10px 12px">${d.auto!=null?`<div class="czl" style="font-size:.92em"><b>${md(d.date)}</b> ${esc(st)} 投資${n0(d.inv)}${u} 回収${n0(d.out)}${u} ${L}<b${pc(d.net)}>${sg(d.net)}</b>${u}</div>`:`<div class="czl" style="font-size:.92em"><b>${md(d.date)}</b> ${esc(st)}</div>`}
-  ${d.list.map(x=>`<div class="row" style="margin:4px 0;font-size:.88em"><span>${ev(x)}</span>${x.t==='set'?'':`<button class="sub sm" onclick="czEdit('${x.id}')">✎ 編集</button>`}</div>`).join('')}<div class="row" style="margin:2px 0 0;font-size:.85em;color:#555"><span>累積 <b>${d.end.toLocaleString()}</b>${u}</span><span${pc(d.end*yp)}>${sg(d.end*yp)}円</span></div></div>`).join('')||'<p class="note">まだ記録がありません</p>'}
+ <p class="note">残った数＝その日の新しい累積値になります。</p></div>`}
+function czDays(st,k){const yp=czYp(k,st),u=czU(k),n0=x=>Math.round(x||0).toLocaleString(),L=k==='p'?'差玉':'差枚',md=d=>{const q=d.split('-');return +q[1]+'月'+(+q[2])+'日'},tb=czTob(k,st);
+ const ev=x=>x.t==='set'?`<span class="tag">置き換え</span> 残り ${(+x.n).toLocaleString()}${u}`:x.t==='wd'?`<span class="tag" style="background:#fff3d6;color:#a35a00">引き出し</span> ${x.yen!=null?(+x.yen).toLocaleString()+'円 ':''}→ 残り ${(+x.n).toLocaleString()}${u} <button class="sub sm" onclick="czEdit('${x.id}')">✎</button>`:`<span class="tag" style="background:#ffe9e9;color:#d62828">タバコ</span> −${(+x.n).toLocaleString()}${u}`;
+ return[...czCalc(st,k).days.values()].sort((a,b)=>a.date<b.date?1:-1).map(d=>{const ch=d.ch!=null?d.ch:d.end-d.start,j=JSON.stringify([k,d.date]).replace(/"/g,'&quot;');return`<div class="card czd" data-k="${k}" data-d="${esc(d.date)}" style="padding:8px 10px;${d.tobd?'border-left:5px solid #d62828':''}"><div style="display:flex;gap:8px;align-items:flex-start">
+ <div class="czl" style="flex:1;font-size:.86em;line-height:1.45"><b>${md(d.date)}</b> ${esc(st)}<br>投資${n0(d.inv)}${u} 回収${n0(d.out)}${u}<br>${L}<b${pc(d.net)}>${sg(d.net)}${u}</b> <span${pc(d.net*yp)}>${sg(d.net*yp)}円</span>${d.list.map(x=>'<br>'+ev(x)).join('')}</div>
+ <div class="czr2" style="text-align:right;font-size:.86em;line-height:1.45;min-width:104px">増減 <b${pc(ch)}>${sg(ch)}</b>${u}<br>累積 <b>${d.end.toLocaleString()}</b>${u}<br>累積額 <b${pc(d.end*yp)}>${sg(d.end*yp)}円</b></div></div>
+ <div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="number" inputmode="numeric" class="czfix" placeholder="累積を直す" value="${d.fix?d.fix.n:''}" style="flex:1;width:auto;font-size:16px;padding:6px;${d.fix?'border:2px solid #2b6fe8':''}" onchange="czFix(${j},this.value)"><button class="tob czt ${d.tobd?'on':'off'}" onclick="czTobD(${j})"${tb?'':' disabled'}>${d.tobd?`🚬 タバコあり −${(+d.tobd.n).toLocaleString()}${u}`:'🚬 タバコ'}</button></div></div>`}).join('')||'<p class="note">まだ記録がありません</p>'}
 function czDetail(){const st=czS,ks=czK==='all'?['p','s']:[czK];
  const bal=ks.map(k=>{const b=czCalc(st,k).bal;return`${sg(b)}${czU(k)}（${sg(b*czYp(k,st))}円）`}).join(' ／ ');
- return`<button class="sub sm" style="margin-bottom:10px" onclick="czOpen(null)">← 店の一覧</button><div class="card"><h2>${esc(st)}</h2><div class="seg">${[['p','パチンコ'],['s','スロット'],['all','全']].map(([k,l])=>`<button id="czk_${k}" class="${czK===k?'':'sub'}" onclick="czSetK('${k}')">${l}</button>`).join('')}</div><p style="margin:10px 0 0"><b>今の残り：</b>${bal}</p></div><p class="note" style="margin:0 0 6px"><small class="note">新しい日付から。投資＝使った持ち玉＋貯玉、回収、差玉(差枚)＝回収−投資＝その日の貯玉の増減。置き換えの日より前は出しません。金額＝その日の終わりの累積×換金率</small></p>${ks.map(k=>`<h2 class="czsec" style="margin:10px 0 6px">${k==='p'?'🎰 パチンコ（玉）':'🎲 スロット（枚）'}の日ごと</h2>`+czDays(st,k)).join('')}${czForm()}`}
+ return`<button class="sub sm" style="margin-bottom:10px" onclick="czOpen(null)">← 店の一覧</button><div class="card"><h2>${esc(st)}</h2><div class="seg">${[['p','玉'],['s','メダル'],['all','全']].map(([k,l])=>`<button id="czk_${k}" class="${czK===k?'':'sub'}" onclick="czSetK('${k}')">${l}</button>`).join('')}</div><p style="margin:10px 0 0"><b>今の残り：</b>${bal}</p></div><p class="note" style="margin:0 0 6px">新しい日付から1日1行。投資＝使った持ち玉＋貯玉、差玉(差枚)＝回収−投資（円＝その店の換金率）。「累積を直す」＝その日の累積をその数に置き換え（空で自動に戻す）。🚬＝その日に${TOB_YEN.toLocaleString()}円分を引く（もう一度で取り消し）。</p>${ks.map(k=>`<h2 class="czsec" style="margin:10px 0 6px">${k==='p'?'🎰 パチンコ（玉）':'🎲 スロット（メダル）'}</h2>`+czDays(st,k)).join('')}${czForm()}`}
+const czUp=(id,o)=>{const l=evList(),now=new Date().toISOString(),x=l.find(e=>e.id===id);if(x)Object.assign(x,o,{updatedAt:now});else l.push(Object.assign({id,at:'9999',yen:null},o,{updatedAt:now}));LS.set(EV,l);czR();syncSoon()};
+window.czFix=(a,v)=>{const [k,d]=a,st=czS,n=N(String(v).trim());czUp('fix-'+k+'-'+st+'-'+d,n==null?{deleted:true}:{t:'fix',store:st,k,date:d,n:Math.round(n),deleted:false})};
+window.czTobD=a=>{const [k,d]=a,st=czS,id='tobd-'+k+'-'+st+'-'+d,x=evList().find(e=>e.id===id),on=x&&!x.deleted;if(on)czUp(id,{deleted:true});else{const n=czTob(k,st);if(!n){alert('換金率が未設定です');return}czUp(id,{t:'tobd',store:st,k,date:d,n,deleted:false})}};
 const czR=()=>{const Y=scrollY;render();scrollTo(0,Y)};
 window.czOpen=s=>{czS=s;if(s)czF.store=s;czEd=null;render();scrollTo(0,0)};
-window.czSetK=k=>{czK=k;if(k!=='all')czF.k=k;czR()};
+window.czSetK=k=>{czK=k;if(k!=='all')czF.k=k;czEd=null;czR()};
 window.czSetF=(k,v)=>{const n=$('cz_n'),y=$('cz_y'),r=$('cz_r'),keep=[n&&n.value,y&&y.value,r&&r.value];czF[k]=v;czR();[['cz_n',0],['cz_y',1],['cz_r',2]].forEach(([i,j])=>{if($(i)&&keep[j])$(i).value=keep[j]})};
 window.czSave=t=>{const st=czF.store,k=czF.k,date=($('cz_dt')&&$('cz_dt').value)||todayS(),now=new Date().toISOString();let n,yen=null;
  if(t==='set'){n=N($('cz_n').value);if(n==null||n<0){alert('数を入れてね');return}}
