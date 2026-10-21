@@ -15,7 +15,7 @@ button.sub{background:#e4e8f0;color:#333}button.sm{width:auto;padding:7px 10px;f
 .mbtn{text-align:left;background:#fff;color:#222;border:2px solid #2b6fe8;font-size:1.05em}
 .bar{height:20px;background:#e8edf6;border-radius:10px;overflow:hidden;flex:2}.bar div{height:100%;background:#2b6fe8}
 .res .row span{width:58px;text-align:right;font-weight:bold}
-.tw{overflow-x:auto}.tw.st{max-height:72vh;overflow:auto;-webkit-overflow-scrolling:touch}.tw.st tr:first-child th{position:sticky;top:0;z-index:2;background:#eef2fa;box-shadow:0 1px 0 #dde}table{border-collapse:collapse;width:100%;font-size:.76em;white-space:nowrap}td,th{border:1px solid #dde;padding:4px;text-align:center}th{background:#eef2fa}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.76em;white-space:nowrap}td,th{border:1px solid #dde;padding:4px;text-align:center}th{background:#eef2fa}
 td.hit{background:#ff9f2e;color:#fff;font-weight:bold}td.me{background:#fff7e6;font-weight:bold}
 .chk{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:.9em}.chk input{width:22px;height:22px;flex:none}
 .tag{font-size:.72em;padding:1px 6px;border-radius:6px;background:#eef2fa;color:#2b6fe8;margin-left:4px}
@@ -188,7 +188,7 @@ function anStats(list){const s={n:0,G:0,h:0,yen:null,work:null,rate:null,wh:null
 const f1=x=>x==null?'-':x.toFixed(1),n0=x=>x==null?'-':Math.round(x).toLocaleString(),sgr=x=>x==null?'-':sg(Math.round(x));
 function anGroup(list,dims){const g=new Map();for(const e of list){const ks=dims.map(d=>DIMS[d].f(e));if(ks.some(k=>k==null))continue;const key=ks.join('\u0001');if(!g.has(key))g.set(key,{dims,ks,list:[]});g.get(key).list.push(e)}
  return[...g.values()].map(x=>({...x,label:x.ks.map((k,i)=>DIMS[dims[i]].show?DIMS[dims[i]].show(k):k).join('×'),mid:dims.includes('mach')?x.ks[dims.indexOf('mach')]:null,s:anStats(x.list)}))}
-const ordK=r=>{const d=r.dims[r.dims.length-1],k=r.ks[r.ks.length-1];if(d==='tail')return k==='z'?11:(+k===0?10:+k);if(d==='dow')return(+k+6)%7;if(d==='day'||d==='mon'||d==='yr')return+k;if((d==='store'||d==='mach')&&r.dims.length===1)return-r.s.n;if(d==='dai'){const n=parseFloat(k);return isNaN(n)?1e12:n}return null};
+const ordK=r=>{const d=r.dims[r.dims.length-1],k=r.ks[r.ks.length-1];if(d==='tail')return k==='z'?11:(+k===0?10:+k);if(d==='dow')return(+k+6)%7;if(d==='day'||d==='mon')return+k;if(d==='yr')return-k;if(d==='ym'){const [y,m]=k.split('-');return-(+y*100+ +m)}if((d==='store'||d==='mach')&&r.dims.length===1)return-r.s.n;if(d==='dai'){const n=parseFloat(k);return isNaN(n)?1e12:n}return null};
 function anSort(rows,met,dir){if(met==='ord')return rows.sort((a,b)=>{const x=ordK(a),y=ordK(b);if(x!=null&&y!=null&&x!==y)return x-y;return String(a.ks.join('|')).localeCompare(String(b.ks.join('|')),'ja',{numeric:true})});const v=r=>r.s[met];return rows.sort((a,b)=>{if(!!a.last!==!!b.last)return a.last?1:-1;const x=v(a),y=v(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return-1;return dir==='good'?y-x:x-y})}
 const fmtP=x=>x==null?'-':(x*100).toFixed(1)+'%';
 function anTable(id,title,rows,o){const S=anS();anSort(rows,S.met,S.dir);const all=anMore.has(id)||!!(o&&o.open),nl=rows.filter(r=>!r.last).length,show=all?rows:[...rows.filter(r=>!r.last).slice(0,10),...rows.filter(r=>r.last)];
