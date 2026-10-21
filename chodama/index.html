@@ -120,7 +120,7 @@ function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b
  <div class="tw" style="margin-top:8px"><table id="tot"><tr><th>全店合計</th><th>貯玉</th><th>貯メダル</th><th>金額</th></tr><tr style="font-weight:bold"><td></td><td${pc(tp)}>${sg(tp)}玉</td><td${pc(ts)}>${sg(ts)}枚</td><td${pc(ty)}>${sg(ty)}円${noY?'＊':''}</td></tr></table></div>
  <p class="note">円換算：パチンコ＝店舗の1玉の価値（未登録は3.57円）、スロット＝店舗の換金額（円/枚）。${noY?'＊レート未設定の店舗は金額に含みません。':''}</p></div>`}
 function render(){const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メダル';IDS=c.rows.map(r=>r.id);
- $('app').innerHTML=`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div><h1 style="margin-top:10px">📅 ${pg==='ss'?'収支管理':pg==='cd'?'貯玉管理':'収支・貯玉'}</h1>
+ $('app').innerHTML=`${pg==='home'?'':`<div style="display:flex;gap:8px"><button class="sub sm" onclick="location.href='../pachinko/'">← パチンコ</button><button class="sub sm" onclick="location.href='../'">← スロット</button></div>`}<h1 style="margin-top:10px">📅 ${pg==='ss'?'収支管理':pg==='cd'?'貯玉管理':'収支・貯玉'}</h1>
  ${pg==='home'?'':`<button id="back" class="sub sm" style="margin-bottom:10px" onclick="goPg('home')">← 戻る</button>`}${pg==='cd'?'':selBar()}
  ${pg==='home'?`${calendar()}<div class="seg" style="margin-bottom:12px"><button id="main_ss" onclick="goPg('ss')">収支管理</button><button id="main_cd" onclick="goPg('cd')">貯玉管理</button></div>`:''}
  <div id="pane_ss" class="${pg==='ss'?'':'hidden'}">${pg==='ss'?statSecs()+'<h2 style="margin:14px 0 6px">日別</h2>'+dayList():''}</div>
