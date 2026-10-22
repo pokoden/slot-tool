@@ -456,15 +456,15 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
  $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
  
  const mo=money(st,stores());$('o_tL').textContent=(st.tL?'最終更新時刻 '+st.tL:'')+(st.locked?'（保存済み：終了 '+(st.tSaved||endT())+' で固定）':'');
- {const h=hrs(st.tS,endT()),hok=st.tS&&endT()&&h>0,rt=mo.rate,n0=x=>Math.round(x).toLocaleString(),RW=(l,v,c)=>`<div class="row"><label>${l}</label><b${c==null?'':pc(c)}>${v}</b></div>`,YM=(y,n,sgn)=>`${y==null?'-':(sgn?sg(y):n0(y))+'円'}／${n==null?'-':(sgn?sg(n):n0(n))+'枚'}`,yOf=n=>n==null||rt==null?null:n*rt;
-  const pm=payoutMine(m,st,mo),gm=gMine(st),tg=m.at&&st.ttotal!==''&&st.ttotal!=null?Math.max(0,+st.ttotal-(+st.tstart||0)):null,out=st.out===''||st.out==null?null:+st.out||0;let x='';
+ {const h=hrs(st.tS,endT()),hok=st.tS&&endT()&&h>0,rt=mo.lend>0?1000/mo.lend:null,n0=x=>Math.round(x).toLocaleString(),RW=(l,v,c)=>`<div class="row"><label>${l}</label><b${c==null?'':pc(c)}>${v}</b></div>`,YM=(y,n,sgn)=>`${y==null?'-':(sgn?sg(y):n0(y))+'円'}／${n==null?'-':(sgn?sg(n):n0(n))+'枚'}`,yOf=n=>n==null||rt==null?null:n*rt;
+  const pm=payoutMine(m,st,mo),gm=gMine(st),tg=m.at&&st.ttotal!==''&&st.ttotal!=null?Math.max(0,+st.ttotal-(+st.tstart||0)):null,out=st.out===''||st.out==null?null:+st.out||0;const lentN=mo.lend>0?(mo.iy||0)/1000*mo.lend:null,dN=mo.any&&lentN!=null?(out||0)-(mo.uhb||0)-(mo.usv||0)-lentN:null,dY=yOf(dN);let x='';
   x+=RW('稼働時間',hok?`${st.tS}〜${endT()} ${h.toFixed(1)}時間`:st.tS?`${st.tS}〜`:'-');
-  x+=RW('使用金額',mo.any?YM(mo.iy,mo.lent==null?null:Math.round(mo.lent)):'-');
+  x+=RW('使用金額',mo.any?YM(mo.iy,lentN==null?null:Math.round(lentN)):'-');
   x+=RW('使用貯メダル',mo.any?YM(yOf(mo.usv),mo.usv):'-');
   x+=RW('使用持ちメダル',mo.any?YM(yOf(mo.uhb),mo.uhb):'-');
   x+=RW('回収',out==null?'-':YM(yOf(out),out));
-  x+=RW('差枚',mo.any?YM(mo.yen,mo.diff,1):'-',mo.any?(mo.yen??mo.diff):null);
-  {const a=hok&&mo.yen!=null?mo.yen/h:null,b=hok&&mo.diff!=null?mo.diff/h:null;x+=RW('時給',a==null&&b==null?'-':YM(a,b,1),a??b)}
+  x+=RW('差枚',mo.any?YM(dY,dN,1):'-',mo.any?dN:null);
+  {const a=hok&&dY!=null?dY/h:null,b=hok&&dN!=null?dN/h:null;x+=RW('時給',a==null&&b==null?'-':YM(a,b,1),a??b)}
   x+=RW('機械割',pm==null?'-':pm.toFixed(1)+'%',pm==null?null:pm-100);
   x+=RW('貸出',mo.ex?`<small style="font-weight:normal">貸出${mo.lend}枚/1000円・交換${mo.ex}枚/100円（1枚${mo.rate.toFixed(2)}円）</small>`:'<small style="font-weight:normal">店舗設定（トップ画面）に店舗名を登録すると計算できます</small>');
   {const hh=st.tS&&endT()?hrs(st.tS,endT()):null;x+=RW('1時間あたりの回転数',hh>0&&gm?(gm/hh).toFixed(0)+'G/時間':'-')}
