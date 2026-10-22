@@ -385,8 +385,8 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  <div class="row"><label>回収<small>最後に流した玉数を入力</small></label>${inp('f_out',st.out??'')}</div></div>
  <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>店舗名</label><b id="o_kstore">-</b></div><div class="row"><label>台番号</label><b id="o_kdai">-</b></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div>
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div><div id="o_use"></div>
- <div class="row"><label class="big">収支</label><b class="big" id="o_pl">-</b></div><div class="row"><label>　時給</label><b id="o_plh">-</b></div>
- <div class="row"><label class="big">仕事量</label><b class="big" id="o_work">-</b></div><div class="row"><label>　仕事量時給</label><b id="o_wkh">-</b></div><div id="o_res"></div></div>
+ <div class="row"><label class="big">収支</label><b class="big" id="o_pl">-</b></div><div class="row"><label class="big">時給</label><b class="big" id="o_plh">-</b></div>
+ <div class="row"><label class="big">仕事量</label><b class="big" id="o_work">-</b></div><div class="row"><label class="big">仕事量時給</label><b class="big" id="o_wkh">-</b></div><div id="o_res"></div></div>
  <div class="card"><button class="sub" onclick="calcExp()">見込み計算（回転数を最後に入力した時刻まで）</button><div id="o_exp" style="margin-top:8px"></div>
  <div id="o_detail" class="note"></div></div>
  <div class="card"><h2>この台を保存</h2> <div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝現在時刻を自動表示（手で入力した時刻が優先、消すと自動に戻る）。保存前の稼働時間・時給は最終更新時刻までで計算。保存後は時刻を固定</small></label></div>
