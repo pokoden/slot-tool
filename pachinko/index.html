@@ -85,7 +85,7 @@ function rowCalc(m,w){const s0=N(w.s0),s1=N(w.s1),b0=N(w.b0)??s0,b1=N(w.b1)??s1;
  const hits={};let anyHit=false;for(const R of m.R){const v=N((w.r||{})[R]);if(v!=null){hits[R]=v;anyHit=true}}
  const ds=s0!=null&&s1!=null&&s1>=s0?s1-s0:null,rnd=m.R.reduce((a,R)=>a+R*(hits[R]||0),0),d0=N(w.d0),d1=N(w.d1),dg=d0!=null&&d1!=null?d1-d0:null,r1m=dg!=null&&rnd>0?dg/rnd:null;
  return{ds,dt,dtb,rnd,dg,r1m,r1p:r1m!=null?r1m/m.r1-1:null,spins,nsp,yen:Math.max(0,yen),balls:Math.max(0,balls),k,rate,rateY,cs,bs,hits,anyHit,neg:(yen<0||balls<0)}}
-function calc(m,st){setRate(rateOf(st.store));const adj=N(st.adj)??DEF_ADJ,P=P_(m,adj),r=(N(st.ratio)??defRatio(m))/100,B=borders(m,r,adj);
+function calc(m,st){setRate(String(st.store||'').trim()?rateOf(st.store):{mode:'ball'});const adj=N(st.adj)??DEF_ADJ,P=P_(m,adj),r=(N(st.ratio)??defRatio(m))/100,B=borders(m,r,adj);
  const rows=(st.rows||[]).map(w=>rowCalc(m,w||{}));let sp=0,spY=0,dtS=0,yen=0,balls=0,cs=0,bs=0,k=0;const hits={};m.R.forEach(R=>hits[R]=0);
  for(const x of rows){dtS+=x.dt;if(x.spins!=null&&x.k>0){sp+=x.nsp;spY+=x.spins+x.dt;yen+=x.yen;balls+=x.balls;cs+=x.cs;bs+=x.bs;k+=x.k}for(const R in x.hits)hits[R]+=x.hits[R]}
  let spT=0,dgS=0,rnS=0;for(const x of rows){if(x.ds!=null)spT+=x.ds;if(x.r1m!=null){dgS+=x.dg;rnS+=x.rnd}}const r1m=rnS>0?dgS/rnS:null,r1p=r1m!=null?r1m/m.r1-1:null;
@@ -367,8 +367,8 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  <div class="card"><h2>稼働記録</h2>
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div><div id="o_use"></div>
  <div class="row"><label class="big">収支</label><b class="big" id="o_pl">-</b></div><div class="row"><label>　時給</label><b id="o_plh">-</b></div>
- <div class="row"><label class="big">${m.yt?"合計仕事量":"仕事量"}</label><b class="big" id="o_work">-</b></div><div class="row"><label>　仕事量時給</label><b id="o_wkh">-</b></div><div id="o_res"></div>
- <button class="sub" style="margin-top:14px" onclick="calcExp()">見込み計算（回転数を最後に入力した時刻まで）</button><div id="o_exp" style="margin-top:8px"></div>
+ <div class="row"><label class="big">仕事量</label><b class="big" id="o_work">-</b></div><div class="row"><label>　仕事量時給</label><b id="o_wkh">-</b></div><div id="o_res"></div></div>
+ <div class="card"><button class="sub" onclick="calcExp()">見込み計算（回転数を最後に入力した時刻まで）</button><div id="o_exp" style="margin-top:8px"></div>
  <div id="o_detail" class="note"></div></div>
  <div class="card"><h2>この台を保存</h2> <div class="row"><label>打った時間<small>開始＝最初に入力した時刻／終了＝現在時刻を自動表示（手で入力した時刻が優先、消すと自動に戻る）。保存前の稼働時間・時給は最終更新時刻までで計算。保存後は時刻を固定</small></label></div>
  <div class="row"><label style="text-align:right">開始</label>${inp('f_tS',st.tS,'time','style="width:110px"')}<label style="text-align:right">終了</label>${inp('f_tE',st.tE,'time','style="width:110px"')}</div>
@@ -414,8 +414,8 @@ function update(){const m=M[mid],c=calc(m,st);{const cnt=RATE.mode==='count';$('
  {const cr=c.k>0?(c.yen/1000)/c.k*100:null,dd=b=>c.rate==null?null:c.rate-b,rw=(l,v,col)=>`<div class="row"><label>${l}</label><b${col==null?'':pc(col)}>${v}</b></div>`,dR=c.rounds-c.expR;
   {const hh=st.tS&&endT()?hours(st.tS,endT()):null,n0=x=>Math.round(x).toLocaleString(),YB=(y,b)=>`${n0(y)}円／${n0(b)}玉`,nOut=N(st.out);$('o_use').innerHTML=rw('使用現金',YB(c.inv,c.inv/1000*BALLK))+rw('使用貯玉',YB(c.usv*EXC,c.usv))+rw('使用持ち玉',YB(c.uhb*EXC,c.uhb))+rw('回収',nOut==null?'-':YB(nOut*EXC,nOut));
   $('o_res').innerHTML=rw('貸出','<small style="font-weight:normal">'+rateTxt(RATE)+'</small>')+rw('1時間あたりの回転数',hh>0&&c.spT?(c.spT/hh).toFixed(0)+'回転/時間':'-')+rw('通常回転数合計',c.spN.toLocaleString()+'回転')
-  +(m.yt?rw('遊タイム回転数',c.dtS.toLocaleString()+'回転')+rw('合計回転数',c.spT.toLocaleString()+'回転')+rw('回転率（通常）',f2(c.rate)+' 回転/k')+rw('回転率（遊タイム込み）',f2(c.rateY)+' 回転/k')+rw('通常仕事量',yb(c.workN),c.workN)+rw('遊タイム仕事量',yb(c.workY),c.workY):rw('回転率',f2(c.rate)+' 回転/k'))
-  +rw('比率ボーダー±',sg2(dd(c.B.ratio)),dd(c.B.ratio))+rw('現金ボーダー±',sg2(dd(c.B.cash)),dd(c.B.cash))+rw('持ち玉ボーダー±',sg2(dd(c.B.ball)),dd(c.B.ball))
+  +(m.yt?rw('遊タイム回転数',c.dtS.toLocaleString()+'回転')+rw('合計回転数',c.spT.toLocaleString()+'回転')+rw('回転率（通常）',f2(c.rate)+' 回転/k'):rw('回転率',f2(c.rate)+' 回転/k'))
+  +[['比率',c.B.ratio],['現金',c.B.cash],['持ち玉',c.B.ball]].map(([l,b])=>{const v=dd(b);return`<div class="row"><label>${l}ボーダー(出玉増減${(()=>{const a=N(st.adj)??DEF_ADJ;return(a>0?'+':'')+a})()}%見込)</label><b style="margin-left:auto;text-align:right">${f2(b)}(<span${pc(v)}>${v==null?'-':sg2(v)}</span>)</b></div>`}).join('')
   +rw('現金比率／持ち玉比率',cr==null?'-':Math.round(cr)+'%／'+(100-Math.round(cr))+'%')
   +rw('ラウンド数',`${c.rounds}R（期待 ${c.expR.toFixed(1)}R　<span${pc(dR)}>${c.spT?sg2(dR).replace(/\.(\d)\d$/,'.$1'):'-'}</span>）`)
   +rw('初当たり',c.firsts?`${c.firsts}回　1/${(c.spT/c.firsts).toFixed(1)}`:'0回')+(()=>{const n=m.R.reduce((a,R)=>a+(c.hits[R]||0),0);return rw('合計当たり',n?`${n}回　1/${(c.spT/n).toFixed(1)}`:'0回')})()
