@@ -385,7 +385,7 @@ function machine(k){mid=k;const m=M[k];st=lockMig(migrate(Object.assign(blank(),
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
 ${blocks(m)[0]}
  </div>
- <div class="card"><h2>収支</h2>
+ <div class="card"><h2>収支計算</h2>
  <div class="row"><label>サンド投入現金（円）<small>サンドに入れたお金の合計</small></label>${inp('f_y0',st.y0??'')}</div>
  <div class="row"><label>サンド残り現金（円）<small>空欄＝残りなし</small></label>${inp('f_y1',st.y1??'')}</div>
  <div class="row"><label>貯メダル開始</label>${inp('f_sv0',st.sv0??'')}</div>

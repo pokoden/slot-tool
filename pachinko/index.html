@@ -85,7 +85,9 @@ function rowCalc(m,w){const s0=N(w.s0),s1=N(w.s1),b0=N(w.b0)??s0,b1=N(w.b1)??s1;
  const hits={};let anyHit=false;for(const R of m.R){const v=N((w.r||{})[R]);if(v!=null){hits[R]=v;anyHit=true}}
  const ds=s0!=null&&s1!=null&&s1>=s0?s1-s0:null,rnd=m.R.reduce((a,R)=>a+R*(hits[R]||0),0),d0=N(w.d0),d1=N(w.d1),dg=d0!=null&&d1!=null?d1-d0:null,r1m=dg!=null&&rnd>0?dg/rnd:null;
  return{ds,dt,dtb,rnd,dg,r1m,r1p:r1m!=null?r1m/m.r1-1:null,spins,nsp,yen:Math.max(0,yen),balls:Math.max(0,balls),k,rate,rateY,cs,bs,hits,anyHit,neg:(yen<0||balls<0)}}
-function calc(m,st){setRate(String(st.store||'').trim()?rateOf(st.store):{mode:'ball'});const adj=N(st.adj)??DEF_ADJ,P=P_(m,adj),r=(N(st.ratio)??defRatio(m))/100,B=borders(m,r,adj);
+// 収支計算欄の持ち玉比率(%)。比率欄が空欄のときの比率ボーダー・比率見込みに使う。欄が全部空欄ならnull
+function pRatio(st){const Z=x=>N(x)??0,PF=['cy0','cy1','cs0','cs1','ch0','ch1'];if(!PF.some(f=>N(st[f])!=null))return null;const c=(Z(st.cy0)-Z(st.cy1))/1000*BALLK,b=(Z(st.cs0)-Z(st.cs1))*SANDB+(Z(st.ch0)-Z(st.ch1)),t=c+b;return t>0?Math.round(b/t*100):null}
+function calc(m,st){setRate(String(st.store||'').trim()?rateOf(st.store):{mode:'ball'});const adj=N(st.adj)??DEF_ADJ,P=P_(m,adj),r=(N(st.ratio)??pRatio(st)??defRatio(m))/100,B=borders(m,r,adj);
  const rows=(st.rows||[]).map(w=>rowCalc(m,w||{}));let sp=0,spY=0,dtS=0,yen=0,balls=0,cs=0,bs=0,k=0;const hits={};m.R.forEach(R=>hits[R]=0);
  for(const x of rows){dtS+=x.dt;if(x.spins!=null&&x.k>0){sp+=x.nsp;spY+=x.spins+x.dt;yen+=x.yen;balls+=x.balls;cs+=x.cs;bs+=x.bs;k+=x.k}for(const R in x.hits)hits[R]+=x.hits[R]}
  let spT=0,dgS=0,rnS=0;for(const x of rows){if(x.ds!=null)spT+=x.ds;if(x.r1m!=null){dgS+=x.dg;rnS+=x.rnd}}const r1m=rnS>0?dgS/rnS:null,r1p=r1m!=null?r1m/m.r1-1:null;
@@ -100,13 +102,17 @@ function calc(m,st){setRate(String(st.store||'').trim()?rateOf(st.store):{mode:'
  // 上のボックス：開始＝表の一番上の入力行から自動（手で上書き可）、終了は既定0。使った量＝開始−終了
  const top=q=>{for(const w of st.rows||[]){const v=N((w||{})[q]);if(v!=null)return v}return null},bx=st.bx||{},box={};
  for(const t of['k','m','y']){const auto=top(t+'0'),a=N(bx[t+'0'])??auto,b=N(bx[t+'1'])??0;box[t]={auto,a,b,used:a!=null?(a-b)*(t==='k'&&!st.bxKball?SANDB:1):null,raw:a!=null?a-b:null}}
- const Z=x=>N(x)??0,autoInv=box.y.used??0,autoUsv=box.k.used??0,autoUhb=box.m.used??0,inv=N(st.inv)??autoInv,usv=N(st.usv)??autoUsv,uhb=N(st.uhb)??autoUhb,net=Z(st.out)-usv-uhb;
- const any=[st.out,st.inv,st.usv,st.uhb].some(x=>N(x)!=null)||['k','m','y'].some(t=>box[t].a!=null)||k>0;
+ const Z=x=>N(x)??0,autoInv=box.y.used??0,autoUsv=box.k.used??0,autoUhb=box.m.used??0;
+ // r66：収支計算欄（サンド投入/残り・貯玉/持ち玉の開始/終了・回収）を優先。全部空欄の古いデータは従来（手入力→上のボックス）
+ const PF=['cy0','cy1','cs0','cs1','ch0','ch1'],pNew=PF.some(f=>N(st[f])!=null),dif=(a,b)=>N(st[a])==null&&N(st[b])==null?0:Z(st[a])-Z(st[b]);
+ let inv,usv,uhb;if(pNew){inv=dif('cy0','cy1');usv=dif('cs0','cs1')*SANDB;uhb=dif('ch0','ch1')}else{inv=N(st.inv)??autoInv;usv=N(st.usv)??autoUsv;uhb=N(st.uhb)??autoUhb}
+ const net=Z(st.out)-usv-uhb,cashB=inv/1000*BALLK,useT=cashB+usv+uhb,crP=useT>0?cashB/useT:null;
+ const any=pNew||[st.out,st.inv,st.usv,st.uhb].some(x=>N(x)!=null)||['k','m','y'].some(t=>box[t].a!=null)||k>0;
  const pl=any?net*EXC-inv:null,b0=null,b1=null;
  const rounds=m.R.reduce((a,R)=>a+R*(hits[R]||0),0),firsts=rows.filter(x=>x.anyHit&&Object.values(x.hits).some(v=>v>0)).length,expR=spT/m.total;
  // 補正：実R＜期待Rなら 収支(玉)＋(期待R−実R)×1R増減出玉（実測優先・表記は増減率込みの純増）。今の仕事量より大きければ置き換え
  const r1u=r1m!=null?r1m:r1e(m,adj),workRaw=work;let workFix=null;if(pl!=null&&spT>0&&rounds<expR){workFix=(pl/EXC+(expR-rounds)*r1u)*EXC;if(work==null||workFix>work)work=workFix}
- return{r1u,workRaw,workFix,autoUsv,autoUhb,box,adj,r1e:r1e(m,adj),spT,spN,dtS,spY,rateY,workN,workY,r1m,r1p,rounds,firsts,expR,P,r,B,rows,sp,yen,balls,cs,bs,k,rate,work,exp,hits,inv,autoInv,autoB0,autoB1,b0,b1,usv,uhb,net,pl}}
+ return{crP,pNew,r1u,workRaw,workFix,autoUsv,autoUhb,box,adj,r1e:r1e(m,adj),spT,spN,dtS,spY,rateY,workN,workY,r1m,r1p,rounds,firsts,expR,P,r,B,rows,sp,yen,balls,cs,bs,k,rate,work,exp,hits,inv,autoInv,autoB0,autoB1,b0,b1,usv,uhb,net,pl}}
 function hm2min(t){const x=String(t||'').match(/^(\d{1,2}):(\d{2})/);return x?+x[1]*60+ +x[2]:null}
 function hours(a,b){const x=hm2min(a),y=hm2min(b);if(x==null||y==null)return null;let d=y-x;if(d<0)d+=1440;return d/60}
 function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
@@ -348,7 +354,7 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div></div>
  <div class="card"><h2>ボーダー</h2>
- <div class="row"><label>持ち玉比率（%）<small>空欄＝初期値 ${defRatio(m)}%（初当たり1/${m.first}）</small></label>${inp('f_ratio',st.ratio,'number',`placeholder="${defRatio(m)}"`)}</div>
+ <div class="row"><label>持ち玉比率（%）<small>空欄＝収支計算の持ち玉比率（収支計算も空欄なら初期値 ${defRatio(m)}%・初当たり1/${m.first}）</small></label>${inp('f_ratio',st.ratio,'number',`placeholder="${defRatio(m)}"`)}</div>
  <div class="row"><label>1R出玉増減率（%）<small>空欄＝${DEF_ADJ}%</small></label><span style="display:inline-flex;gap:4px;align-items:center"><button type="button" class="sub" style="width:40px;height:40px;padding:0;margin:0;font-size:1em;flex:0 0 40px" onclick="adjBump(-1)">−</button>${inp('f_adj',st.adj??'','number',`placeholder="${DEF_ADJ}" style="width:70px;height:40px;box-sizing:border-box"`)}<button type="button" class="sub" style="width:40px;height:40px;padding:0;margin:0;font-size:1em;flex:0 0 40px" onclick="adjBump(1)">＋</button></span></div>
  <div class="tw" style="margin-bottom:8px"><table><tr><th>表記出玉</th><th>増減出玉</th><th>増減玉数</th></tr><tr><td class="big">${m.r1}</td><td class="big" id="o_r1e">-</td><td class="big" id="o_r1d">-</td></tr></table></div>
  <div class="tw"><table><tr><th>比率ボーダー</th><th>現金ボーダー</th><th>持ち玉ボーダー</th></tr><tr><td class="big" id="o_br">-</td><td class="big" id="o_bc">-</td><td class="big" id="o_bb">-</td></tr></table></div>
@@ -359,10 +365,13 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  ${Array.from({length:ROWS},(_,i)=>rowHtml(m,i)).join('')}
  <tr style="background:#eef2fa;font-weight:bold"><th>合計</th><td colspan="${m.yt?6:3}" id="o_sp">-</td><td colspan="4" class="bd" id="o_used">-</td><td colspan="4" class="bd" id="o_k">-</td><td class="c" id="o_rate">-</td><td class="c" id="o_dr">-</td><td class="c" id="o_dc">-</td><td class="c" id="o_db">-</td>${m.R.map(R=>`<td id="o_R${R}">0</td>`).join('')}<td colspan="2" class="bd" id="o_dg">-</td><td class="c" id="o_r1">-</td><td class="c" id="o_r1p">-</td>${XC.map(k=>`<td class="c" id="o_${k}">-</td>`).join('')}</tr></table></div>
  <button class="sub" id="moreBtn" onclick="showMore()">${more?'閉じる（10回目まで表示）':'さらに表示（11〜30回目）'}</button></div>
- <div class="card"><h2>収支</h2>
- <div class="row"><label>現金投資合計<small>空欄＝上のボックスの現金（開始−終了）。手入力で上書き</small></label>${inp('f_inv',st.inv??'')}</div>
- <div class="row"><label>使用貯玉数<small>空欄＝ボックスの貯玉（開始−終了、玉換算）。手入力で上書き</small></label>${inp('f_usv',st.usv??'')}</div>
- <div class="row"><label>使用持ち玉数<small>空欄＝ボックスの持ち玉（開始−終了）。手入力で上書き</small></label>${inp('f_uhb',st.uhb??'')}</div>
+ <div class="card"><h2>収支計算</h2>
+ <div class="row"><label>サンド投入現金（円）<small>サンドに入れたお金の合計</small></label>${inp('f_cy0',st.cy0??'')}</div>
+ <div class="row"><label>サンド残り現金（円）<small>空欄＝残りなし</small></label>${inp('f_cy1',st.cy1??'')}</div>
+ <div class="row"><label>貯玉開始<span class="pu_k"></span></label>${inp('f_cs0',st.cs0??'')}</div>
+ <div class="row"><label>貯玉終了<span class="pu_k"></span></label>${inp('f_cs1',st.cs1??'')}</div>
+ <div class="row"><label>持ち玉開始</label>${inp('f_ch0',st.ch0??'')}</div>
+ <div class="row"><label>持ち玉終了</label>${inp('f_ch1',st.ch1??'')}</div>
  <div class="row"><label>回収<small>最後に流した玉数を入力</small></label>${inp('f_out',st.out??'')}</div></div>
  <div class="card"><h2>稼働記録</h2>
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div><div id="o_use"></div>
@@ -383,7 +392,7 @@ function lockMig(s){if(s&&s.locked==null){if(s.tE&&!s.tL){s.locked=1;s.tSaved=s.
 const endT=()=>st.locked?(st.tEman?st.tE:st.tSaved||st.tE):(st.tEman?st.tE:(st.tL||''));
 function tickE(){if(mid&&st&&!st.tEman&&$('f_tE')&&document.activeElement!==$('f_tE')){st.tE=st.locked?(st.tSaved||st.tE):nowHM();$('f_tE').value=st.tE}}
 setInterval(tickE,20000);
-function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','ratio','adj','out','inv','usv','uhb','tS','tE'])st[f]=$('f_'+f).value;
+function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','ratio','adj','out','cy0','cy1','cs0','cs1','ch0','ch1','tS','tE'])st[f]=$('f_'+f).value;
  const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';
  // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
  st.bx={};for(const t of['k','m','y'])for(const j of['0','1'])st.bx[t+j]=$('bx_'+t+j).value;
@@ -409,9 +418,9 @@ function update(){const m=M[mid],c=calc(m,st);{const cnt=RATE.mode==='count';$('
  setO('o_sp',m.yt?`通常${c.spN.toLocaleString()}＋遊タイム${c.dtS.toLocaleString()}＝${c.spT.toLocaleString()}回転`:c.spT.toLocaleString()+'回転');setO('o_used',c.balls.toLocaleString()+'玉');setO('o_k',c.yen.toLocaleString()+'円');setO('o_rate',f2(c.rate));
  const d=b=>c.rate==null?null:c.rate-b;setO('o_dr',sg2(d(c.B.ratio)),d(c.B.ratio));setO('o_dc',sg2(d(c.B.cash)),d(c.B.cash));setO('o_db',sg2(d(c.B.ball)),d(c.B.ball));
  m.R.forEach(R=>setO('o_R'+R,c.hits[R]));
- $('f_inv').placeholder=c.autoInv;$('f_usv').placeholder=c.autoUsv;$('f_uhb').placeholder=c.autoUhb;
+ document.querySelectorAll('.pu_k').forEach(e=>e.textContent=RATE.mode==='count'?'（回数）':'（玉）');
  const yb=x=>x==null?'-':sg(x)+'円（'+sg(x/EXC)+'玉）';setO('o_pl',yb(c.pl),c.pl);setO('o_work',yb(c.work),c.work);
- {const cr=c.k>0?(c.yen/1000)/c.k*100:null,dd=b=>c.rate==null?null:c.rate-b,rw=(l,v,col)=>`<div class="row"><label>${l}</label><b${col==null?'':pc(col)}>${v}</b></div>`,dR=c.rounds-c.expR;
+ {const cr=c.crP!=null?c.crP*100:c.pNew?null:c.k>0?(c.yen/1000)/c.k*100:null,dd=b=>c.rate==null?null:c.rate-b,rw=(l,v,col)=>`<div class="row"><label>${l}</label><b${col==null?'':pc(col)}>${v}</b></div>`,dR=c.rounds-c.expR;
   {const hh=st.tS&&endT()?hours(st.tS,endT()):null,n0=x=>Math.round(x).toLocaleString(),YB=(y,b)=>`${n0(y)}円／${n0(b)}玉`,nOut=N(st.out);$('o_use').innerHTML=rw('使用現金',YB(c.inv,c.inv/1000*BALLK))+rw('使用貯玉',YB(c.usv*EXC,c.usv))+rw('使用持ち玉',YB(c.uhb*EXC,c.uhb))+rw('回収',nOut==null?'-':YB(nOut*EXC,nOut));
   $('o_res').innerHTML=rw('貸出','<small style="font-weight:normal">'+rateTxt(RATE)+'</small>')+rw('1時間あたりの回転数',hh>0&&c.spT?(c.spT/hh).toFixed(0)+'回転/時間':'-')+rw('通常回転数合計',c.spN.toLocaleString()+'回転')
   +(m.yt?rw('遊タイム回転数',c.dtS.toLocaleString()+'回転')+rw('合計回転数',c.spT.toLocaleString()+'回転')+rw('回転率（通常）',f2(c.rate)+' 回転/k'):rw('回転率',f2(c.rate)+' 回転/k'))
