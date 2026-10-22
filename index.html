@@ -26,6 +26,17 @@ table.nt td,table.nt th{padding:3px 2px}table.nt th{line-height:1.2}</style></he
 <div id="home"></div>
 <div id="mach" class="hidden"></div>
 <script>
+// r69：店舗名の変更（古い名前→新しい名前）。読み込み時・同期で取得したデータの両方に適用し、古い名前が戻らないようにする
+const SMAP={'柏マル':'マルハン青森柏','マルハンつがる柏':'マルハン青森柏','柏USA':'USA柏','つがる柏USA':'USA柏','五所マル':'マルハン五所川原','石渡マル':'マルハン弘前石渡','五所ジャム':'ジャムフレンド五所川原','弘前マル':'マルハン弘前','弘前ジャム':'ジャムフレンド弘前'};
+const SMRE=new RegExp('(^|[|-])('+Object.keys(SMAP).sort((a,b)=>b.length-a.length).join('|')+')(?=[|-]|$)','g');
+function smStr(s){if(Object.prototype.hasOwnProperty.call(SMAP,s.trim()))return SMAP[s.trim()];return s.replace(SMRE,(m,a,n)=>a+SMAP[n])}
+function smDedupe(a){if(!Array.isArray(a))return a;const m=new Map(),o=[];for(const x of a){if(!x||typeof x!=='object'||x.name==null){o.push(x);continue}const k=String(x.name).trim(),p=m.get(k);
+ if(!p){m.set(k,x);o.push(x);continue}const better=(!x.deleted&&p.deleted)||(!!x.deleted===!!p.deleted&&String(x.updatedAt||'')>String(p.updatedAt||''));if(better){o[o.indexOf(p)]=x;m.set(k,x)}}return o}
+function SMIG(v,storesKey){if(typeof v==='string')return smStr(v);if(Array.isArray(v)){const r=v.map(x=>SMIG(x));return storesKey?smDedupe(r):r}
+ if(v&&typeof v==='object'){const r={};for(const k of Object.keys(v))r[smStr(k)]=SMIG(v[k],k==='stores');return r}return v}
+(function(){try{const re=new RegExp(Object.keys(SMAP).join('|'));for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(v2_|p1_|cd_)/.test(k)||/token/i.test(k))continue;const s=localStorage.getItem(k);if(!s||!re.test(s))continue;
+ let j;try{j=JSON.parse(s)}catch(e){continue}const n=SMIG(j,/_stores$/.test(k));const t=JSON.stringify(n);if(t!==s)localStorage.setItem(k,t)}}catch(e){}})();
+
 // ===== 機種データ（出典に記載の公表・解析値のみ） =====
 const M={
 tg:{at:1,kind:'AT',intro:'2025年2月3日',name:'L 東京喰種',sub:'スマスロ / AT機',
@@ -166,7 +177,7 @@ const hist=()=>rawHist().filter(x=>!x.deleted);
 const putStores=s=>{LS.set('v2_stores',applyChanges(rawStores(),s,storeKey,new Date().toISOString()));syncSoon()};
 const putHist=h=>{LS.set('v2_hist',applyChanges(rawHist(),dedupeLive(h),entryKey,new Date().toISOString()));syncSoon()};
 // id / updatedAt 付与（既存データ移行）
-const DEF_STORES=[['柏マル',50,5.6],['柏USA',50,5.6],['五所ジャム',50,5.6],['石渡マル',46,5.2],['五所マル',47,5.3]];
+const DEF_STORES=[['マルハン青森柏',50,5.6],['USA柏',50,5.6],['ジャムフレンド五所川原',50,5.6],['マルハン弘前石渡',46,5.2],['マルハン五所川原',47,5.3]];
 function seedStores(list){const have=new Set((list||[]).map(storeKey));const add=DEF_STORES.filter(([n])=>!have.has('n:'+n)).map(([name,lend,ex],i)=>({id:'def-'+name,name,lend,ex,rate:Math.round(100/ex*10000)/10000,updatedAt:'2000-01-01T00:00:00.000Z'}));return add.length?[...(list||[]),...add]:list}
 (function(){const sd=seedStores(rawStores());if(sd!==rawStores())LS.set('v2_stores',sd)})();
 (function(){const now=new Date().toISOString();let a=rawStores(),c=false;a=a.map(x=>{if(!x.id||!x.updatedAt){c=true;return{...x,id:x.id||genId(),updatedAt:x.updatedAt||now}}return x});if(c)LS.set('v2_stores',a);
@@ -348,7 +359,7 @@ window.clearToken=()=>{if(!confirm('この端末の同期キーを削除しま�
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
 async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
  if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
- const j=await r.json();return{sha:j.sha,data:JSON.parse(b64dec(j.content||''))}}
+ const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64dec(j.content||'')))}}
 async function ghPut(tok,data,sha){const body={message:'sync '+new Date().toISOString(),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
  return fetch(SYNC_URL,{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)})}
 window.syncNow=async manual=>{const tok=LS.get('v2_token','');if(!tok){if(manual)syncStatus();return}
@@ -394,7 +405,7 @@ ${blocks(m)[0]}
  <div class="row"><label>持ちメダル終了</label>${inp('f_hb1',st.hb1??'')}</div>
  <div class="row"><label>回収<small>最後に流したメダル数を入力</small></label>${inp('f_out',st.out??'')}</div>
  </div>
- <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div><div id="money"></div></div>
+ <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>店舗名</label><b id="o_kstore">-</b></div><div class="row"><label>台番号</label><b id="o_kdai">-</b></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div><div id="money"></div></div>
  <div class="card"><h2>カウント</h2>${blocks(m)[1]}<div class="row"><label>自分が回したG${m.at?'（通常）':''}</label><b id="mine">-</b></div><hr style="border:0;border-top:1px solid #e3e6ee;margin:10px 0">`;
  const pb=k=>{if(!m.ph)return'';const l=m.ph[k];if(!l)return'<span class="phb phe"></span>';return`<button class="phb" onclick="phShow('${k}')" aria-label="見本画像"><img src="img/${mid}/thumb/${l[0][0]}.jpg" loading="lazy" alt="">${l.length>1?`<i>${l.length}</i>`:''}</button>`};for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
   else if(e.t==='pct')h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
@@ -452,7 +463,7 @@ function ownG(m,st){if(m.at&&st.ttotal!==''&&st.ttotal!=null)return Math.max(0,+
 function payoutMine(m,st,mo){const g=ownG(m,st);return g>0&&mo.diff!=null?(3*g+mo.diff)/(3*g)*100:null}
 window.setG=g=>{st.gmode=g;LS.set('v2_cur_'+mid,st);update()};
 const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',r1=x=>Math.round(x*10)/10,sg=x=>(x>0?'+':'')+Math.round(x).toLocaleString();
-function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;{const e=$('o_kdate');if(e)e.textContent=st.date||'-'}
+function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;{const T=(i,v)=>{const e=$(i);if(e)e.textContent=String(v||'').trim()||'-'};T('o_kdate',st.date);T('o_kstore',st.store);T('o_kdai',st.memo)}
  $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
  
  const mo=money(st,stores());$('o_tL').textContent=(st.tL?'最終更新時刻 '+st.tL:'')+(st.locked?'（保存済み：終了 '+(st.tSaved||endT())+' で固定）':'');
@@ -501,7 +512,7 @@ window.delH=id=>{if(!confirm('この保存データを削除しますか？'))re
 window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('v2_cur_'+mid);machine(mid)};
 const XPJS='export.js',XPN='スロ',XPF='slot';
 let XALL=false;
-window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=2';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=3';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
 const xpFn=s=>String(s).replace(/[\\/:*?"<>|\s]+/g,'_');
 function anCondText(){const S=anS(),p=location.hash.slice(4),a=[];if(p.startsWith('mach'))a.push('機種: '+(S.mach?mkName(S.mach):'未選択'));else{const ss=stSel();a.push('店舗: '+(ss.length?(ss.length>3?ss.slice(0,3).join('・')+' ほか'+(ss.length-3)+'店舗':ss.join('・')):'全店舗'));a.push('期間: '+(S.pOn?(S.pFrom||'最初')+'〜'+(S.pTo||today()):'全期間'));a.push('狙い: '+(S.aim||'全部'));{const dd=DTF.map(([k,l])=>{const v=dtV(k);return v==null||Number.isNaN(v)?'':l+(k==='fw'?' '+'日月火水木金土'[v]+'曜':' '+v)}).filter(Boolean);if(dd.length)a.push(dd.join(' '))}if(p.startsWith('sm')||p.startsWith('hr')){const ms=mpSel();a.push('機種: '+(ms.length?(ms.length>3?ms.slice(0,3).map(mkName).join('・')+' ほか'+(ms.length-3)+'機種':ms.map(mkName).join('・')):'全機種'))}}
  const h=p.startsWith('hr'),k=h?S.hmet:S.met,l=((h?AN_HMET:AN_MET).find(x=>x[0]===k)||[k,k])[1];a.push('並び順: '+l+(k==='ord'?'':S.dir==='good'?'（良い順）':'（悪い順）'));return a.join(' ／ ')}

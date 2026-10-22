@@ -61,17 +61,28 @@ async function pdf(ctx){await Promise.all([load('h'),load('p')]);const{jsPDF}=wi
     const sh=(end-off)*sc;g.drawImage(cv,0,off*sc,cv.width,sh,MG,y,cv.width*d,sh*d);y+=sh*d+18;off=end;if(off<H-1)newPg()}}}
   flush();return doc.output('blob')}finally{box.remove()}}
 // ---- 画像（PNG）。m＝判別ページの稼働記録の枠だけ／a＝集計の表全体（横にはみ出す列も全部）＋絞り込み条件1行
-async function png(kind,ctx){await load('h');const box=document.createElement('div');box.id='xpbox';box.style.cssText='position:absolute;left:-30000px;top:0;background:#fff;width:max-content;padding:12px';
+// r69：段階表示・画像待ち1枚3秒・全体20秒で打ち切り・html2canvasは枠だけ複製・iPhoneは約800万画素/倍率1.5まで
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let STAGE='';const stage=t=>{STAGE=t;const e=document.getElementById('xpStage');if(e)e.textContent='段階：'+t};
+const wait=(p,ms)=>Promise.race([p,new Promise(r=>setTimeout(r,ms))]);
+function toData(img){try{if(!img.naturalWidth)return false;const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);img.src=c.toDataURL('image/png');return true}catch(e){return false}}
+async function png(kind,ctx){stage('ライブラリ読込');await load('h');const box=document.createElement('div');box.id='xpbox';box.style.cssText='position:absolute;left:0;top:0;transform:translateX(-200vw);background:#fff;width:max-content;padding:12px';
  box.innerHTML='<style>#xpbox .tw{overflow:visible!important;max-height:none!important;max-width:none!important}#xpbox .card{box-shadow:none;margin:0;overflow:visible!important;max-width:none!important}#xpbox table{background:#fff}#xpbox th,#xpbox td{position:static!important}</style>';
  try{if(kind==='m'){const src=[...document.querySelectorAll('#mach .card')].find(c=>{const h=c.querySelector('h2');return h&&h.textContent.trim().startsWith('稼働記録')});if(!src)throw new Error('稼働記録の枠が見つかりません');
-   const cl=src.cloneNode(true);cl.querySelectorAll('button,input,select,textarea,script').forEach(x=>x.remove());cl.style.width=src.getBoundingClientRect().width+'px';box.appendChild(cl)}
+   const cl=src.cloneNode(true);cl.querySelectorAll('button,input,select,textarea,script').forEach(x=>x.remove());
+   // 元の画像（読み込み済み）からデータ化して差し替え。コピーの loading=lazy は外す
+   const oi=[...src.querySelectorAll('img')],ci=[...cl.querySelectorAll('img')];ci.forEach((im,n)=>{im.removeAttribute('loading');im.loading='eager';const o=oi[n];if(o&&o.complete&&o.naturalWidth){const c=document.createElement('canvas');try{c.width=o.naturalWidth;c.height=o.naturalHeight;c.getContext('2d').drawImage(o,0,0);im.src=c.toDataURL('image/png')}catch(e){}}});
+   cl.style.width=src.getBoundingClientRect().width+'px';box.appendChild(cl)}
   else{const hd=document.createElement('div');hd.style.cssText='font:bold 18px sans-serif;color:#1b3a73;margin:0 0 2px';hd.textContent=ctx.title;const cd=document.createElement('div');cd.style.cssText='font-size:13px;color:#555;margin:0 0 10px;white-space:nowrap';cd.textContent=ctx.cond;box.append(hd,cd);
-   for(const s of ctx.secs){const t=document.createElement('div');t.style.cssText='font-weight:bold;margin:10px 0 4px';t.textContent=s.title;box.append(t,s.node)}}
-  document.body.appendChild(box);const imgs=[...box.querySelectorAll('img')];imgs.forEach(i=>i.loading='eager');await Promise.all(imgs.map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
-  const R=box.getBoundingClientRect(),sc=Math.max(1,Math.min(2,Math.sqrt(16e6/(R.width*R.height||1))));
-  const cv=await html2canvas(box,{scale:sc,backgroundColor:'#fff',logging:false,useCORS:true,windowWidth:Math.max(innerWidth,Math.ceil(R.width)+40)});
-  return await new Promise((ok,ng)=>cv.toBlob(b=>b&&b.size?ok(b):ng(new Error('画像を作れませんでした')),'image/png'))}finally{box.remove()}}
+   for(const s of ctx.secs){s.node.querySelectorAll('img').forEach(im=>{im.removeAttribute('loading')});const t=document.createElement('div');t.style.cssText='font-weight:bold;margin:10px 0 4px';t.textContent=s.title;box.append(t,s.node)}}
+  document.body.appendChild(box);stage('画像待ち');const imgs=[...box.querySelectorAll('img')];
+  await Promise.all(imgs.map(i=>i.complete?0:wait(new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true})}),3000)));
+  imgs.forEach(i=>{if(!i.src.startsWith('data:'))toData(i)});
+  const R=box.getBoundingClientRect(),MP=IOS?8e6:16e6,MX=IOS?1.5:2,sc=Math.max(.5,Math.min(MX,Math.sqrt(MP/(R.width*R.height||1))));
+  stage('描画');const cv=await html2canvas(box,{scale:sc,backgroundColor:'#fff',logging:false,useCORS:true,imageTimeout:3000,x:0,y:0,width:Math.ceil(R.width),height:Math.ceil(R.height),windowWidth:Math.max(innerWidth,Math.ceil(R.width)+40),
+   ignoreElements:el=>!(el===document.head||document.head.contains(el)||box.contains(el)||el.contains(box)),onclone:d=>{const b=d.getElementById('xpbox');if(b)b.style.transform='none'}});
+  stage('PNG化');return await new Promise((ok,ng)=>cv.toBlob(b=>b&&b.size?ok(b):ng(new Error('画像を作れませんでした（画像が大きすぎる可能性）')),'image/png'))}finally{box.remove()}}
 window.XP={run:async(kind,fmt)=>{let ctx;try{ctx=window.xpCtx(kind)}catch(e){alert('書き出しの準備に失敗しました: '+e.message);return}
- if(!ctx||!ctx.secs.length){alert('書き出す表がありません');return}ovl('<p style="margin:0">作成中…</p>');
- try{const b=fmt==='png'?await png(kind,ctx):fmt==='pdf'?await pdf(ctx):await xlsx(ctx);offer(b,ctx.file+(fmt==='png'?'.png':fmt==='pdf'?'.pdf':'.xlsx'))}catch(e){close();alert('書き出しに失敗しました: '+(e&&e.message||e))}}};
+ if(!ctx||!ctx.secs.length){alert('書き出す表がありません');return}ovl('<p style="margin:0">作成中…</p>'+(fmt==='png'?'<p class="note" id="xpStage" style="margin:6px 0 0"></p>':''));
+ try{const b=fmt==='png'?await Promise.race([png(kind,ctx),new Promise((_,ng)=>setTimeout(()=>ng(new Error('TIMEOUT')),20000))]):fmt==='pdf'?await pdf(ctx):await xlsx(ctx);offer(b,ctx.file+(fmt==='png'?'.png':fmt==='pdf'?'.pdf':'.xlsx'))}catch(e){close();if(e&&e.message==='TIMEOUT'){const bx=document.getElementById('xpbox');if(bx)bx.remove();alert('画像の作成がタイムアウトしました（'+(STAGE||'準備')+'の段階）')}else alert('書き出しに失敗しました: '+(e&&e.message||e))}}};
 })();

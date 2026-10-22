@@ -31,6 +31,17 @@ table.nt td,table.nt th{padding:3px 2px}table.nt th{line-height:1.2}</style></he
 <div id="home"></div>
 <div id="mach" class="hidden"></div>
 <script>
+// r69：店舗名の変更（古い名前→新しい名前）。読み込み時・同期で取得したデータの両方に適用し、古い名前が戻らないようにする
+const SMAP={'柏マル':'マルハン青森柏','マルハンつがる柏':'マルハン青森柏','柏USA':'USA柏','つがる柏USA':'USA柏','五所マル':'マルハン五所川原','石渡マル':'マルハン弘前石渡','五所ジャム':'ジャムフレンド五所川原','弘前マル':'マルハン弘前','弘前ジャム':'ジャムフレンド弘前'};
+const SMRE=new RegExp('(^|[|-])('+Object.keys(SMAP).sort((a,b)=>b.length-a.length).join('|')+')(?=[|-]|$)','g');
+function smStr(s){if(Object.prototype.hasOwnProperty.call(SMAP,s.trim()))return SMAP[s.trim()];return s.replace(SMRE,(m,a,n)=>a+SMAP[n])}
+function smDedupe(a){if(!Array.isArray(a))return a;const m=new Map(),o=[];for(const x of a){if(!x||typeof x!=='object'||x.name==null){o.push(x);continue}const k=String(x.name).trim(),p=m.get(k);
+ if(!p){m.set(k,x);o.push(x);continue}const better=(!x.deleted&&p.deleted)||(!!x.deleted===!!p.deleted&&String(x.updatedAt||'')>String(p.updatedAt||''));if(better){o[o.indexOf(p)]=x;m.set(k,x)}}return o}
+function SMIG(v,storesKey){if(typeof v==='string')return smStr(v);if(Array.isArray(v)){const r=v.map(x=>SMIG(x));return storesKey?smDedupe(r):r}
+ if(v&&typeof v==='object'){const r={};for(const k of Object.keys(v))r[smStr(k)]=SMIG(v[k],k==='stores');return r}return v}
+(function(){try{const re=new RegExp(Object.keys(SMAP).join('|'));for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(v2_|p1_|cd_)/.test(k)||/token/i.test(k))continue;const s=localStorage.getItem(k);if(!s||!re.test(s))continue;
+ let j;try{j=JSON.parse(s)}catch(e){continue}const n=SMIG(j,/_stores$/.test(k));const t=JSON.stringify(n);if(t!==s)localStorage.setItem(k,t)}}catch(e){}})();
+
 // ===== 機種データ（出典：pachinko-spec.info の残保留あり条件） =====
 // 追加するときはこの配列に1行足すだけ。R は小さい順。初当たり＝TS（低ベース時の大当り確率分母）
 const MACHINES=[
@@ -131,7 +142,7 @@ const rawStores=()=>LS.get('p1_stores',[]),rawHist=()=>LS.get('p1_hist',[]);
 const stores=()=>rawStores().filter(x=>!x.deleted),hist=()=>rawHist().filter(x=>!x.deleted);
 const putStores=s=>{LS.set('p1_stores',applyChanges(rawStores(),s,storeKey,new Date().toISOString()));syncSoon()};
 const putHist=h=>{LS.set('p1_hist',applyChanges(rawHist(),dedupeLive(h),entryKey,new Date().toISOString()));syncSoon()};
-const DEF_STORES=['柏マル','柏USA','五所ジャム','石渡マル','五所マル'];
+const DEF_STORES=['マルハン青森柏','USA柏','ジャムフレンド五所川原','マルハン弘前石渡','マルハン五所川原'];
 function seedStores(list){const have=new Set((list||[]).map(storeKey));const add=DEF_STORES.filter(n=>!have.has('n:'+n)).map(name=>({id:'def-'+name,name,updatedAt:'2000-01-01T00:00:00.000Z'}));return add.length?[...(list||[]),...add]:list}
 (function(){const sd=seedStores(rawStores());if(sd!==rawStores())LS.set('p1_stores',sd)})();
 const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',sg=x=>(x>0?'+':'')+Math.round(x).toLocaleString(),f2=x=>x==null||!isFinite(x)?'-':x.toFixed(2),sg2=x=>x==null||!isFinite(x)?'-':(x>0?'+':'')+x.toFixed(2);
@@ -308,7 +319,7 @@ window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トーク�
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
 async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
  if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
- const j=await r.json();return{sha:j.sha,data:JSON.parse(b64dec(j.content||''))}}
+ const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64dec(j.content||'')))}}
 async function ghPut(tok,data,sha){const body={message:'pachinko sync '+new Date().toISOString(),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
  return fetch(SYNC_URL,{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)})}
 window.syncNow=async manual=>{const tok=LS.get(TOK,'');if(!tok){if(manual)syncStatus();return}
@@ -372,7 +383,7 @@ function machine(k){mid=k;const m=M[k];COLS=colsOf(m);{const raw=LS.get('p1_cur_
  <div class="row"><label>持ち玉開始</label>${inp('f_ch0',st.ch0??'')}</div>
  <div class="row"><label>持ち玉終了</label>${inp('f_ch1',st.ch1??'')}</div>
  <div class="row"><label>回収<small>最後に流した玉数を入力</small></label>${inp('f_out',st.out??'')}</div></div>
- <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div>
+ <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>店舗名</label><b id="o_kstore">-</b></div><div class="row"><label>台番号</label><b id="o_kdai">-</b></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div>
  <div class="row"><label>稼働時間</label><b id="o_time">-</b></div><div id="o_use"></div>
  <div class="row"><label class="big">収支</label><b class="big" id="o_pl">-</b></div><div class="row"><label>　時給</label><b id="o_plh">-</b></div>
  <div class="row"><label class="big">仕事量</label><b class="big" id="o_work">-</b></div><div class="row"><label>　仕事量時給</label><b id="o_wkh">-</b></div><div id="o_res"></div></div>
@@ -408,7 +419,7 @@ window.calcExp=()=>{read();const c=calc(M[mid],st),o=$('o_exp');if(!st.tS){o.inn
  const now=st.tG||st.tE||nowHM(),h=hours(st.tS,now);if(!(h>0)){o.innerHTML='<p class="note">まだ時間が経っていません</p>';return}if(!c.exp||!c.spT){o.innerHTML='<p class="note">回転数と投資を入れてください</p>';return}
  const sph=c.spT/h,K=[['ratio','比率'],['cash','現金'],['ball','持ち玉']],ev=Object.fromEntries(K.map(([k])=>[k,c.exp[k]/c.spT])),Y=x=>`<span${pc(x)}>${sg(x)}円</span>`;
  o.innerHTML=`<p class="note">${st.tS}〜${now}（${h.toFixed(1)}時間）・${c.spT.toLocaleString()}回転 → <b>${sph.toFixed(0)}回転／時間</b>・回転率 ${f2(c.rate)}</p><h2 style="font-size:.95em;margin:8px 0 4px">現在の仕事量見込み</h2><div class="tw" style="margin-bottom:10px"><table><tr><th></th>${K.map(x=>`<th>${x[1]}</th>`).join('')}</tr><tr><th>時給</th>${K.map(([k])=>`<td class="big">${Y(ev[k]*sph)}</td>`).join('')}</tr><tr><th>合計</th>${K.map(([k])=>`<td><b>${Y(ev[k]*c.spT)}</b></td>`).join('')}</tr></table></div><div class="tw"><table><tr><th></th>${K.map(x=>`<th>${x[1]}</th>`).join('')}</tr><tr><th>1回転</th>${K.map(([k])=>`<td><span${pc(ev[k])}>${sg2(ev[k])}円</span></td>`).join('')}</tr>${Array.from({length:14},(_,i)=>`<tr><th>${i+1}時間</th>${K.map(([k])=>`<td>${Y(ev[k]*sph*(i+1))}</td>`).join('')}</tr>`).join('')}</table></div>`};
-function update(){const m=M[mid],c=calc(m,st);{const e=$('o_kdate');if(e)e.textContent=st.date||'-'}{const cnt=RATE.mode==='count';$('o_ratenote').textContent=`1000円あたりの回転数。${st.store?st.store+'：':''}${rateTxt(RATE)}`;const u=cnt?'（回数）':'（玉）';$('h_k0').innerHTML='貯玉開始<br>'+u;$('h_k1').innerHTML='貯玉終了<br>'+u;if($('bxh_k'))$('bxh_k').textContent='貯玉'+u}
+function update(){const m=M[mid],c=calc(m,st);{const T=(i,v)=>{const e=$(i);if(e)e.textContent=String(v||'').trim()||'-'};T('o_kdate',st.date);T('o_kstore',st.store);T('o_kdai',st.memo)}{const cnt=RATE.mode==='count';$('o_ratenote').textContent=`1000円あたりの回転数。${st.store?st.store+'：':''}${rateTxt(RATE)}`;const u=cnt?'（回数）':'（玉）';$('h_k0').innerHTML='貯玉開始<br>'+u;$('h_k1').innerHTML='貯玉終了<br>'+u;if($('bxh_k'))$('bxh_k').textContent='貯玉'+u}
  /* r67：上の貯玉/持ち玉/現金ボックスは画面から削除（古いデータの値は計算にだけ使う） */
  setO('o_br',f2(c.B.ratio));setO('o_bc',f2(c.B.cash));setO('o_bb',f2(c.B.ball));setO('o_r1e',c.r1e.toFixed(1));{const d=c.r1e-m.r1;setO('o_r1d',(d>0?'+':d<0?'−':'±')+Math.abs(d).toFixed(1),d)}
  const pct=x=>x==null?'-':(x>0?'+':'')+(x*100).toFixed(1)+'%';c.rows.forEach((x,i)=>{setO('o'+i+'_ds',x.ds==null?'-':String(x.ds));if(m.yt)setO('o'+i+'_dt',N((st.rows[i]||{}).t0)!=null&&N((st.rows[i]||{}).t1)!=null&&x.dt>=0?String(x.dt):'-');setO('o'+i+'_r1',x.r1m==null?'-':x.r1m.toFixed(1));setO('o'+i+'_r1p',pct(x.r1p),x.r1p)});
@@ -443,7 +454,7 @@ window.delH=id=>{if(!confirm('この保存データを削除しますか？'))re
 window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('p1_cur_'+mid);machine(mid)};
 const XPJS='../export.js',XPN='パチンコ',XPF='pachinko';
 let XALL=false;
-window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=2';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=3';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
 const xpFn=s=>String(s).replace(/[\\/:*?"<>|\s]+/g,'_');
 function anCondText(){const S=anS(),p=location.hash.slice(4),a=[];if(p.startsWith('mach'))a.push('機種: '+(S.mach?mkName(S.mach):'未選択'));else{const ss=stSel();a.push('店舗: '+(ss.length?(ss.length>3?ss.slice(0,3).join('・')+' ほか'+(ss.length-3)+'店舗':ss.join('・')):'全店舗'));a.push('期間: '+(S.pOn?(S.pFrom||'最初')+'〜'+(S.pTo||today()):'全期間'));a.push('狙い: '+(S.aim||'全部'));{const dd=DTF.map(([k,l])=>{const v=dtV(k);return v==null||Number.isNaN(v)?'':l+(k==='fw'?' '+'日月火水木金土'[v]+'曜':' '+v)}).filter(Boolean);if(dd.length)a.push(dd.join(' '))}if(p.startsWith('sm')||p.startsWith('hr')){const ms=mpSel();a.push('機種: '+(ms.length?(ms.length>3?ms.slice(0,3).map(mkName).join('・')+' ほか'+(ms.length-3)+'機種':ms.map(mkName).join('・')):'全機種'))}}
  const h=p.startsWith('hr'),k=h?S.hmet:S.met,l=((h?AN_HMET:AN_MET).find(x=>x[0]===k)||[k,k])[1];a.push('並び順: '+l+(k==='ord'?'':S.dir==='good'?'（良い順）':'（悪い順）'));return a.join(' ／ ')}

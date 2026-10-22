@@ -28,6 +28,17 @@ a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
 <style>.tob{width:auto;margin:0;padding:6px 10px;font-size:.85em;white-space:nowrap;flex:0 0 auto}.tob.on{background:#d62828}.tob.off{background:#e4e8f0;color:#333}table.nt td,table.nt th{padding:3px 2px}table.nt th{font-size:1em;line-height:1.2}</style></head><body>
 <div id="app"></div>
 <script>
+// r69：店舗名の変更（古い名前→新しい名前）。読み込み時・同期で取得したデータの両方に適用し、古い名前が戻らないようにする
+const SMAP={'柏マル':'マルハン青森柏','マルハンつがる柏':'マルハン青森柏','柏USA':'USA柏','つがる柏USA':'USA柏','五所マル':'マルハン五所川原','石渡マル':'マルハン弘前石渡','五所ジャム':'ジャムフレンド五所川原','弘前マル':'マルハン弘前','弘前ジャム':'ジャムフレンド弘前'};
+const SMRE=new RegExp('(^|[|-])('+Object.keys(SMAP).sort((a,b)=>b.length-a.length).join('|')+')(?=[|-]|$)','g');
+function smStr(s){if(Object.prototype.hasOwnProperty.call(SMAP,s.trim()))return SMAP[s.trim()];return s.replace(SMRE,(m,a,n)=>a+SMAP[n])}
+function smDedupe(a){if(!Array.isArray(a))return a;const m=new Map(),o=[];for(const x of a){if(!x||typeof x!=='object'||x.name==null){o.push(x);continue}const k=String(x.name).trim(),p=m.get(k);
+ if(!p){m.set(k,x);o.push(x);continue}const better=(!x.deleted&&p.deleted)||(!!x.deleted===!!p.deleted&&String(x.updatedAt||'')>String(p.updatedAt||''));if(better){o[o.indexOf(p)]=x;m.set(k,x)}}return o}
+function SMIG(v,storesKey){if(typeof v==='string')return smStr(v);if(Array.isArray(v)){const r=v.map(x=>SMIG(x));return storesKey?smDedupe(r):r}
+ if(v&&typeof v==='object'){const r={};for(const k of Object.keys(v))r[smStr(k)]=SMIG(v[k],k==='stores');return r}return v}
+(function(){try{const re=new RegExp(Object.keys(SMAP).join('|'));for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(!/^(v2_|p1_|cd_)/.test(k)||/token/i.test(k))continue;const s=localStorage.getItem(k);if(!s||!re.test(s))continue;
+ let j;try{j=JSON.parse(s)}catch(e){continue}const n=SMIG(j,/_stores$/.test(k));const t=JSON.stringify(n);if(t!==s)localStorage.setItem(k,t)}}catch(e){}})();
+
 // ===== 版の確認：開いたとき・戻ったときにサーバーの最新版と比べ、古ければ読み込み直す（ホーム画面のキャッシュ対策） =====
 const APPV='r60';
 async function verCheck(){try{if(location.protocol==='file:')return;const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/const APPV='([^']+)'/);if(!m||m[1]===APPV)return;const k='cd_vtry_'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');location.replace(location.pathname+'?v='+m[1]+'&t='+Date.now()+location.hash)}catch(e){}}
@@ -190,8 +201,8 @@ function summary(){const P=calcKind('p'),S=calcKind('s'),m=new Map();for(const b
  <div class="tw" style="margin-top:8px"><table id="tot"><tr><th>全店合計</th><th>貯玉</th><th>貯メダル</th><th>金額</th></tr><tr style="font-weight:bold"><td></td><td${pc(tp)}>${sg(tp)}玉</td><td${pc(ts)}>${sg(ts)}枚</td><td${pc(ty)}>${sg(ty)}円${noY?'＊':''}</td></tr></table></div>
  <p class="note">円換算：パチンコ＝店舗の1玉の価値（未登録は3.57円）、スロット＝店舗の換金額（円/枚）。${noY?'＊レート未設定の店舗は金額に含みません。':''}</p></div>`}
 // ===== 貯玉ページ（r46）：手入力・引き出し・タバコの記録だけで累積を作る（保存記録には貯玉の増減が無いため）。chodama.json の ev に同期 =====
-const EV='cd_ev',CZ_ST=['柏マル','柏USA','五所マル','五所ジャム','石渡マル'],evList=()=>LS.get(EV,[])||[],evLive=()=>evList().filter(x=>!x.deleted);
-let czS=null,czK='p',czEd=null,czF={store:'柏マル',date:'',k:'p'};
+const EV='cd_ev',CZ_ST=['マルハン青森柏','USA柏','マルハン五所川原','ジャムフレンド五所川原','マルハン弘前石渡'],evList=()=>LS.get(EV,[])||[],evLive=()=>evList().filter(x=>!x.deleted);
+let czS=null,czK='p',czEd=null,czF={store:'マルハン青森柏',date:'',k:'p'};
 const czStores=()=>{const s=[...CZ_ST];for(const x of evLive())if(!s.includes(x.store))s.push(x.store);return s};
 const czU=k=>k==='p'?'玉':'枚',czYp=(k,st)=>yenPer(k,st)||0,czTob=(k,st)=>{const y=czYp(k,st);return y?Math.round(TOB_YEN/y):0};
 // 1店・1種類の累積：日付順（同じ日は入力順）。手入力・引き出し＝その数に置き換え、タバコ＝6,000円分を引く
@@ -268,7 +279,7 @@ window.setCash=(i,v)=>{const id=IDS[i];if(!id)return;v=String(v).trim();const l=
 window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);const Y=scrollY;render();scrollTo(0,Y);syncSoon()};
 // ===== 同期：記録は読むだけ（pachinko.json / data.json）、タバコ交換は chodama.json に保存 =====
 const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
-async function ghGet(tok,f){const r=await fetch(REPO+f+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return{sha:j.sha,data:JSON.parse(b64d(j.content||''))}}
+async function ghGet(tok,f){const r=await fetch(REPO+f+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64d(j.content||'')))}}
 let syT=null,busy=false,again=false;const syncSoon=()=>{clearTimeout(syT);syT=setTimeout(syncNow,600)};
 const srt=a=>JSON.stringify([...a].sort((x,y)=>x.id<y.id?-1:1));
 window.syncNow=async()=>{const tok=LS.get(TOK,'');if(!tok)return;if(busy){again=true;return}busy=true;const msg=t=>{LS.set('cd_sync_msg',t);if($('sy'))$('sy').textContent=t};msg('同期中…');
