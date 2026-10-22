@@ -74,7 +74,7 @@ async function png(kind,ctx){stage('ライブラリ読込');await load('h');cons
    const oi=[...src.querySelectorAll('img')],ci=[...cl.querySelectorAll('img')];ci.forEach((im,n)=>{im.removeAttribute('loading');im.loading='eager';const o=oi[n];if(o&&o.complete&&o.naturalWidth){const c=document.createElement('canvas');try{c.width=o.naturalWidth;c.height=o.naturalHeight;c.getContext('2d').drawImage(o,0,0);im.src=c.toDataURL('image/png')}catch(e){}}});
    cl.style.width=src.getBoundingClientRect().width+'px';box.appendChild(cl)}
   else{const hd=document.createElement('div');hd.style.cssText='font:bold 18px sans-serif;color:#1b3a73;margin:0 0 2px';hd.textContent=ctx.title;const cd=document.createElement('div');cd.style.cssText='font-size:13px;color:#555;margin:0 0 10px;white-space:nowrap';cd.textContent=ctx.cond;box.append(hd,cd);
-   for(const s of ctx.secs){s.node.querySelectorAll('img').forEach(im=>{im.removeAttribute('loading')});const t=document.createElement('div');t.style.cssText='font-weight:bold;margin:10px 0 4px';t.textContent=s.title;box.append(t,s.node)}}
+   for(const s of(ctx.img&&ctx.img.length?ctx.img:ctx.secs)){s.node.querySelectorAll('img').forEach(im=>{im.removeAttribute('loading')});if(s.title){const t=document.createElement('div');t.style.cssText='font-weight:bold;margin:10px 0 4px';t.textContent=s.title;box.append(t)}box.append(s.node)}}
   document.body.appendChild(box);stage('画像待ち');const imgs=[...box.querySelectorAll('img')];
   await Promise.all(imgs.map(i=>i.complete?0:wait(new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true})}),3000)));
   imgs.forEach(i=>{if(!i.src.startsWith('data:'))toData(i)});
@@ -83,6 +83,6 @@ async function png(kind,ctx){stage('ライブラリ読込');await load('h');cons
    ignoreElements:el=>!(el===document.head||document.head.contains(el)||box.contains(el)||el.contains(box)),onclone:d=>{const b=d.getElementById('xpbox');if(b)b.style.transform='none'}});
   stage('PNG化');return await new Promise((ok,ng)=>cv.toBlob(b=>b&&b.size?ok(b):ng(new Error('画像を作れませんでした（画像が大きすぎる可能性）')),'image/png'))}finally{box.remove()}}
 window.XP={run:async(kind,fmt)=>{let ctx;try{ctx=window.xpCtx(kind)}catch(e){alert('書き出しの準備に失敗しました: '+e.message);return}
- if(!ctx||!ctx.secs.length){alert('書き出す表がありません');return}ovl('<p style="margin:0">作成中…</p>'+(fmt==='png'?'<p class="note" id="xpStage" style="margin:6px 0 0"></p>':''));
+ if(!ctx||!(fmt==='png'&&ctx.img&&ctx.img.length?ctx.img:ctx.secs).length){alert('書き出す表がありません');return}ovl('<p style="margin:0">作成中…</p>'+(fmt==='png'?'<p class="note" id="xpStage" style="margin:6px 0 0"></p>':''));
  try{const b=fmt==='png'?await Promise.race([png(kind,ctx),new Promise((_,ng)=>setTimeout(()=>ng(new Error('TIMEOUT')),20000))]):fmt==='pdf'?await pdf(ctx):await xlsx(ctx);offer(b,ctx.file+(fmt==='png'?'.png':fmt==='pdf'?'.pdf':'.xlsx'))}catch(e){close();if(e&&e.message==='TIMEOUT'){const bx=document.getElementById('xpbox');if(bx)bx.remove();alert('画像の作成がタイムアウトしました（'+(STAGE||'準備')+'の段階）')}else alert('書き出しに失敗しました: '+(e&&e.message||e))}}};
 })();

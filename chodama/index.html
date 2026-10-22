@@ -270,7 +270,7 @@ window.czDel=()=>{if(!czEd||!confirm('この記録を消しますか？'))return
 function render(){czAutoC=null;const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='p'?'玉':'メダル';IDS=c.rows.map(r=>r.id);
  const TT={home:'収支・貯玉',ss:'収支管理',sa:'収支集計',sd:'日別集計',cd:'貯玉'},BK={ss:'home',cd:'home',sa:'ss',sd:'ss'};
  $('app').innerHTML=`<h1 style="margin-top:10px">📅 ${TT[pg]||''}</h1>
- ${pg==='home'?'':`<button id="back" class="sub sm" style="margin-bottom:10px" onclick="goPg('${BK[pg]||'home'}')">← 戻る</button>`}
+ ${pg==='home'?'':`<button id="back" class="sub sm" style="margin-bottom:10px" onclick="goPg('${BK[pg]||'home'}')">← 戻る</button>`}${['home','sa','sd','cd'].includes(pg)?`<div class="xpbar" style="display:flex;gap:6px;justify-content:flex-end;margin:0 0 10px"><button class="sub sm" style="margin:0" onclick="xpRun('c','png')">🖼画像</button><button class="sub sm" style="margin:0" onclick="xpRun('c','xlsx')">📊エクセル</button></div>`:''}
  ${pg==='home'?`<div class="seg" style="margin-bottom:12px"><button id="main_ss" onclick="goPg('ss')">収支管理</button><button id="main_cd" onclick="goPg('cd')">貯玉管理</button></div>${selBar()}${calendar()}${homeDays()}`:''}
  ${pg==='ss'?`<div class="card"><button id="go_sa" class="mbtn" style="width:100%;margin:0 0 8px" onclick="goPg('sa')">📊 収支集計</button><button id="go_sd" class="mbtn" style="width:100%;margin:0" onclick="goPg('sd')">📈 日別集計</button></div>`:''}
  ${pg==='sa'?selBar()+cdFilters()+statSecs():''}${pg==='sd'?selBar()+cdFilters()+dailyPage():''}
@@ -278,6 +278,25 @@ function render(){czAutoC=null;const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='
  ${pg==='home'?`<details class="card" id="syncCard"><summary style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>⚙ 同期設定</b><small class="note" id="sy" style="text-align:right">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'未設定（この端末の記録だけで表示中）'}</small></summary><p class="note">記録はスロット版・パチンコ版の同期データ（GitHub）から読みます。ホーム画面から開いた場合は保存領域が別になるので、ここにもトークンを入れてください（スロット版と同じトークン）。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" style="width:170px" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div><button onclick="saveTok()">保存して同期</button><button class="sub" onclick="syncNow()">今すぐ同期</button>
  </details>`:''}`}
+// ===== r73：画像・エクセル書き出し（export.js をスロ・パチと共用）=====
+const XPJS='../export.js';
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=3';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+function xpCond(home){const a=['種類: '+({all:'合計',p:'パチンコ',s:'スロット'}[mode]||mode)];if(home){a.push('月: '+(calM||todayS().slice(0,7)).replace('-','年')+'月');return a.join(' ／ ')}
+ const sel=typeof stSel==='function'?stSel():[];a.push('店舗: '+(sel.length?(sel.length>3?sel.slice(0,3).join('・')+' ほか'+(sel.length-3)+'店舗':sel.join('・')):'全店舗'));
+ const P=cdP();a.push('期間: '+(P.on?(P.f||'最初')+'〜'+P.t:'全期間'));if(typeof cdAim==='function')a.push('狙い: '+(cdAim()||'全部'));
+ const dd=DTF.map(([k,l])=>{const v=dtV(k);return v==null||Number.isNaN(v)?'':l+(k==='fw'?' '+'日月火水木金土'[v]+'曜':' '+v)}).filter(Boolean);if(dd.length)a.push(dd.join(' '));return a.join(' ／ ')}
+window.xpCtx=k=>{const T=n=>n?n.textContent.replace(/\s+/g,' ').trim():'',app=$('app'),ttl=n=>{const c=n.closest('.card,details');if(!c)return'';const h=c.querySelector('h2,summary b,b');return h?T(h.firstChild&&h.firstChild.nodeType===3?h.firstChild:h):''};
+ const cl=(n,keepW)=>{const c=n.cloneNode(true);c.querySelectorAll('button,input,select,textarea,script,.xpbar,p.note').forEach(x=>x.remove());c.removeAttribute('onclick');if(keepW)c.style.width=n.getBoundingClientRect().width+'px';return c};
+ const tb=n=>{const c=n.cloneNode(true);c.querySelectorAll('button,img,input,select,svg').forEach(x=>x.remove());return c};
+ const fn=t=>String(t).replace(/[\\/:*?"<>|\s]+/g,'_'),TT={home:'収支管理',sa:'収支集計',sd:'日別集計',cd:'貯玉'}[pg]||'収支管理';let img=[],secs=[];
+ if(pg==='home'){const cal=$('cal_prev')&&$('cal_prev').closest('.card');if(cal)img.push({title:'',node:cl(cal,1)});
+  const D=byDay(),m=calM||todayS().slice(0,7),W='日月火水木金土',t=document.createElement('table');let h='<tr><th>日付</th><th>曜日</th><th>台数</th><th>稼働時間</th><th>パチンコ</th><th>スロット</th><th>合計</th></tr>';
+  for(const o of[...D.values()].filter(o=>o.date.slice(0,7)===m).sort((a,b)=>a.date<b.date?-1:1)){const [y,mo,d]=o.date.split('-').map(Number),sm=kk=>{const l=o.list.filter(r=>r.k===kk&&r.yen!=null);return l.length?sg(l.reduce((a,r)=>a+r.yen,0))+'円':''};
+   h+=`<tr><td>${y}/${mo}/${d}</td><td>${W[new Date(y,mo-1,d).getDay()]}</td><td>${o.list.length}台</td><td>${o.hours>0?o.hours.toFixed(1)+'h':''}</td><td>${sm('p')}</td><td>${sm('s')}</td><td>${o.yn?sg(o.yen)+'円':''}</td></tr>`}
+  t.innerHTML=h;if(t.rows.length>1)secs.push({title:m.replace('-','年')+'月の日別',node:t})}
+ else if(pg==='sd'){for(const c of app.querySelectorAll('.card')){if(c.querySelector('svg')||c.querySelector('#dAvg,#dTbl'))img.push({title:'',node:cl(c,1)})}for(const t of app.querySelectorAll('#dAvg,#dTbl'))secs.push({title:t.id==='dAvg'?'平均':'日別',node:tb(t)})}
+ else{const root=pg==='cd'?$('pane_cd'):app;for(const t of root.querySelectorAll('table')){if(t.closest('#perCard,#stPick'))continue;const ti=ttl(t)||'表';secs.push({title:ti,node:tb(t)});img.push({title:ti,node:tb(t)})}}
+ return{kind:'a',title:TT,cond:xpCond(pg==='home'),secs,img,file:fn('収支管理_'+TT+'_'+todayS())}};
 window.saveTok=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow()};
 window.setTab=k=>{tab=k;LS.set('cd_tab',k);const Y=scrollY;render();scrollTo(0,Y)};
 window.setCash=(i,v)=>{const id=IDS[i];if(!id)return;v=String(v).trim();const l=cashList().filter(x=>x.id!==id);l.push({id,v:v===''?'':String(Math.round(+v)),updatedAt:new Date().toISOString()});LS.set(CASH,l);const Y=scrollY;render();scrollTo(0,Y);syncSoon()};
