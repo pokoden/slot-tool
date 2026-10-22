@@ -1,6 +1,6 @@
 // 分析・判別ページの PDF / エクセル書き出し（押した時だけ読み込む）
 (function(){
-const LIB={x:'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',h:'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',p:'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'};
+const LIB={x:'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',h:new URL('lib/html2canvas.min.js',document.currentScript&&document.currentScript.src||location.href).href,p:'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'};
 const loaded={};
 const load=k=>loaded[k]||(loaded[k]=new Promise((ok,ng)=>{const s=document.createElement('script');s.src=LIB[k];s.onload=ok;s.onerror=()=>{delete loaded[k];ng(new Error('ライブラリを読み込めませんでした（通信を確認してください）'))};document.head.appendChild(s)}));
 const txt=n=>(n.innerText!=null&&n.isConnected?n.innerText:n.textContent||'').replace(/\s+/g,' ').trim();
@@ -60,7 +60,18 @@ async function pdf(ctx){await Promise.all([load('h'),load('p')]);const{jsPDF}=wi
     if(first){g.fillStyle='#222';g.font='bold 22px '+F;g.fillText(s.title,MG,y+24);y+=34;first=false}
     const sh=(end-off)*sc;g.drawImage(cv,0,off*sc,cv.width,sh,MG,y,cv.width*d,sh*d);y+=sh*d+18;off=end;if(off<H-1)newPg()}}}
   flush();return doc.output('blob')}finally{box.remove()}}
+// ---- 画像（PNG）。m＝判別ページの稼働記録の枠だけ／a＝集計の表全体（横にはみ出す列も全部）＋絞り込み条件1行
+async function png(kind,ctx){await load('h');const box=document.createElement('div');box.id='xpbox';box.style.cssText='position:absolute;left:-30000px;top:0;background:#fff;width:max-content;padding:12px';
+ box.innerHTML='<style>#xpbox .tw{overflow:visible!important;max-height:none!important;max-width:none!important}#xpbox .card{box-shadow:none;margin:0;overflow:visible!important;max-width:none!important}#xpbox table{background:#fff}#xpbox th,#xpbox td{position:static!important}</style>';
+ try{if(kind==='m'){const src=[...document.querySelectorAll('#mach .card')].find(c=>{const h=c.querySelector('h2');return h&&h.textContent.trim().startsWith('稼働記録')});if(!src)throw new Error('稼働記録の枠が見つかりません');
+   const cl=src.cloneNode(true);cl.querySelectorAll('button,input,select,textarea,script').forEach(x=>x.remove());cl.style.width=src.getBoundingClientRect().width+'px';box.appendChild(cl)}
+  else{const hd=document.createElement('div');hd.style.cssText='font:bold 18px sans-serif;color:#1b3a73;margin:0 0 2px';hd.textContent=ctx.title;const cd=document.createElement('div');cd.style.cssText='font-size:13px;color:#555;margin:0 0 10px;white-space:nowrap';cd.textContent=ctx.cond;box.append(hd,cd);
+   for(const s of ctx.secs){const t=document.createElement('div');t.style.cssText='font-weight:bold;margin:10px 0 4px';t.textContent=s.title;box.append(t,s.node)}}
+  document.body.appendChild(box);const imgs=[...box.querySelectorAll('img')];imgs.forEach(i=>i.loading='eager');await Promise.all(imgs.map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  const R=box.getBoundingClientRect(),sc=Math.max(1,Math.min(2,Math.sqrt(16e6/(R.width*R.height||1))));
+  const cv=await html2canvas(box,{scale:sc,backgroundColor:'#fff',logging:false,useCORS:true,windowWidth:Math.max(innerWidth,Math.ceil(R.width)+40)});
+  return await new Promise((ok,ng)=>cv.toBlob(b=>b&&b.size?ok(b):ng(new Error('画像を作れませんでした')),'image/png'))}finally{box.remove()}}
 window.XP={run:async(kind,fmt)=>{let ctx;try{ctx=window.xpCtx(kind)}catch(e){alert('書き出しの準備に失敗しました: '+e.message);return}
  if(!ctx||!ctx.secs.length){alert('書き出す表がありません');return}ovl('<p style="margin:0">作成中…</p>');
- try{const b=fmt==='pdf'?await pdf(ctx):await xlsx(ctx);offer(b,ctx.file+(fmt==='pdf'?'.pdf':'.xlsx'))}catch(e){close();alert('書き出しに失敗しました: '+(e&&e.message||e))}}};
+ try{const b=fmt==='png'?await png(kind,ctx):fmt==='pdf'?await pdf(ctx):await xlsx(ctx);offer(b,ctx.file+(fmt==='png'?'.png':fmt==='pdf'?'.pdf':'.xlsx'))}catch(e){close();alert('書き出しに失敗しました: '+(e&&e.message||e))}}};
 })();
