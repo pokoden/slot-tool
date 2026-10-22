@@ -454,7 +454,7 @@ window.delH=id=>{if(!confirm('この保存データを削除しますか？'))re
 window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('p1_cur_'+mid);machine(mid)};
 const XPJS='../export.js',XPN='パチンコ',XPF='pachinko';
 let XALL=false;
-window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=3';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=4';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
 const xpFn=s=>String(s).replace(/[\\/:*?"<>|\s]+/g,'_');
 function anCondText(){const S=anS(),p=location.hash.slice(4),a=[];if(p.startsWith('mach'))a.push('機種: '+(S.mach?mkName(S.mach):'未選択'));else{const ss=stSel();a.push('店舗: '+(ss.length?(ss.length>3?ss.slice(0,3).join('・')+' ほか'+(ss.length-3)+'店舗':ss.join('・')):'全店舗'));a.push('期間: '+(S.pOn?(S.pFrom||'最初')+'〜'+(S.pTo||today()):'全期間'));a.push('狙い: '+(S.aim||'全部'));{const dd=DTF.map(([k,l])=>{const v=dtV(k);return v==null||Number.isNaN(v)?'':l+(k==='fw'?' '+'日月火水木金土'[v]+'曜':' '+v)}).filter(Boolean);if(dd.length)a.push(dd.join(' '))}if(p.startsWith('sm')||p.startsWith('hr')){const ms=mpSel();a.push('機種: '+(ms.length?(ms.length>3?ms.slice(0,3).map(mkName).join('・')+' ほか'+(ms.length-3)+'機種':ms.map(mkName).join('・')):'全機種'))}}
  const h=p.startsWith('hr'),k=h?S.hmet:S.met,l=((h?AN_HMET:AN_MET).find(x=>x[0]===k)||[k,k])[1];a.push('並び順: '+l+(k==='ord'?'':S.dir==='good'?'（良い順）':'（悪い順）'));return a.join(' ／ ')}

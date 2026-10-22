@@ -280,7 +280,7 @@ function render(){czAutoC=null;const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='
  </details>`:''}`}
 // ===== r73：画像・エクセル書き出し（export.js をスロ・パチと共用）=====
 const XPJS='../export.js';
-window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=3';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=4';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
 function xpCond(home){const a=['種類: '+({all:'合計',p:'パチンコ',s:'スロット'}[mode]||mode)];if(home){a.push('月: '+(calM||todayS().slice(0,7)).replace('-','年')+'月');return a.join(' ／ ')}
  const sel=typeof stSel==='function'?stSel():[];a.push('店舗: '+(sel.length?(sel.length>3?sel.slice(0,3).join('・')+' ほか'+(sel.length-3)+'店舗':sel.join('・')):'全店舗'));
  const P=cdP();a.push('期間: '+(P.on?(P.f||'最初')+'〜'+P.t:'全期間'));if(typeof cdAim==='function')a.push('狙い: '+(cdAim()||'全部'));
@@ -294,9 +294,9 @@ window.xpCtx=k=>{const T=n=>n?n.textContent.replace(/\s+/g,' ').trim():'',app=$(
   for(const o of[...D.values()].filter(o=>o.date.slice(0,7)===m).sort((a,b)=>a.date<b.date?-1:1)){const [y,mo,d]=o.date.split('-').map(Number),sm=kk=>{const l=o.list.filter(r=>r.k===kk&&r.yen!=null);return l.length?sg(l.reduce((a,r)=>a+r.yen,0))+'円':''};
    h+=`<tr><td>${y}/${mo}/${d}</td><td>${W[new Date(y,mo-1,d).getDay()]}</td><td>${o.list.length}台</td><td>${o.hours>0?o.hours.toFixed(1)+'h':''}</td><td>${sm('p')}</td><td>${sm('s')}</td><td>${o.yn?sg(o.yen)+'円':''}</td></tr>`}
   t.innerHTML=h;if(t.rows.length>1)secs.push({title:m.replace('-','年')+'月の日別',node:t})}
- else if(pg==='sd'){for(const c of app.querySelectorAll('.card')){if(c.querySelector('svg')||c.querySelector('#dAvg,#dTbl'))img.push({title:'',node:cl(c,1)})}for(const t of app.querySelectorAll('#dAvg,#dTbl'))secs.push({title:t.id==='dAvg'?'平均':'日別',node:tb(t)})}
+ else if(pg==='sd'){/* r74：画像は累積収支とRSIのグラフ2枚だけ（文字なし・線だけ） */const sv=[...app.querySelectorAll('.card svg')].slice(0,2);sv.forEach((g,i)=>{const w=g.getBoundingClientRect().width,c=g.cloneNode(true);c.querySelectorAll('text').forEach(x=>x.remove());c.style.width=w+'px';c.style.display='block';if(i)c.style.marginTop='6px';img.push({title:'',node:c})});for(const t of app.querySelectorAll('#dAvg,#dTbl'))secs.push({title:t.id==='dAvg'?'平均':'日別',node:tb(t)})}
  else{const root=pg==='cd'?$('pane_cd'):app;for(const t of root.querySelectorAll('table')){if(t.closest('#perCard,#stPick'))continue;const ti=ttl(t)||'表';secs.push({title:ti,node:tb(t)});img.push({title:ti,node:tb(t)})}}
- return{kind:'a',title:TT,cond:xpCond(pg==='home'),secs,img,file:fn('収支管理_'+TT+'_'+todayS())}};
+ return{kind:'a',bare:pg==='sd',title:TT,cond:xpCond(pg==='home'),secs,img,file:fn('収支管理_'+TT+'_'+todayS())}};
 window.saveTok=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow()};
 window.setTab=k=>{tab=k;LS.set('cd_tab',k);const Y=scrollY;render();scrollTo(0,Y)};
 window.setCash=(i,v)=>{const id=IDS[i];if(!id)return;v=String(v).trim();const l=cashList().filter(x=>x.id!==id);l.push({id,v:v===''?'':String(Math.round(+v)),updatedAt:new Date().toISOString()});LS.set(CASH,l);const Y=scrollY;render();scrollTo(0,Y);syncSoon()};
