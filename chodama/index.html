@@ -280,7 +280,7 @@ function render(){czAutoC=null;const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='
  </details>`:''}`}
 // ===== r73：画像・エクセル書き出し（export.js をスロ・パチと共用）=====
 const XPJS='../export.js';
-window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=4';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
+window.xpRun=(k,f)=>{const go=()=>XP.run(k,f);if(window.XP)return go();const s=document.createElement('script');s.src=XPJS+'?v=5';s.onload=go;s.onerror=()=>alert('書き出し機能を読み込めませんでした（通信を確認してください）');document.head.appendChild(s)};
 function xpCond(home){const a=['種類: '+({all:'合計',p:'パチンコ',s:'スロット'}[mode]||mode)];if(home){a.push('月: '+(calM||todayS().slice(0,7)).replace('-','年')+'月');return a.join(' ／ ')}
  const sel=typeof stSel==='function'?stSel():[];a.push('店舗: '+(sel.length?(sel.length>3?sel.slice(0,3).join('・')+' ほか'+(sel.length-3)+'店舗':sel.join('・')):'全店舗'));
  const P=cdP();a.push('期間: '+(P.on?(P.f||'最初')+'〜'+P.t:'全期間'));if(typeof cdAim==='function')a.push('狙い: '+(cdAim()||'全部'));
