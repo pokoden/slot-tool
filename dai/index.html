@@ -9,7 +9,7 @@
   h1 { font-size: 1.4rem; margin: 0 0 12px; }
   .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
   textarea { width: 100%; height: 140px; font-family: ui-monospace, monospace; font-size: 13px; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
-  button, select, input[type=date] { font-size: 14px; padding: 8px 12px; margin: 4px 4px 4px 0; border-radius: 6px; border: 1px solid #bbb; background: #fff; }
+  button, select, input[type=date], input[type=password] { font-size: 14px; padding: 8px 12px; margin: 4px 4px 4px 0; border-radius: 6px; border: 1px solid #bbb; background: #fff; }
   button.primary { background: #1a73e8; color: #fff; border: none; }
   button.danger { background: #d93025; color: #fff; border: none; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
@@ -26,6 +26,17 @@
 </head>
 <body>
 <h1>スロ台データ集計</h1>
+
+<div class="card">
+  <div class="small">GitHub同期（複数端末で同じデータを見るために必要）</div>
+  <input type="password" id="token" placeholder="GitHub Personal Access Token" style="width:100%; max-width:400px;">
+  <div>
+    <button onclick="saveToken()">トークンを保存</button>
+    <button class="primary" onclick="loadFromGitHub()">GitHubから読み込む</button>
+    <button onclick="saveToGitHub()">GitHubに保存</button>
+  </div>
+  <div class="small">トークンはブラウザ内にだけ保存されます。repo権限のPATを作ってください。</div>
+</div>
 
 <div class="card">
   <div class="small">TSVを貼り付け（日付	店舗	機種	台番	スタート	BB	RB）</div>
@@ -68,13 +79,86 @@
 
 <script>
 const STORAGE_KEY = "slot_dai_data_v1";
+const TOKEN_KEY = "slot_github_token";
+const OWNER = "pokoden";
+const REPO = "slot-tool";
+const DATA_PATH = "dai/data.json";
 let data = [];
+let dataSha = null;
 
-function load() {
+function loadLocal() {
   try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { data = []; }
 }
-function save() {
+function saveLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+function saveToken() {
+  const t = document.getElementById("token").value.trim();
+  if (!t) return setStatus("トークンを入力してください");
+  localStorage.setItem(TOKEN_KEY, t);
+  document.getElementById("token").value = "";
+  setStatus("トークンを保存しました");
+}
+
+async function ghApi(path, method = "GET", body = null) {
+  const token = getToken();
+  if (!token) throw new Error("トークンが未設定です");
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method,
+    headers: {
+      "Authorization": `token ${token}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    },
+    body: body ? JSON.stringify(body) : null
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`GitHub API error ${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
+async function loadFromGitHub() {
+  try {
+    setStatus("読み込み中...");
+    const file = await ghApi(DATA_PATH);
+    dataSha = file.sha;
+    const text = atob(file.content.replace(/\n/g, ""));
+    data = JSON.parse(text);
+    saveLocal();
+    refreshFilters();
+    render();
+    setStatus(`GitHubから読み込みました（${data.length}件）`);
+  } catch (e) {
+    if (e.message.includes("404")) {
+      setStatus("data.jsonがまだありません。データを取り込んで保存してください");
+    } else {
+      setStatus("読み込みエラー: " + e.message);
+    }
+  }
+}
+
+async function saveToGitHub() {
+  try {
+    setStatus("保存中...");
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+    const body = {
+      message: "Update slot data.json",
+      content,
+      branch: "main"
+    };
+    if (dataSha) body.sha = dataSha;
+    const res = await ghApi(DATA_PATH, "PUT", body);
+    dataSha = res.content.sha;
+    setStatus("GitHubに保存しました");
+  } catch (e) {
+    setStatus("保存エラー: " + e.message);
+  }
 }
 
 function parseLine(line) {
@@ -93,7 +177,7 @@ function parseLine(line) {
   };
 }
 
-function importTSV() {
+async function importTSV() {
   const text = document.getElementById("paste").value.trim();
   if (!text) { setStatus("データが空です"); return; }
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -105,11 +189,12 @@ function importTSV() {
     if (idx >= 0) { data[idx] = row; updated++; }
     else { data.push(row); added++; }
   });
-  save();
+  saveLocal();
   document.getElementById("paste").value = "";
   setStatus(`取り込み完了：新規 ${added}件 / 上書き ${updated}件`);
   refreshFilters();
   render();
+  if (getToken()) await saveToGitHub();
 }
 
 function gassan(row) {
@@ -222,22 +307,24 @@ function exportCSV() {
   a.click();
 }
 
-function clearAll() {
+async function clearAll() {
   if (!confirm("全データを削除しますか？")) return;
   data = [];
-  save();
+  saveLocal();
   refreshFilters();
   render();
   setStatus("削除しました");
+  if (getToken()) await saveToGitHub();
 }
 
 function setStatus(msg) {
   document.getElementById("status").textContent = msg;
 }
 
-load();
+loadLocal();
 refreshFilters();
 render();
+if (getToken()) loadFromGitHub();
 </script>
 </body>
 </html>
