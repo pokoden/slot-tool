@@ -28,14 +28,14 @@
 <h1>スロ台データ集計</h1>
 
 <div class="card">
-  <div class="small">GitHub同期（複数端末で同じデータを見るために必要）</div>
+  <div class="small">GitHub同期（月ごとにファイルを分けて保存）</div>
   <input type="password" id="token" placeholder="GitHub Personal Access Token" style="width:100%; max-width:400px;">
   <div>
     <button onclick="saveToken()">トークンを保存</button>
-    <button class="primary" onclick="loadFromGitHub()">GitHubから読み込む</button>
-    <button onclick="saveToGitHub()">GitHubに保存</button>
+    <button class="primary" onclick="loadCurrentMonth()">今月を読み込む</button>
+    <button onclick="loadAllMonths()">全月を読み込む</button>
   </div>
-  <div class="small">トークンはブラウザ内にだけ保存されます。repo権限のPATを作ってください。</div>
+  <div class="small">データは slot-data リポジトリの YYYY-MM.json に保存されます。</div>
 </div>
 
 <div class="card">
@@ -82,9 +82,8 @@ const STORAGE_KEY = "slot_dai_data_v1";
 const TOKEN_KEY = "slot_github_token";
 const OWNER = "pokoden";
 const REPO = "slot-data";
-const DATA_PATH = "dai_data.json";
 let data = [];
-let dataSha = null;
+let monthShas = {};
 
 function loadLocal() {
   try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { data = []; }
@@ -93,9 +92,7 @@ function saveLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || "";
-}
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 function saveToken() {
   const t = document.getElementById("token").value.trim();
   if (!t) return setStatus("トークンを入力してください");
@@ -104,97 +101,96 @@ function saveToken() {
   setStatus("トークンを保存しました");
 }
 
-async function ghApi(path, method = "GET", body = null) {
+function monthOf(dateStr) {
+  return dateStr.replace(/\//g, "-").slice(0, 7);
+}
+
+async function ghGet(path) {
   const token = getToken();
-  if (!token) throw new Error("トークンが未設定です");
+  if (!token) throw new Error("トークン未設定");
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
-    method,
-    headers: {
-      "Authorization": `token ${token}`,
-      "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json"
-    },
-    body: body ? JSON.stringify(body) : null
+    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" }
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`GitHub API error ${res.status}: ${err}`);
-  }
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
-async function loadFromGitHub() {
+async function ghPut(path, content, sha) {
+  const token = getToken();
+  const body = { message: "Update " + path, content: btoa(unescape(encodeURIComponent(content))), branch: "main" };
+  if (sha) body.sha = sha;
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
+    method: "PUT",
+    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function loadMonth(ym) {
+  const file = await ghGet(ym + ".json");
+  if (!file) return [];
+  monthShas[ym] = file.sha;
+  const text = atob(file.content.replace(/\n/g, ""));
+  return JSON.parse(text);
+}
+
+async function saveMonth(ym, rows) {
+  const content = JSON.stringify(rows, null, 2);
+  const res = await ghPut(ym + ".json", content, monthShas[ym]);
+  monthShas[ym] = res.content.sha;
+}
+
+async function loadCurrentMonth() {
+  const ym = new Date().toISOString().slice(0, 7);
   try {
-    setStatus("読み込み中...");
-    const file = await ghApi(DATA_PATH);
-    dataSha = file.sha;
-    const text = atob(file.content.replace(/\n/g, ""));
-    data = JSON.parse(text);
+    setStatus(ym + " を読み込み中...");
+    const rows = await loadMonth(ym);
+    data = data.filter(d => monthOf(d.date) !== ym).concat(rows);
     saveLocal();
     refreshFilters();
     render();
-    setStatus(`GitHubから読み込みました（${data.length}件）`);
-  } catch (e) {
-    if (e.message.includes("404")) {
-      setStatus("data.jsonがまだありません。データを取り込んで保存してください");
-    } else {
-      setStatus("読み込みエラー: " + e.message);
-    }
-  }
+    setStatus(ym + " を読み込みました");
+  } catch (e) { setStatus("エラー: " + e.message); }
 }
 
-async function saveToGitHub() {
-  try {
-    setStatus("保存中...");
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-    const body = {
-      message: "Update slot data.json",
-      content,
-      branch: "main"
-    };
-    if (dataSha) body.sha = dataSha;
-    const res = await ghApi(DATA_PATH, "PUT", body);
-    dataSha = res.content.sha;
-    setStatus("GitHubに保存しました");
-  } catch (e) {
-    setStatus("保存エラー: " + e.message);
-  }
-}
-
-function parseLine(line) {
-  const p = line.split("\t").map(s => s.trim());
-  if (p.length < 7) return null;
-  const start = parseInt(p[4], 10);
-  const bb = parseInt(p[5], 10);
-  const rb = parseInt(p[6], 10);
-  if (isNaN(start)) return null;
-  return {
-    date: p[0],
-    store: p[1].replace(/店$/, ""),
-    machine: p[2],
-    tai: p[3],
-    start, bb, rb
-  };
+async function loadAllMonths() {
+  setStatus("全月読み込みは手動で月を指定してください（重いため）");
 }
 
 async function importTSV() {
   const text = document.getElementById("paste").value.trim();
-  if (!text) { setStatus("データが空です"); return; }
+  if (!text) return setStatus("データが空です");
   const lines = text.split(/\r?\n/).filter(l => l.trim());
-  let added = 0, updated = 0;
+  const byMonth = {};
   lines.forEach(line => {
-    const row = parseLine(line);
-    if (!row) return;
-    const idx = data.findIndex(d => d.date === row.date && d.store === row.store && d.machine === row.machine && d.tai === row.tai);
-    if (idx >= 0) { data[idx] = row; updated++; }
-    else { data.push(row); added++; }
+    const p = line.split("\t").map(s => s.trim());
+    if (p.length < 7) return;
+    const start = parseInt(p[4], 10);
+    if (isNaN(start)) return;
+    const row = { date: p[0], store: p[1].replace(/店$/, ""), machine: p[2], tai: p[3], start, bb: parseInt(p[5],10), rb: parseInt(p[6],10) };
+    const ym = monthOf(row.date);
+    if (!byMonth[ym]) byMonth[ym] = [];
+    byMonth[ym].push(row);
   });
+
+  for (const ym of Object.keys(byMonth)) {
+    let existing = await loadMonth(ym);
+    byMonth[ym].forEach(newRow => {
+      const idx = existing.findIndex(d => d.date === newRow.date && d.store === newRow.store && d.machine === newRow.machine && d.tai === newRow.tai);
+      if (idx >= 0) existing[idx] = newRow;
+      else existing.push(newRow);
+    });
+    await saveMonth(ym, existing);
+    data = data.filter(d => monthOf(d.date) !== ym).concat(existing);
+  }
   saveLocal();
   document.getElementById("paste").value = "";
-  setStatus(`取り込み完了：新規 ${added}件 / 上書き ${updated}件`);
+  setStatus("取り込み＆月別保存完了");
   refreshFilters();
   render();
-  if (getToken()) await saveToGitHub();
 }
 
 function gassan(row) {
@@ -209,15 +205,8 @@ function gassanNum(row) {
 function refreshFilters() {
   const stores = [...new Set(data.map(d => d.store))].sort();
   const machines = [...new Set(data.map(d => d.machine))].sort();
-  const storeSel = document.getElementById("storeSel");
-  const machineSel = document.getElementById("machineSel");
-  const dateSel = document.getElementById("dateSel");
-  storeSel.innerHTML = '<option value="">すべて</option>' + stores.map(s => `<option>${s}</option>`).join("");
-  machineSel.innerHTML = '<option value="">すべて</option>' + machines.map(s => `<option>${s}</option>`).join("");
-  if (data.length) {
-    const latest = data.map(d => d.date).sort().pop();
-    dateSel.value = latest.replace(/\//g, "-");
-  }
+  document.getElementById("storeSel").innerHTML = '<option value="">すべて</option>' + stores.map(s => `<option>${s}</option>`).join("");
+  document.getElementById("machineSel").innerHTML = '<option value="">すべて</option>' + machines.map(s => `<option>${s}</option>`).join("");
 }
 
 function render() {
@@ -225,35 +214,18 @@ function render() {
   const machine = document.getElementById("machineSel").value;
   const date = document.getElementById("dateSel").value.replace(/-/g, "/");
   const sort = document.getElementById("sortSel").value;
-
-  let rows = data.filter(d => 
-    (!store || d.store === store) &&
-    (!machine || d.machine === machine) &&
-    (!date || d.date === date)
-  );
-
+  let rows = data.filter(d => (!store || d.store === store) && (!machine || d.machine === machine) && (!date || d.date === date));
   if (sort === "start_asc") rows.sort((a,b) => a.start - b.start);
   else if (sort === "gassan_asc") rows.sort((a,b) => gassanNum(a) - gassanNum(b));
   else if (sort === "gassan_desc") rows.sort((a,b) => gassanNum(b) - gassanNum(a));
   else rows.sort((a,b) => a.tai.localeCompare(b.tai, undefined, {numeric:true}));
 
-  let html = `<table><thead><tr>
-    <th>順位</th><th class="left">台番</th><th class="left">機種</th><th>スタート</th><th>BB</th><th>RB</th><th>合算</th>
-  </tr></thead><tbody>`;
-
+  let html = `<table><thead><tr><th>順位</th><th class="left">台番</th><th class="left">機種</th><th>スタート</th><th>BB</th><th>RB</th><th>合算</th></tr></thead><tbody>`;
   rows.forEach((r, i) => {
-    const g = gassan(r);
-    const gn = gassanNum(r);
-    let cls = "";
-    if (gn < 150) cls = "good";
-    else if (gn > 250) cls = "bad";
+    const g = gassan(r), gn = gassanNum(r);
+    const cls = gn < 150 ? "good" : gn > 250 ? "bad" : "";
     const rank = (sort === "start_asc" || sort === "gassan_asc") ? i+1 : "";
-    html += `<tr class="${cls}">
-      <td class="rank">${rank}</td>
-      <td class="left">${r.tai}</td>
-      <td class="left">${r.machine}</td>
-      <td>${r.start}</td><td>${r.bb}</td><td>${r.rb}</td><td>${g}</td>
-    </tr>`;
+    html += `<tr class="${cls}"><td class="rank">${rank}</td><td class="left">${r.tai}</td><td class="left">${r.machine}</td><td>${r.start}</td><td>${r.bb}</td><td>${r.rb}</td><td>${g}</td></tr>`;
   });
   html += "</tbody></table>";
   document.getElementById("tableWrap").innerHTML = rows.length ? html : "<div class='small'>該当データなし</div>";
@@ -262,69 +234,50 @@ function render() {
 function calcPeriod() {
   const from = document.getElementById("fromDate").value.replace(/-/g, "/");
   const to = document.getElementById("toDate").value.replace(/-/g, "/");
-  if (!from || !to) { document.getElementById("periodResult").innerHTML = "期間を指定してください"; return; }
-
+  if (!from || !to) return document.getElementById("periodResult").innerHTML = "期間を指定してください";
   const period = data.filter(d => d.date >= from && d.date <= to);
-  if (!period.length) { document.getElementById("periodResult").innerHTML = "該当データなし"; return; }
-
+  if (!period.length) return document.getElementById("periodResult").innerHTML = "該当データなし";
   const byDayMachine = {};
   period.forEach(d => {
     const key = d.date + "|" + d.machine;
     if (!byDayMachine[key]) byDayMachine[key] = [];
     byDayMachine[key].push(d);
   });
-
-  const worstPerDay = [];
+  const worst = [];
   Object.values(byDayMachine).forEach(list => {
     list.sort((a,b) => gassanNum(a) - gassanNum(b));
-    if (list.length) worstPerDay.push(list[0]);
+    if (list.length) worst.push(list[0]);
   });
-
-  let totalStart = 0, totalBB = 0, totalRB = 0;
-  worstPerDay.forEach(w => {
-    totalStart += w.start;
-    totalBB += w.bb;
-    totalRB += w.rb;
-  });
-  const totalG = totalBB + totalRB;
-  const avgGassan = totalG > 0 ? (totalStart / totalG).toFixed(1) : "-";
-
-  document.getElementById("periodResult").innerHTML = `
-    <p>対象日数：${new Set(worstPerDay.map(w=>w.date)).size}日 / 最悪台件数：${worstPerDay.length}</p>
-    <p>合計スタート：${totalStart.toLocaleString()}　BB：${totalBB}　RB：${totalRB}　合計合算：${avgGassan}</p>
-    <div class="small">各日・各機種で合算が一番悪かった台を集計しています。</div>
-  `;
+  let ts=0, tb=0, tr=0;
+  worst.forEach(w => { ts += w.start; tb += w.bb; tr += w.rb; });
+  const g = (tb+tr)>0 ? (ts/(tb+tr)).toFixed(1) : "-";
+  document.getElementById("periodResult").innerHTML = `<p>対象 ${new Set(worst.map(w=>w.date)).size}日 / 最悪台 ${worst.length}件</p><p>合計スタート ${ts.toLocaleString()} BB ${tb} RB ${tr} 合算 ${g}</p>`;
 }
 
 function exportCSV() {
-  if (!data.length) return alert("データがありません");
+  if (!data.length) return alert("データなし");
   const header = "日付,店舗,機種,台番,スタート,BB,RB\n";
   const body = data.map(d => `${d.date},${d.store},${d.machine},${d.tai},${d.start},${d.bb},${d.rb}`).join("\n");
-  const blob = new Blob([header + body], {type: "text/csv;charset=utf-8"});
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "slot_dai_data.csv";
+  a.href = URL.createObjectURL(new Blob([header+body], {type:"text/csv"}));
+  a.download = "slot_dai.csv";
   a.click();
 }
 
 async function clearAll() {
-  if (!confirm("全データを削除しますか？")) return;
+  if (!confirm("全データ削除しますか？")) return;
   data = [];
   saveLocal();
   refreshFilters();
   render();
-  setStatus("削除しました");
-  if (getToken()) await saveToGitHub();
+  setStatus("削除しました（GitHub側の月ファイルは残っています）");
 }
 
-function setStatus(msg) {
-  document.getElementById("status").textContent = msg;
-}
+function setStatus(msg) { document.getElementById("status").textContent = msg; }
 
 loadLocal();
 refreshFilters();
 render();
-if (getToken()) loadFromGitHub();
 </script>
 </body>
 </html>
