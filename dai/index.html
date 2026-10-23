@@ -5,62 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>スロ台データ集計</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 12px; background: #f5f5f5; color: #222; }
-  h1 { font-size: 1.4rem; margin: 0 0 12px; }
-  .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  textarea { width: 100%; height: 140px; font-family: ui-monospace, monospace; font-size: 13px; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
-  button, select, input[type=date], input[type=password] { font-size: 14px; padding: 8px 12px; margin: 4px 4px 4px 0; border-radius: 6px; border: 1px solid #bbb; background: #fff; }
-  button.primary { background: #1a73e8; color: #fff; border: none; }
-  button.danger { background: #d93025; color: #fff; border: none; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
-  th, td { border-bottom: 1px solid #eee; padding: 6px 4px; text-align: right; }
-  th { background: #fafafa; text-align: center; position: sticky; top: 0; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; margin: 0; padding: 16px; background: #f0f2f5; color: #1a1a1a; }
+  h1 { font-size: 1.5rem; margin: 0 0 16px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  textarea { width: 100%; height: 120px; font-family: ui-monospace, monospace; font-size: 13px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+  input, select, button { font-size: 15px; padding: 10px 14px; margin: 4px 4px 4px 0; border-radius: 8px; border: 1px solid #ccc; background: #fff; }
+  button { cursor: pointer; font-weight: 600; }
+  button.primary { background: #0066ff; color: #fff; border: none; }
+  button.danger { background: #e53e3e; color: #fff; border: none; }
+  button.secondary { background: #edf2f7; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid #eee; }
+  th { background: #f8fafc; text-align: center; position: sticky; top: 0; }
   td.left, th.left { text-align: left; }
-  .bad { background: #fce8e6; }
-  .good { background: #e6f4ea; }
-  .rank { font-weight: bold; color: #d93025; }
-  .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; }
-  .small { font-size: 12px; color: #666; }
-  #status { margin: 6px 0; font-weight: bold; }
+  .bad { background: #fff5f5; }
+  .good { background: #f0fff4; }
+  .rank { font-weight: bold; color: #c53030; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  .small { font-size: 13px; color: #666; margin-top: 6px; }
+  #status { margin: 8px 0; font-weight: 600; color: #2b6cb0; }
 </style>
 </head>
 <body>
 <h1>スロ台データ集計</h1>
 
 <div class="card">
-  <div class="small">GitHub同期（月ごとにファイルを分けて保存）</div>
-  <input type="password" id="token" placeholder="GitHub Personal Access Token" style="width:100%; max-width:400px;">
-  <div>
-    <button onclick="saveToken()">トークンを保存</button>
-    <button class="primary" onclick="loadCurrentMonth()">今月を読み込む</button>
-    <button onclick="loadAllMonths()">全月を読み込む</button>
+  <div class="small">GitHub同期（月別ファイルで保存）</div>
+  <div class="row">
+    <input type="password" id="token" placeholder="GitHubトークン" style="flex:1; min-width:200px;">
+    <button onclick="saveToken()">保存</button>
+    <button class="primary" onclick="loadCurrentMonth()">今月を読む</button>
   </div>
-  <div class="small">データは slot-data リポジトリの YYYY-MM.json に保存されます。</div>
 </div>
 
 <div class="card">
-  <div class="small">TSVを貼り付け（日付	店舗	機種	台番	スタート	BB	RB）</div>
-  <textarea id="paste" placeholder="2026/10/16	マルハン青森柏店	SネオアイムジャグラーEXKK	321	3776	15	8
-..."></textarea>
-  <div>
-    <button class="primary" onclick="importTSV()">貼り付けデータを取り込む</button>
-    <button onclick="exportCSV()">CSV書き出し</button>
-    <button class="danger" onclick="clearAll()">全データ削除</button>
+  <div class="small">TSVを貼り付け（日付　店舗　機種　台番　スタート　BB　RB）</div>
+  <textarea id="paste" placeholder="2026/10/16	マルハン青森柏店	SネオアイムジャグラーEXKK	321	3776	15	8"></textarea>
+  <div class="row">
+    <button class="primary" onclick="importTSV()">取り込む</button>
+    <button class="secondary" onclick="exportCSV()">CSV書き出し</button>
+    <button class="danger" onclick="clearAll()">全削除</button>
   </div>
   <div id="status"></div>
 </div>
 
 <div class="card">
-  <div class="controls">
+  <div class="row">
     <label>店舗 <select id="storeSel" onchange="render()"></select></label>
     <label>機種 <select id="machineSel" onchange="render()"></select></label>
     <label>日付 <input type="date" id="dateSel" onchange="render()"></label>
-    <label>並び 
+    <label>並び
       <select id="sortSel" onchange="render()">
         <option value="tai">台番</option>
-        <option value="start_asc">スタート少ない順</option>
-        <option value="gassan_asc">合算悪い順</option>
-        <option value="gassan_desc">合算良い順</option>
+        <option value="start_asc">スタート少</option>
+        <option value="gassan_asc">合算悪</option>
+        <option value="gassan_desc">合算良</option>
       </select>
     </label>
   </div>
@@ -68,8 +68,8 @@
 </div>
 
 <div class="card">
-  <h3 style="margin-top:0;">期間集計（合算が一番悪かった台の合計）</h3>
-  <div class="controls">
+  <h3 style="margin-top:0;">期間集計</h3>
+  <div class="row">
     <label>開始 <input type="date" id="fromDate"></label>
     <label>終了 <input type="date" id="toDate"></label>
     <button class="primary" onclick="calcPeriod()">計算</button>
@@ -78,137 +78,101 @@
 </div>
 
 <script>
-const STORAGE_KEY = "slot_dai_data_v1";
 const TOKEN_KEY = "slot_github_token";
 const OWNER = "pokoden";
 const REPO = "slot-data";
 let data = [];
 let monthShas = {};
 
-function loadLocal() {
-  try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { data = []; }
-}
-function saveLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
 function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 function saveToken() {
   const t = document.getElementById("token").value.trim();
-  if (!t) return setStatus("トークンを入力してください");
+  if (!t) return setStatus("トークンを入力");
   localStorage.setItem(TOKEN_KEY, t);
   document.getElementById("token").value = "";
-  setStatus("トークンを保存しました");
+  setStatus("トークン保存しました");
 }
-
-function monthOf(dateStr) {
-  return dateStr.replace(/\//g, "-").slice(0, 7);
-}
+function monthOf(d) { return d.replace(/\//g, "-").slice(0, 7); }
+function setStatus(msg) { document.getElementById("status").textContent = msg; }
 
 async function ghGet(path) {
   const token = getToken();
-  if (!token) throw new Error("トークン未設定");
+  if (!token) throw new Error("トークンなし");
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
-    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json" }
+    headers: { Authorization: "token " + token, Accept: "application/vnd.github+json" }
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-
 async function ghPut(path, content, sha) {
   const token = getToken();
   const body = { message: "Update " + path, content: btoa(unescape(encodeURIComponent(content))), branch: "main" };
   if (sha) body.sha = sha;
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
     method: "PUT",
-    headers: { "Authorization": `token ${token}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+    headers: { Authorization: "token " + token, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-
 async function loadMonth(ym) {
   const file = await ghGet(ym + ".json");
   if (!file) return [];
   monthShas[ym] = file.sha;
-  const text = atob(file.content.replace(/\n/g, ""));
-  return JSON.parse(text);
+  return JSON.parse(atob(file.content.replace(/\n/g, "")));
 }
-
 async function saveMonth(ym, rows) {
-  const content = JSON.stringify(rows, null, 2);
-  const res = await ghPut(ym + ".json", content, monthShas[ym]);
+  const res = await ghPut(ym + ".json", JSON.stringify(rows, null, 2), monthShas[ym]);
   monthShas[ym] = res.content.sha;
 }
-
 async function loadCurrentMonth() {
   const ym = new Date().toISOString().slice(0, 7);
   try {
-    setStatus(ym + " を読み込み中...");
+    setStatus(ym + " 読み込み中...");
     const rows = await loadMonth(ym);
     data = data.filter(d => monthOf(d.date) !== ym).concat(rows);
-    saveLocal();
     refreshFilters();
     render();
-    setStatus(ym + " を読み込みました");
+    setStatus(ym + " 読み込み完了（" + rows.length + "件）");
   } catch (e) { setStatus("エラー: " + e.message); }
 }
-
-async function loadAllMonths() {
-  setStatus("全月読み込みは手動で月を指定してください（重いため）");
-}
-
 async function importTSV() {
   const text = document.getElementById("paste").value.trim();
   if (!text) return setStatus("データが空です");
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
   const byMonth = {};
-  lines.forEach(line => {
+  text.split(/\r?\n/).forEach(line => {
     const p = line.split("\t").map(s => s.trim());
     if (p.length < 7) return;
     const start = parseInt(p[4], 10);
     if (isNaN(start)) return;
-    const row = { date: p[0], store: p[1].replace(/店$/, ""), machine: p[2], tai: p[3], start, bb: parseInt(p[5],10), rb: parseInt(p[6],10) };
+    const row = { date: p[0], store: p[1].replace(/店$/, ""), machine: p[2], tai: p[3], start, bb: +p[5], rb: +p[6] };
     const ym = monthOf(row.date);
-    if (!byMonth[ym]) byMonth[ym] = [];
-    byMonth[ym].push(row);
+    (byMonth[ym] ||= []).push(row);
   });
-
   for (const ym of Object.keys(byMonth)) {
     let existing = await loadMonth(ym);
-    byMonth[ym].forEach(newRow => {
-      const idx = existing.findIndex(d => d.date === newRow.date && d.store === newRow.store && d.machine === newRow.machine && d.tai === newRow.tai);
-      if (idx >= 0) existing[idx] = newRow;
-      else existing.push(newRow);
+    byMonth[ym].forEach(nr => {
+      const i = existing.findIndex(d => d.date === nr.date && d.store === nr.store && d.machine === nr.machine && d.tai === nr.tai);
+      if (i >= 0) existing[i] = nr; else existing.push(nr);
     });
     await saveMonth(ym, existing);
     data = data.filter(d => monthOf(d.date) !== ym).concat(existing);
   }
-  saveLocal();
   document.getElementById("paste").value = "";
-  setStatus("取り込み＆月別保存完了");
+  setStatus("取り込み完了");
   refreshFilters();
   render();
 }
-
-function gassan(row) {
-  const total = row.bb + row.rb;
-  return total > 0 ? (row.start / total).toFixed(1) : "-";
-}
-function gassanNum(row) {
-  const total = row.bb + row.rb;
-  return total > 0 ? row.start / total : 99999;
-}
-
+function gassan(r) { const t = r.bb + r.rb; return t > 0 ? (r.start / t).toFixed(1) : "-"; }
+function gassanNum(r) { const t = r.bb + r.rb; return t > 0 ? r.start / t : 99999; }
 function refreshFilters() {
   const stores = [...new Set(data.map(d => d.store))].sort();
   const machines = [...new Set(data.map(d => d.machine))].sort();
   document.getElementById("storeSel").innerHTML = '<option value="">すべて</option>' + stores.map(s => `<option>${s}</option>`).join("");
   document.getElementById("machineSel").innerHTML = '<option value="">すべて</option>' + machines.map(s => `<option>${s}</option>`).join("");
 }
-
 function render() {
   const store = document.getElementById("storeSel").value;
   const machine = document.getElementById("machineSel").value;
@@ -219,63 +183,45 @@ function render() {
   else if (sort === "gassan_asc") rows.sort((a,b) => gassanNum(a) - gassanNum(b));
   else if (sort === "gassan_desc") rows.sort((a,b) => gassanNum(b) - gassanNum(a));
   else rows.sort((a,b) => a.tai.localeCompare(b.tai, undefined, {numeric:true}));
-
   let html = `<table><thead><tr><th>順位</th><th class="left">台番</th><th class="left">機種</th><th>スタート</th><th>BB</th><th>RB</th><th>合算</th></tr></thead><tbody>`;
   rows.forEach((r, i) => {
     const g = gassan(r), gn = gassanNum(r);
     const cls = gn < 150 ? "good" : gn > 250 ? "bad" : "";
-    const rank = (sort === "start_asc" || sort === "gassan_asc") ? i+1 : "";
+    const rank = (sort === "start_asc" || sort === "gassan_asc") ? i + 1 : "";
     html += `<tr class="${cls}"><td class="rank">${rank}</td><td class="left">${r.tai}</td><td class="left">${r.machine}</td><td>${r.start}</td><td>${r.bb}</td><td>${r.rb}</td><td>${g}</td></tr>`;
   });
   html += "</tbody></table>";
-  document.getElementById("tableWrap").innerHTML = rows.length ? html : "<div class='small'>該当データなし</div>";
+  document.getElementById("tableWrap").innerHTML = rows.length ? html : "<div class='small'>該当なし</div>";
 }
-
 function calcPeriod() {
   const from = document.getElementById("fromDate").value.replace(/-/g, "/");
   const to = document.getElementById("toDate").value.replace(/-/g, "/");
   if (!from || !to) return document.getElementById("periodResult").innerHTML = "期間を指定してください";
   const period = data.filter(d => d.date >= from && d.date <= to);
-  if (!period.length) return document.getElementById("periodResult").innerHTML = "該当データなし";
-  const byDayMachine = {};
-  period.forEach(d => {
-    const key = d.date + "|" + d.machine;
-    if (!byDayMachine[key]) byDayMachine[key] = [];
-    byDayMachine[key].push(d);
-  });
+  if (!period.length) return document.getElementById("periodResult").innerHTML = "該当なし";
+  const by = {};
+  period.forEach(d => { (by[d.date + "|" + d.machine] ||= []).push(d); });
   const worst = [];
-  Object.values(byDayMachine).forEach(list => {
-    list.sort((a,b) => gassanNum(a) - gassanNum(b));
-    if (list.length) worst.push(list[0]);
-  });
-  let ts=0, tb=0, tr=0;
+  Object.values(by).forEach(list => { list.sort((a,b) => gassanNum(a) - gassanNum(b)); if (list.length) worst.push(list[0]); });
+  let ts = 0, tb = 0, tr = 0;
   worst.forEach(w => { ts += w.start; tb += w.bb; tr += w.rb; });
-  const g = (tb+tr)>0 ? (ts/(tb+tr)).toFixed(1) : "-";
-  document.getElementById("periodResult").innerHTML = `<p>対象 ${new Set(worst.map(w=>w.date)).size}日 / 最悪台 ${worst.length}件</p><p>合計スタート ${ts.toLocaleString()} BB ${tb} RB ${tr} 合算 ${g}</p>`;
+  const g = (tb + tr) > 0 ? (ts / (tb + tr)).toFixed(1) : "-";
+  document.getElementById("periodResult").innerHTML = `<p>対象 ${new Set(worst.map(w => w.date)).size}日 / 最悪台 ${worst.length}件</p><p>合計スタート ${ts.toLocaleString()}　BB ${tb}　RB ${tr}　合算 ${g}</p>`;
 }
-
 function exportCSV() {
   if (!data.length) return alert("データなし");
-  const header = "日付,店舗,機種,台番,スタート,BB,RB\n";
-  const body = data.map(d => `${d.date},${d.store},${d.machine},${d.tai},${d.start},${d.bb},${d.rb}`).join("\n");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([header+body], {type:"text/csv"}));
+  a.href = URL.createObjectURL(new Blob(["日付,店舗,機種,台番,スタート,BB,RB\n" + data.map(d => `${d.date},${d.store},${d.machine},${d.tai},${d.start},${d.bb},${d.rb}`).join("\n")], { type: "text/csv" }));
   a.download = "slot_dai.csv";
   a.click();
 }
-
 async function clearAll() {
   if (!confirm("全データ削除しますか？")) return;
   data = [];
-  saveLocal();
   refreshFilters();
   render();
-  setStatus("削除しました（GitHub側の月ファイルは残っています）");
+  setStatus("削除しました");
 }
-
-function setStatus(msg) { document.getElementById("status").textContent = msg; }
-
-loadLocal();
 refreshFilters();
 render();
 </script>
