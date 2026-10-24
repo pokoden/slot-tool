@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生活収支管理</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f5f5; color: #333; }
+  header { background: #1a1a1a; color: #fff; padding: 12px 16px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+  header button { background: #333; color: #fff; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .tabs { display: flex; background: #fff; border-bottom: 1px solid #ddd; overflow-x: auto; }
+  .tabs button { flex: 1; min-width: 80px; padding: 10px 8px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
+  .tabs button.active { border-bottom-color: #c45c26; color: #c45c26; font-weight: bold; }
+  .container { max-width: 520px; margin: 0 auto; padding: 12px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .card h3 { margin: 0 0 8px; font-size: 15px; color: #c45c26; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+  .row:last-child { border-bottom: none; font-weight: bold; }
+  .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .nav button { background: none; border: 1px solid #ddd; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 13px; }
+  .cal .dow { font-weight: bold; color: #666; padding: 4px 0; }
+  .cal .day { padding: 8px 2px; border-radius: 4px; cursor: pointer; min-height: 36px; }
+  .cal .day.other { color: #ccc; }
+  .cal .day.today { outline: 2px solid #c45c26; }
+  .cal .day.stand { background: #e8f5e9; }
+  .cal .day.kado { background: #fff3e0; }
+  .cal .day.rest { background: #f5f5f5; }
+  .legend { display: flex; gap: 12px; font-size: 12px; margin-top: 8px; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  input[type="number"], input[type="text"], input[type="password"], select { padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+  input.wide { width: 100%; }
+  input.num { width: 90px; text-align: right; }
+  .btn { background: #c45c26; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
+  .btn:hover { background: #a34a1e; }
+  .btn.secondary { background: #666; }
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 10; }
+  .modal.show { display: flex; }
+  .modal-box { background: #fff; border-radius: 8px; padding: 16px; width: 340px; max-width: 92vw; max-height: 90vh; overflow-y: auto; }
+  .modal-box h4 { margin: 0 0 12px; }
+  .modal-box label { display: block; font-size: 12px; color: #666; margin-top: 8px; }
+  .modal-box select, .modal-box button, .modal-box input { width: 100%; margin-top: 4px; padding: 8px; }
+  .status { font-size: 12px; color: #666; margin-top: 8px; }
+  .sync-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .small { font-size: 12px; color: #666; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid #eee; }
+  th:first-child, td:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<header>
+  生活収支管理
+  <button onclick="openSync()">⚙ 同期設定</button>
+</header>
+<div class="tabs">
+  <button class="active" onclick="switchTab('home')">ホーム</button>
+  <button onclick="switchTab('cal')">カレンダー</button>
+  <button onclick="switchTab('kakei')">家計</button>
+  <button onclick="switchTab('tax')">税金・目標</button>
+  <button onclick="switchTab('loan')">車ローン</button>
+</div>
+<div class="container">
+
+  <!-- HOME -->
+  <div id="tab-home" class="tab-content active">
+    <div class="card">
+      <h3>手持ち資金</h3>
+      <div class="row"><span>財布現金</span><span><input type="number" class="num" id="cash" onchange="calc()"> 円</span></div>
+      <div class="row"><span>パチ財布</span><span><input type="number" class="num" id="pachi" onchange="calc()"> 円</span></div>
+      <div class="row"><span>銀行</span><span><input type="number" class="num" id="bank" onchange="calc()"> 円</span></div>
+      <div class="row"><span>貯玉合計（引用）</span><span><input type="number" class="num" id="chodama" onchange="calc()"> 円</span></div>
+      <div class="row"><span>手持ち資金合計</span><span id="total">0 円</span></div>
+    </div>
+    <div class="card">
+      <h3>今月の状況</h3>
+      <div class="row"><span>今月収支</span><span id="monthBalance">-</span></div>
+      <div class="row"><span>目標額</span><span><input type="number" class="num" id="goal" onchange="calcGoal()"> 円</span></div>
+      <div class="row"><span>目標差額</span><span id="goalDiff">-</span></div>
+      <div class="row"><span>スタンド残り日数</span><span id="remainStand">-</span></div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div id="tab-cal" class="tab-content">
+    <div class="card">
+      <div class="nav">
+        <button onclick="prevMonth()">◀</button>
+        <strong id="monthLabel">2026年10月</strong>
+        <button onclick="nextMonth()">▶</button>
+      </div>
+      <div class="cal" id="calendar"></div>
+      <div class="legend">
+        <span><i style="background:#e8f5e9"></i>スタンド</span>
+        <span><i style="background:#fff3e0"></i>稼働</span>
+        <span><i style="background:#f5f5f5"></i>休み</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>今月の予定サマリー</h3>
+      <div class="row"><span>スタンド日数</span><span id="sumStand">-</span></div>
+      <div class="row"><span>稼働日数</span><span id="sumKado">-</span></div>
+      <div class="row"><span>休み日数</span><span id="sumRest">-</span></div>
+      <div class="row"><span>スタンド給料合計</span><span id="sumPay">-</span></div>
+      <div class="row"><span>稼働収支合計</span><span id="sumKadoProfit">-</span></div>
+    </div>
+  </div>
+
+  <!-- KAKEI -->
+  <div id="tab-kakei" class="tab-content">
+    <div class="card">
+      <h3>家計簿（月次）</h3>
+      <div class="nav">
+        <button onclick="prevKakeiMonth()">◀</button>
+        <strong id="kakeiMonthLabel">2026年10月</strong>
+        <button onclick="nextKakeiMonth()">▶</button>
+      </div>
+      <table id="kakeiTable">
+        <thead><tr><th>項目</th><th>収入</th><th>支出</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button class="btn" style="margin-top:8px;width:100%" onclick="addKakeiItem()">項目を追加</button>
+    </div>
+  </div>
+
+  <!-- TAX -->
+  <div id="tab-tax" class="tab-content">
+    <div class="card">
+      <h3>扶養内・税金</h3>
+      <div class="row"><span>今年の稼いだ額</span><span><input type="number" class="num" id="earned" onchange="calcTax()"> 円</span></div>
+      <div class="row"><span>税金がかかる額</span><span>1,290,000 円</span></div>
+      <div class="row"><span>残り稼げる額</span><span id="remainEarn">-</span></div>
+    </div>
+    <div class="card">
+      <h3>貯金目標</h3>
+      <div class="row"><span>累積目標額</span><span><input type="number" class="num" id="saveGoal" onchange="calcTax()"> 円</span></div>
+      <div class="row"><span>実際累積額</span><span><input type="number" class="num" id="saveActual" onchange="calcTax()"> 円</span></div>
+      <div class="row"><span>目標差</span><span id="saveDiff">-</span></div>
+    </div>
+  </div>
+
+  <!-- LOAN -->
+  <div id="tab-loan" class="tab-content">
+    <div class="card">
+      <h3>車ローン</h3>
+      <div class="row"><span>残回数</span><span><input type="number" class="num" id="loanRemain" onchange="calcLoan()"> 回</span></div>
+      <div class="row"><span>月々返済</span><span><input type="number" class="num" id="loanMonthly" onchange="calcLoan()"> 円</span></div>
+      <div class="row"><span>残額</span><span id="loanLeft">-</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sync-btns">
+      <button class="btn" onclick="pushData()">保存して同期</button>
+      <button class="btn secondary" onclick="pullData()">今すぐ同期</button>
+    </div>
+    <div class="status" id="syncStatus">未設定</div>
+  </div>
+
+</div>
+
+<!-- Day modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h4 id="modalDate">日付</h4>
+    <label>予定</label>
+    <select id="modalType">
+      <option value="">未設定</option>
+      <option value="stand">スタンド</option>
+      <option value="kado">稼働</option>
+      <option value="rest">休み</option>
+    </select>
+    <label>出勤時間（h）</label>
+    <input type="number" id="modalHours" step="0.5" placeholder="9">
+    <label>給料（円）</label>
+    <input type="number" id="modalPay" placeholder="9900">
+    <label>稼働時間（h）</label>
+    <input type="number" id="modalKadoHours" step="0.1" placeholder="0">
+    <label>稼働収支（円）</label>
+    <input type="number" id="modalKadoProfit" placeholder="0">
+    <button class="btn" onclick="saveDay()">保存</button>
+    <button class="btn secondary" onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+
+<!-- Kakei item modal -->
+<div class="modal" id="kakeiModal">
+  <div class="modal-box">
+    <h4>家計項目を追加</h4>
+    <label>項目名</label>
+    <input type="text" id="kakeiName" placeholder="タバコ / 給料 など">
+    <label>種別</label>
+    <select id="kakeiKind">
+      <option value="income">収入</option>
+      <option value="expense">支出</option>
+    </select>
+    <label>金額</label>
+    <input type="number" id="kakeiAmount">
+    <button class="btn" onclick="saveKakeiItem()">追加</button>
+    <button class="btn secondary" onclick="closeKakeiModal()">キャンセル</button>
+  </div>
+</div>
+
+<!-- Sync settings -->
+<div class="modal" id="syncModal">
+  <div class="modal-box">
+    <h4>同期設定</h4>
+    <label>GitHub Token</label>
+    <input type="password" id="ghToken" class="wide" placeholder="ghp_...">
+    <label>リポジトリ (owner/repo)</label>
+    <input type="text" id="ghRepo" class="wide" placeholder="username/repo">
+    <label>ファイルパス</label>
+    <input type="text" id="ghPath" class="wide" value="seikatsu.json">
+    <button class="btn" onclick="saveSyncSettings()">設定を保存</button>
+    <button class="btn secondary" onclick="closeSync()">閉じる</button>
+    <div class="status" id="syncSettingStatus"></div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'seikatsu_data';
+const SYNC_KEY = 'seikatsu_sync';
+let current = new Date(2026, 9, 25);
+let kakeiMonth = new Date(2026, 9, 1);
+let schedule = {}; // date -> {type, hours, pay, kadoHours, kadoProfit}
+let kakei = {};    // 'YYYY-MM' -> [{name, kind, amount}]
+let syncConfig = {};
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      schedule = data.schedule || {};
+      kakei = data.kakei || {};
+      ['cash','pachi','bank','chodama','goal','earned','saveGoal','saveActual','loanRemain','loanMonthly'].forEach(id => {
+        if (data[id] != null) document.getElementById(id).value = data[id];
+      });
+    }
+    const syncRaw = localStorage.getItem(SYNC_KEY);
+    if (syncRaw) {
+      syncConfig = JSON.parse(syncRaw);
+      document.getElementById('ghToken').value = syncConfig.token || '';
+      document.getElementById('ghRepo').value = syncConfig.repo || '';
+      document.getElementById('ghPath').value = syncConfig.path || 'seikatsu.json';
+      updateSyncStatus();
+    }
+  } catch(e) {}
+  calc();
+  render();
+  renderKakei();
+  calcTax();
+  calcLoan();
+}
+
+function getData() {
+  return {
+    schedule,
+    kakei,
+    cash: +document.getElementById('cash').value || 0,
+    pachi: +document.getElementById('pachi').value || 0,
+    bank: +document.getElementById('bank').value || 0,
+    chodama: +document.getElementById('chodama').value || 0,
+    goal: +document.getElementById('goal').value || 0,
+    earned: +document.getElementById('earned').value || 0,
+    saveGoal: +document.getElementById('saveGoal').value || 0,
+    saveActual: +document.getElementById('saveActual').value || 0,
+    loanRemain: +document.getElementById('loanRemain').value || 0,
+    loanMonthly: +document.getElementById('loanMonthly').value || 0
+  };
+}
+
+function saveLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(getData()));
+}
+
+function calc() {
+  const d = getData();
+  const total = d.cash + d.pachi + d.bank + d.chodama;
+  document.getElementById('total').textContent = total.toLocaleString() + ' 円';
+  calcGoal();
+  saveLocal();
+}
+
+function calcGoal() {
+  const d = getData();
+  const total = d.cash + d.pachi + d.bank + d.chodama;
+  const diff = total - d.goal;
+  document.getElementById('goalDiff').textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' 円';
+  document.getElementById('goalDiff').style.color = diff >= 0 ? '#2c5f4e' : '#c45c26';
+}
+
+function calcTax() {
+  const earned = +document.getElementById('earned').value || 0;
+  const remain = 1290000 - earned;
+  document.getElementById('remainEarn').textContent = remain.toLocaleString() + ' 円';
+  const sg = +document.getElementById('saveGoal').value || 0;
+  const sa = +document.getElementById('saveActual').value || 0;
+  const sd = sa - sg;
+  document.getElementById('saveDiff').textContent = (sd >= 0 ? '+' : '') + sd.toLocaleString() + ' 円';
+  saveLocal();
+}
+
+function calcLoan() {
+  const r = +document.getElementById('loanRemain').value || 0;
+  const m = +document.getElementById('loanMonthly').value || 0;
+  document.getElementById('loanLeft').textContent = (r * m).toLocaleString() + ' 円';
+  saveLocal();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tabs button').forEach((b, i) => {
+    b.classList.toggle('active', ['home','cal','kakei','tax','loan'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function render() {
+  const y = current.getFullYear();
+  const m = current.getMonth();
+  document.getElementById('monthLabel').textContent = `${y}年${m+1}月`;
+
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m+1, 0);
+  const startDow = first.getDay();
+  const days = last.getDate();
+
+  let html = '<div class="dow">日</div><div class="dow">月</div><div class="dow">火</div><div class="dow">水</div><div class="dow">木</div><div class="dow">金</div><div class="dow">土</div>';
+  for (let i = 0; i < startDow; i++) html += '<div class="day other"></div>';
+
+  let stand = 0, kado = 0, rest = 0, pay = 0, kadoProfit = 0;
+  const todayStr = new Date().toISOString().slice(0,10);
+  let remainStand = 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(y, m, d);
+    const key = date.toISOString().slice(0,10);
+    const rec = schedule[key] || {};
+    const type = rec.type || '';
+    const cls = ['day', type, key === todayStr ? 'today' : ''].filter(Boolean).join(' ');
+    html += `<div class="${cls}" onclick="openModal('${key}')">${d}</div>`;
+    if (type === 'stand') { stand++; pay += rec.pay || 0; if (date >= today) remainStand++; }
+    if (type === 'kado') { kado++; kadoProfit += rec.kadoProfit || 0; }
+    if (type === 'rest') rest++;
+  }
+
+  document.getElementById('calendar').innerHTML = html;
+  document.getElementById('sumStand').textContent = stand + '日';
+  document.getElementById('sumKado').textContent = kado + '日';
+  document.getElementById('sumRest').textContent = rest + '日';
+  document.getElementById('sumPay').textContent = pay.toLocaleString() + ' 円';
+  document.getElementById('sumKadoProfit').textContent = kadoProfit.toLocaleString() + ' 円';
+  document.getElementById('remainStand').textContent = remainStand + '日';
+
+  const monthBal = pay + kadoProfit;
+  document.getElementById('monthBalance').textContent = monthBal.toLocaleString() + ' 円';
+}
+
+function prevMonth() { current.setMonth(current.getMonth()-1); render(); }
+function nextMonth() { current.setMonth(current.getMonth()+1); render(); }
+
+let editingDate = '';
+function openModal(date) {
+  editingDate = date;
+  const rec = schedule[date] || {};
+  document.getElementById('modalDate').textContent = date;
+  document.getElementById('modalType').value = rec.type || '';
+  document.getElementById('modalHours').value = rec.hours || '';
+  document.getElementById('modalPay').value = rec.pay || '';
+  document.getElementById('modalKadoHours').value = rec.kadoHours || '';
+  document.getElementById('modalKadoProfit').value = rec.kadoProfit || '';
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+function saveDay() {
+  const type = document.getElementById('modalType').value;
+  if (type) {
+    schedule[editingDate] = {
+      type,
+      hours: +document.getElementById('modalHours').value || 0,
+      pay: +document.getElementById('modalPay').value || 0,
+      kadoHours: +document.getElementById('modalKadoHours').value || 0,
+      kadoProfit: +document.getElementById('modalKadoProfit').value || 0
+    };
+  } else {
+    delete schedule[editingDate];
+  }
+  saveLocal();
+  closeModal();
+  render();
+}
+
+function renderKakei() {
+  const y = kakeiMonth.getFullYear();
+  const m = kakeiMonth.getMonth();
+  const key = `${y}-${String(m+1).padStart(2,'0')}`;
+  document.getElementById('kakeiMonthLabel').textContent = `${y}年${m+1}月`;
+  const items = kakei[key] || [];
+  const tbody = document.querySelector('#kakeiTable tbody');
+  tbody.innerHTML = items.map(it => `
+    <tr>
+      <td>${it.name}</td>
+      <td>${it.kind === 'income' ? it.amount.toLocaleString() : ''}</td>
+      <td>${it.kind === 'expense' ? it.amount.toLocaleString() : ''}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="3" style="text-align:center;color:#999">データなし</td></tr>';
+}
+function prevKakeiMonth() { kakeiMonth.setMonth(kakeiMonth.getMonth()-1); renderKakei(); }
+function nextKakeiMonth() { kakeiMonth.setMonth(kakeiMonth.getMonth()+1); renderKakei(); }
+function addKakeiItem() { document.getElementById('kakeiModal').classList.add('show'); }
+function closeKakeiModal() { document.getElementById('kakeiModal').classList.remove('show'); }
+function saveKakeiItem() {
+  const y = kakeiMonth.getFullYear();
+  const m = kakeiMonth.getMonth();
+  const key = `${y}-${String(m+1).padStart(2,'0')}`;
+  if (!kakei[key]) kakei[key] = [];
+  kakei[key].push({
+    name: document.getElementById('kakeiName').value || '項目',
+    kind: document.getElementById('kakeiKind').value,
+    amount: +document.getElementById('kakeiAmount').value || 0
+  });
+  saveLocal();
+  closeKakeiModal();
+  renderKakei();
+  document.getElementById('kakeiName').value = '';
+  document.getElementById('kakeiAmount').value = '';
+}
+
+function openSync() { document.getElementById('syncModal').classList.add('show'); }
+function closeSync() { document.getElementById('syncModal').classList.remove('show'); }
+function saveSyncSettings() {
+  syncConfig = {
+    token: document.getElementById('ghToken').value.trim(),
+    repo: document.getElementById('ghRepo').value.trim(),
+    path: document.getElementById('ghPath').value.trim() || 'seikatsu.json'
+  };
+  localStorage.setItem(SYNC_KEY, JSON.stringify(syncConfig));
+  updateSyncStatus();
+  document.getElementById('syncSettingStatus').textContent = '設定を保存しました';
+  setTimeout(() => document.getElementById('syncSettingStatus').textContent = '', 2000);
+}
+function updateSyncStatus() {
+  const el = document.getElementById('syncStatus');
+  el.textContent = (syncConfig.token && syncConfig.repo) ? '同期設定済み（' + syncConfig.repo + '）' : '未設定';
+}
+
+async function ghFetch(method, path, body) {
+  if (!syncConfig.token || !syncConfig.repo) throw new Error('同期設定がありません');
+  const url = `https://api.github.com/repos/${syncConfig.repo}/contents/${path}`;
+  const headers = {
+    'Authorization': 'token ' + syncConfig.token,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+  const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function pullData() {
+  try {
+    document.getElementById('syncStatus').textContent = '同期中...';
+    const data = await ghFetch('GET', syncConfig.path);
+    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    schedule = content.schedule || {};
+    kakei = content.kakei || {};
+    ['cash','pachi','bank','chodama','goal','earned','saveGoal','saveActual','loanRemain','loanMonthly'].forEach(id => {
+      if (content[id] != null) document.getElementById(id).value = content[id];
+    });
+    saveLocal();
+    calc();
+    render();
+    renderKakei();
+    calcTax();
+    calcLoan();
+    document.getElementById('syncStatus').textContent = '同期完了（' + new Date().toLocaleTimeString() + '）';
+  } catch (e) {
+    document.getElementById('syncStatus').textContent = '同期エラー: ' + e.message;
+  }
+}
+
+async function pushData() {
+  try {
+    document.getElementById('syncStatus').textContent = '保存中...';
+    const data = getData();
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+    let sha;
+    try { sha = (await ghFetch('GET', syncConfig.path)).sha; } catch (e) {}
+    await ghFetch('PUT', syncConfig.path, { message: 'Update seikatsu data', content, sha });
+    document.getElementById('syncStatus').textContent = '保存完了（' + new Date().toLocaleTimeString() + '）';
+  } catch (e) {
+    document.getElementById('syncStatus').textContent = '保存エラー: ' + e.message;
+  }
+}
+
+loadLocal();
+</script>
+</body>
+</html>
