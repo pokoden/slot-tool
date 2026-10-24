@@ -231,6 +231,29 @@ let schedule = {}; // date -> {type, hours, pay, kadoHours, kadoProfit}
 let kakei = {};    // 'YYYY-MM' -> [{name, kind, amount}]
 let syncConfig = {};
 
+async function tryLoadChodamaTotal() {
+  if (!syncConfig.token || !syncConfig.repo) return;
+  try {
+    const res = await fetch('https://api.github.com/repos/' + syncConfig.repo + '/contents/chodama.json', {
+      headers: { 'Authorization': 'Bearer ' + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const cd = JSON.parse(decodeURIComponent(escape(atob(data.content))));
+    // rough total from stores if present
+    let total = 0;
+    if (cd && Array.isArray(cd.stores)) {
+      for (const s of cd.stores) {
+        if (s && !s.deleted && s.yen) total += +s.yen || 0;
+      }
+    }
+    if (total > 0 && !document.getElementById('chodama').value) {
+      document.getElementById('chodama').value = Math.round(total);
+      calc();
+    }
+  } catch(e) {}
+}
+
 function loadLocal() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -261,6 +284,7 @@ function loadLocal() {
   renderKakei();
   calcTax();
   calcLoan();
+  tryLoadChodamaTotal();
 }
 
 function getData() {
@@ -474,7 +498,16 @@ async function ghFetch(method, path, body) {
 async function pullData() {
   try {
     document.getElementById('syncStatus').textContent = '同期中...';
-    const data = await ghFetch('GET', syncConfig.path);
+    let data;
+    try {
+      data = await ghFetch('GET', syncConfig.path);
+    } catch (e) {
+      if (String(e).includes('Not Found') || String(e.message).includes('Not Found')) {
+        document.getElementById('syncStatus').textContent = 'まだデータがありません。保存して同期で作成できます';
+        return;
+      }
+      throw e;
+    }
     const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
     schedule = content.schedule || {};
     kakei = content.kakei || {};
