@@ -224,6 +224,7 @@
 <script>
 const STORAGE_KEY = 'seikatsu_data';
 const SYNC_KEY = 'seikatsu_sync';
+const TOKEN_KEY = 'v2_token';
 let current = new Date(2026, 9, 25);
 let kakeiMonth = new Date(2026, 9, 1);
 let schedule = {}; // date -> {type, hours, pay, kadoHours, kadoProfit}
@@ -244,11 +245,16 @@ function loadLocal() {
     const syncRaw = localStorage.getItem(SYNC_KEY);
     if (syncRaw) {
       syncConfig = JSON.parse(syncRaw);
-      document.getElementById('ghToken').value = syncConfig.token || '';
-      document.getElementById('ghRepo').value = syncConfig.repo || '';
-      document.getElementById('ghPath').value = syncConfig.path || 'seikatsu.json';
-      updateSyncStatus();
     }
+    // 既存アプリのトークンがあればそれを使う
+    const existingToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('v2_token');
+    if (existingToken && !syncConfig.token) syncConfig.token = existingToken;
+    if (!syncConfig.repo) syncConfig.repo = 'pokoden/slot-data';
+    if (!syncConfig.path) syncConfig.path = 'seikatsu.json';
+    document.getElementById('ghToken').value = syncConfig.token || '';
+    document.getElementById('ghRepo').value = syncConfig.repo || 'pokoden/slot-data';
+    document.getElementById('ghPath').value = syncConfig.path || 'seikatsu.json';
+    updateSyncStatus();
   } catch(e) {}
   calc();
   render();
@@ -358,6 +364,7 @@ function render() {
   document.getElementById('sumKadoProfit').textContent = kadoProfit.toLocaleString() + ' 円';
   document.getElementById('remainStand').textContent = remainStand + '日';
 
+  // month balance rough
   const monthBal = pay + kadoProfit;
   document.getElementById('monthBalance').textContent = monthBal.toLocaleString() + ' 円';
 }
@@ -437,10 +444,11 @@ function closeSync() { document.getElementById('syncModal').classList.remove('sh
 function saveSyncSettings() {
   syncConfig = {
     token: document.getElementById('ghToken').value.trim(),
-    repo: document.getElementById('ghRepo').value.trim(),
+    repo: document.getElementById('ghRepo').value.trim() || 'pokoden/slot-data',
     path: document.getElementById('ghPath').value.trim() || 'seikatsu.json'
   };
   localStorage.setItem(SYNC_KEY, JSON.stringify(syncConfig));
+  if (syncConfig.token) localStorage.setItem(TOKEN_KEY, syncConfig.token);
   updateSyncStatus();
   document.getElementById('syncSettingStatus').textContent = '設定を保存しました';
   setTimeout(() => document.getElementById('syncSettingStatus').textContent = '', 2000);
@@ -454,7 +462,7 @@ async function ghFetch(method, path, body) {
   if (!syncConfig.token || !syncConfig.repo) throw new Error('同期設定がありません');
   const url = `https://api.github.com/repos/${syncConfig.repo}/contents/${path}`;
   const headers = {
-    'Authorization': 'token ' + syncConfig.token,
+    'Authorization': 'Bearer ' + syncConfig.token,
     'Accept': 'application/vnd.github.v3+json',
     'Content-Type': 'application/json'
   };
@@ -481,7 +489,7 @@ async function pullData() {
     calcLoan();
     document.getElementById('syncStatus').textContent = '同期完了（' + new Date().toLocaleTimeString() + '）';
   } catch (e) {
-    document.getElementById('syncStatus').textContent = '同期エラー: ' + e.message;
+    document.getElementById('syncStatus').textContent = '同期エラー: ' + (e.message || e).toString().slice(0, 120);
   }
 }
 
@@ -495,7 +503,7 @@ async function pushData() {
     await ghFetch('PUT', syncConfig.path, { message: 'Update seikatsu data', content, sha });
     document.getElementById('syncStatus').textContent = '保存完了（' + new Date().toLocaleTimeString() + '）';
   } catch (e) {
-    document.getElementById('syncStatus').textContent = '保存エラー: ' + e.message;
+    document.getElementById('syncStatus').textContent = '保存エラー: ' + (e.message || e).toString().slice(0, 120);
   }
 }
 
