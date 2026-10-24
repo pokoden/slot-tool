@@ -237,7 +237,7 @@ async function tryLoadChodamaTotal() {
   if (!syncConfig.token || !syncConfig.repo) return;
   try {
     const res = await fetch('https://api.github.com/repos/' + syncConfig.repo + '/contents/chodama.json', {
-      headers: { 'Authorization': 'Bearer ' + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
+      headers: { 'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
     });
     if (!res.ok) return;
     const data = await res.json();
@@ -469,7 +469,7 @@ function openSync() { document.getElementById('syncModal').classList.add('show')
 function closeSync() { document.getElementById('syncModal').classList.remove('show'); }
 function saveSyncSettings() {
   syncConfig = {
-    token: document.getElementById('ghToken').value.trim(),
+    token: document.getElementById('ghToken').value.trim().replace(/\s+/g, ''),
     repo: document.getElementById('ghRepo').value.trim() || 'pokoden/slot-data',
     path: document.getElementById('ghPath').value.trim() || 'seikatsu.json'
   };
@@ -486,7 +486,7 @@ async function testToken() {
   document.getElementById('syncSettingStatus').textContent = 'テスト中...';
   try {
     const res = await fetch('https://api.github.com/repos/' + repo + '/contents/chodama.json', {
-      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+      headers: { 'Authorization': (token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + token, 'Accept': 'application/vnd.github.v3+json' }
     });
     if (res.status === 401) {
       document.getElementById('syncSettingStatus').textContent = 'トークンが無効です（401）';
@@ -509,7 +509,7 @@ async function ghFetch(method, path, body) {
   if (!syncConfig.token || !syncConfig.repo) throw new Error('同期設定がありません');
   const url = `https://api.github.com/repos/${syncConfig.repo}/contents/${path}`;
   const headers = {
-    'Authorization': 'Bearer ' + syncConfig.token,
+    'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token,
     'Accept': 'application/vnd.github.v3+json',
     'Content-Type': 'application/json'
   };
