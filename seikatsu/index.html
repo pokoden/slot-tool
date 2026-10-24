@@ -217,6 +217,7 @@
     <label>ファイルパス</label>
     <input type="text" id="ghPath" class="wide" value="seikatsu.json">
     <button class="btn" onclick="saveSyncSettings()">設定を保存</button>
+    <button class="btn secondary" onclick="testToken()">トークンをテスト</button>
     <button class="btn secondary" onclick="closeSync()">閉じる</button>
     <div class="status" id="syncSettingStatus"></div>
   </div>
@@ -478,6 +479,27 @@ function saveSyncSettings() {
   document.getElementById('syncSettingStatus').textContent = '設定を保存しました';
   setTimeout(() => document.getElementById('syncSettingStatus').textContent = '', 2000);
 }
+async function testToken() {
+  const token = document.getElementById('ghToken').value.trim();
+  const repo = document.getElementById('ghRepo').value.trim() || 'pokoden/slot-data';
+  if (!token) { document.getElementById('syncSettingStatus').textContent = 'トークンを入力してください'; return; }
+  document.getElementById('syncSettingStatus').textContent = 'テスト中...';
+  try {
+    const res = await fetch('https://api.github.com/repos/' + repo + '/contents/chodama.json', {
+      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (res.status === 401) {
+      document.getElementById('syncSettingStatus').textContent = 'トークンが無効です（401）';
+    } else if (res.ok) {
+      document.getElementById('syncSettingStatus').textContent = 'OK（接続成功）';
+    } else {
+      document.getElementById('syncSettingStatus').textContent = 'エラー: ' + res.status;
+    }
+  } catch(e) {
+    document.getElementById('syncSettingStatus').textContent = '接続エラー';
+  }
+}
+
 function updateSyncStatus() {
   const el = document.getElementById('syncStatus');
   el.textContent = (syncConfig.token && syncConfig.repo) ? '同期設定済み（' + syncConfig.repo + '）' : '未設定';
@@ -523,7 +545,9 @@ async function pullData() {
     calcLoan();
     document.getElementById('syncStatus').textContent = '同期完了（' + new Date().toLocaleTimeString() + '）';
   } catch (e) {
-    document.getElementById('syncStatus').textContent = '同期エラー: ' + (e.message || e).toString().slice(0, 120);
+    document.getElementById('syncStatus').textContent = String(e).includes('401') || String(e).includes('Bad credentials') 
+      ? 'トークンが無効です。同期設定で正しいトークンを入れ直してください' 
+      : '同期エラー: ' + (e.message || e).toString().slice(0, 100);
   }
 }
 
@@ -537,7 +561,9 @@ async function pushData() {
     await ghFetch('PUT', syncConfig.path, { message: 'Update seikatsu data', content, sha });
     document.getElementById('syncStatus').textContent = '保存完了（' + new Date().toLocaleTimeString() + '）';
   } catch (e) {
-    document.getElementById('syncStatus').textContent = '保存エラー: ' + (e.message || e).toString().slice(0, 120);
+    document.getElementById('syncStatus').textContent = String(e).includes('401') || String(e).includes('Bad credentials') 
+      ? 'トークンが無効です。同期設定で正しいトークンを入れ直してください' 
+      : '保存エラー: ' + (e.message || e).toString().slice(0, 100);
   }
 }
 
