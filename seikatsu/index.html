@@ -240,12 +240,11 @@ async function tryLoadChodamaTotal() {
     if (!res.ok) return;
     const data = await res.json();
     const cd = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-    // rough total from stores if present
+    // sum non-deleted 'set' entries (current holdings)
     let total = 0;
-    if (cd && Array.isArray(cd.stores)) {
-      for (const s of cd.stores) {
-        if (s && !s.deleted && s.yen) total += +s.yen || 0;
-      }
+    const list = cd.ev || cd.entries || [];
+    for (const e of list) {
+      if (e && !e.deleted && e.t === 'set' && e.n) total += +e.n || 0;
     }
     if (total > 0 && !document.getElementById('chodama').value) {
       document.getElementById('chodama').value = Math.round(total);
