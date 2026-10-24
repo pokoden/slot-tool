@@ -158,6 +158,7 @@
     <div class="sync-btns">
       <button class="btn" onclick="pushData()">保存して同期</button>
       <button class="btn secondary" onclick="pullData()">今すぐ同期</button>
+      <button class="btn secondary" onclick="autoLoadFromChodama()">収支管理から引用</button>
     </div>
     <div class="status" id="syncStatus">未設定</div>
   </div>
@@ -233,26 +234,65 @@ let schedule = {}; // date -> {type, hours, pay, kadoHours, kadoProfit}
 let kakei = {};    // 'YYYY-MM' -> [{name, kind, amount}]
 let syncConfig = {};
 
-async function tryLoadChodamaTotal() {
+async function ghGet(path) {
+  if (!syncConfig.token || !syncConfig.repo) return null;
+  const res = await fetch('https://api.github.com/repos/' + syncConfig.repo + '/contents/' + path, {
+    headers: { 'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return JSON.parse(decodeURIComponent(escape(atob(data.content))));
+}
+
+async function autoLoadFromChodama() {
   if (!syncConfig.token || !syncConfig.repo) return;
   try {
-    const res = await fetch('https://api.github.com/repos/' + syncConfig.repo + '/contents/chodama.json', {
-      headers: { 'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const cd = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-    // sum non-deleted 'set' entries (current holdings)
-    let total = 0;
-    const list = cd.ev || cd.entries || [];
-    for (const e of list) {
-      if (e && !e.deleted && e.t === 'set' && e.n) total += +e.n || 0;
+    document.getElementById('syncStatus').textContent = '収支管理から読み込み中...';
+    const [cd, slotData, pachiData] = await Promise.all([
+      ghGet('chodama.json'),
+      ghGet('data.json'),
+      ghGet('pachinko.json')
+    ]);
+
+    // 貯玉合計：setエントリを円換算
+    let chodamaYen = 0;
+    if (cd && cd.ev) {
+      const stores = (slotData && slotData.stores) || [];
+      const storeMap = {};
+      for (const s of stores) storeMap[s.name] = s;
+      for (const e of cd.ev) {
+        if (e.deleted || e.t !== 'set' || !e.n) continue;
+        const st = storeMap[e.store] || {};
+        let yenPer = 3.57;
+        if (e.k === 's' && st.ex) yenPer = 100 / st.ex;
+        else if (e.k === 'p' && st.val) yenPer = st.val;
+        chodamaYen += e.n * yenPer;
+      }
     }
-    if (total > 0 && !document.getElementById('chodama').value) {
-      document.getElementById('chodama').value = Math.round(total);
-      calc();
+    if (chodamaYen > 0) {
+      document.getElementById('chodama').value = Math.round(chodamaYen);
     }
-  } catch(e) {}
+
+    // 今月のパチスロ収支：data.json + pachinko.json の今月yen合計
+    const now = new Date();
+    const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    let monthYen = 0;
+    for (const src of [slotData, pachiData]) {
+      if (!src || !src.entries) continue;
+      for (const e of src.entries) {
+        if (e.deleted || !e.date || !e.date.startsWith(ym) || e.yen == null) continue;
+        monthYen += +e.yen || 0;
+      }
+    }
+    if (monthYen !== 0) {
+      document.getElementById('slotMonth').value = Math.round(monthYen);
+    }
+
+    calc();
+    document.getElementById('syncStatus').textContent = '収支管理から読み込み完了';
+  } catch(e) {
+    document.getElementById('syncStatus').textContent = '読み込みエラー';
+  }
 }
 
 function loadLocal() {
@@ -285,7 +325,7 @@ function loadLocal() {
   renderKakei();
   calcTax();
   calcLoan();
-  tryLoadChodamaTotal();
+  autoLoadFromChodama();
 }
 
 function getData() {
