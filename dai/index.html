@@ -102,7 +102,8 @@ function utf8ToBase64(str) {
   return btoa(binary);
 }
 function base64ToUtf8(b64) {
-  const binary = atob(b64.replace(/\n/g, ""));
+  const clean = b64.replace(/\n/g, "").replace(/\s/g, "");
+  const binary = atob(clean);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new TextDecoder().decode(bytes);
@@ -134,8 +135,15 @@ async function loadMonth(ym) {
   const file = await ghGet(ym + ".json");
   if (!file) return [];
   monthShas[ym] = file.sha;
-  const decoded = base64ToUtf8(file.content);
-  return JSON.parse(decoded);
+  try {
+    const decoded = base64ToUtf8(file.content);
+    if (!decoded || decoded.trim() === "") return [];
+    return JSON.parse(decoded);
+  } catch (e) {
+    console.error("loadMonth parse error for " + ym, e);
+    setStatus(ym + " の読み込みでエラー（空として続けます）");
+    return [];
+  }
 }
 async function saveMonth(ym, rows) {
   const res = await ghPut(ym + ".json", JSON.stringify(rows, null, 2), monthShas[ym]);
@@ -179,19 +187,23 @@ async function importTSV() {
     const ym = monthOf(row.date);
     (byMonth[ym] ||= []).push(row);
   });
-  for (const ym of Object.keys(byMonth)) {
-    let existing = await loadMonth(ym);
-    byMonth[ym].forEach(nr => {
-      const i = existing.findIndex(d => d.date === nr.date && d.store === nr.store && d.machine === nr.machine && d.tai === nr.tai);
-      if (i >= 0) existing[i] = nr; else existing.push(nr);
-    });
-    await saveMonth(ym, existing);
-    data = data.filter(d => monthOf(d.date) !== ym).concat(existing);
+  try {
+    for (const ym of Object.keys(byMonth)) {
+      let existing = await loadMonth(ym);
+      byMonth[ym].forEach(nr => {
+        const i = existing.findIndex(d => d.date === nr.date && d.store === nr.store && d.machine === nr.machine && d.tai === nr.tai);
+        if (i >= 0) existing[i] = nr; else existing.push(nr);
+      });
+      await saveMonth(ym, existing);
+      data = data.filter(d => monthOf(d.date) !== ym).concat(existing);
+    }
+    document.getElementById("paste").value = "";
+    setStatus("取り込み完了");
+    refreshFilters();
+    render();
+  } catch (e) {
+    setStatus("エラー: " + e.message);
   }
-  document.getElementById("paste").value = "";
-  setStatus("取り込み完了");
-  refreshFilters();
-  render();
 }
 function gassan(r) { const t = r.bb + r.rb; return t > 0 ? (r.start / t).toFixed(1) : "-"; }
 function gassanNum(r) { const t = r.bb + r.rb; return t > 0 ? r.start / t : 99999; }
