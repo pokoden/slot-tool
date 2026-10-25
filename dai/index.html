@@ -21,7 +21,6 @@
   td.left, th.left { text-align: left; }
   .bad { background: #fff5f5; }
   .good { background: #f0fff4; }
-  .rank { font-weight: bold; color: #c53030; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
   .small { font-size: 13px; color: #666; margin-top: 6px; }
   #status { margin: 8px 0; font-weight: 600; color: #2b6cb0; }
@@ -40,7 +39,7 @@
 </div>
 
 <div class="card">
-  <div class="small">TSVを貼り付け（日付　店舗　機種　台番　スタート　BB　RB）</div>
+  <div class="small">TSVを貼り付け（日付　店舗　機種　台番　回転　BB　RB）</div>
   <textarea id="paste" placeholder="2026/10/16	マルハン青森柏店	SネオアイムジャグラーEXKK	321	3776	15	8"></textarea>
   <div class="row">
     <button class="primary" onclick="importTSV()">取り込む</button>
@@ -57,8 +56,9 @@
     <label>日付 <input type="date" id="dateSel" onchange="render()"></label>
     <label>並び
       <select id="sortSel" onchange="render()">
+        <option value="date">日付</option>
         <option value="tai">台番</option>
-        <option value="start_asc">スタート少</option>
+        <option value="start_asc">回転少</option>
         <option value="gassan_asc">合算悪</option>
         <option value="gassan_desc">合算良</option>
       </select>
@@ -170,12 +170,11 @@ async function importTSV() {
       bb = parseNum(p[5]);
       rb = parseNum(p[6]);
     } else {
-      // 台番なしの場合（6列以下）
       start = parseNum(p[3]);
       bb = parseNum(p[4]);
       rb = parseNum(p[5] || 0);
     }
-    if (isNaN(start) || start === 0 && !p[3]) return;
+    if (isNaN(start)) return;
     const row = { date, store: store.replace(/店$/, ""), machine, tai, start, bb, rb };
     const ym = monthOf(row.date);
     (byMonth[ym] ||= []).push(row);
@@ -211,13 +210,13 @@ function render() {
   if (sort === "start_asc") rows.sort((a,b) => a.start - b.start);
   else if (sort === "gassan_asc") rows.sort((a,b) => gassanNum(a) - gassanNum(b));
   else if (sort === "gassan_desc") rows.sort((a,b) => gassanNum(b) - gassanNum(a));
+  else if (sort === "date") rows.sort((a,b) => a.date.localeCompare(b.date) || a.tai.localeCompare(b.tai, undefined, {numeric:true}));
   else rows.sort((a,b) => a.tai.localeCompare(b.tai, undefined, {numeric:true}));
-  let html = `<table><thead><tr><th>順位</th><th class="left">台番</th><th class="left">機種</th><th>スタート</th><th>BB</th><th>RB</th><th>合算</th></tr></thead><tbody>`;
-  rows.forEach((r, i) => {
-    const g = gassan(r), gn = gassanNum(r);
+  let html = `<table><thead><tr><th class="left">日付</th><th class="left">店舗</th><th class="left">機種</th><th>台番</th><th>回転</th><th>BB</th><th>RB</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    const gn = gassanNum(r);
     const cls = gn < 150 ? "good" : gn > 250 ? "bad" : "";
-    const rank = (sort === "start_asc" || sort === "gassan_asc") ? i + 1 : "";
-    html += `<tr class="${cls}"><td class="rank">${rank}</td><td class="left">${r.tai}</td><td class="left">${r.machine}</td><td>${r.start}</td><td>${r.bb}</td><td>${r.rb}</td><td>${g}</td></tr>`;
+    html += `<tr class="${cls}"><td class="left">${r.date}</td><td class="left">${r.store}</td><td class="left">${r.machine}</td><td>${r.tai}</td><td>${r.start}</td><td>${r.bb}</td><td>${r.rb}</td></tr>`;
   });
   html += "</tbody></table>";
   document.getElementById("tableWrap").innerHTML = rows.length ? html : "<div class='small'>該当なし</div>";
@@ -235,18 +234,27 @@ function calcPeriod() {
   let ts = 0, tb = 0, tr = 0;
   worst.forEach(w => { ts += w.start; tb += w.bb; tr += w.rb; });
   const g = (tb + tr) > 0 ? (ts / (tb + tr)).toFixed(1) : "-";
-  document.getElementById("periodResult").innerHTML = `<p>対象 ${new Set(worst.map(w => w.date)).size}日 / 最悪台 ${worst.length}件</p><p>合計スタート ${ts.toLocaleString()}　BB ${tb}　RB ${tr}　合算 ${g}</p>`;
+  document.getElementById("periodResult").innerHTML = `<p>対象 ${new Set(worst.map(w => w.date)).size}日 / 最悪台 ${worst.length}件</p><p>合計回転 ${ts.toLocaleString()}　BB ${tb}　RB ${tr}　合算 ${g}</p>`;
 }
 function exportCSV() {
   if (!data.length) return alert("データなし");
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob(["日付,店舗,機種,台番,スタート,BB,RB\n" + data.map(d => `${d.date},${d.store},${d.machine},${d.tai},${d.start},${d.bb},${d.rb}`).join("\n")], { type: "text/csv" }));
+  a.href = URL.createObjectURL(new Blob(["日付,店舗,機種,台番,回転,BB,RB\n" + data.map(d => `${d.date},${d.store},${d.machine},${d.tai},${d.start},${d.bb},${d.rb}`).join("\n")], { type: "text/csv" }));
   a.download = "slot_dai.csv";
   a.click();
 }
 async function clearAll() {
-  if (!confirm("全データ削除しますか？")) return;
+  if (!confirm("全データを削除しますか？（GitHub上のデータも消します）")) return;
+  const months = [...new Set(data.map(d => monthOf(d.date)))];
+  for (const ym of months) {
+    try {
+      await saveMonth(ym, []);
+    } catch (e) {
+      console.error(e);
+    }
+  }
   data = [];
+  monthShas = {};
   refreshFilters();
   render();
   setStatus("削除しました");
