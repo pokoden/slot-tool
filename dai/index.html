@@ -119,6 +119,14 @@ async function ghGet(path) {
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
+async function ghGetBlob(sha) {
+  const token = getToken();
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/git/blobs/${sha}`, {
+    headers: { Authorization: "token " + token, Accept: "application/vnd.github+json" }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
 async function ghPut(path, content, sha) {
   const token = getToken();
   const body = { message: "Update " + path, content: utf8ToBase64(content), branch: "main" };
@@ -136,12 +144,17 @@ async function loadMonth(ym) {
   if (!file) return [];
   monthShas[ym] = file.sha;
   try {
-    const decoded = base64ToUtf8(file.content);
+    let contentB64 = file.content;
+    if (!contentB64 || file.size > 1000000) {
+      const blob = await ghGetBlob(file.sha);
+      contentB64 = blob.content;
+    }
+    const decoded = base64ToUtf8(contentB64);
     if (!decoded || decoded.trim() === "") return [];
     return JSON.parse(decoded);
   } catch (e) {
-    console.error("loadMonth parse error for " + ym, e);
-    setStatus(ym + " の読み込みでエラー（空として続けます）");
+    console.error("loadMonth error for " + ym, e);
+    setStatus(ym + " 読み込みエラー: " + e.message);
     return [];
   }
 }
