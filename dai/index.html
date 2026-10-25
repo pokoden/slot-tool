@@ -95,6 +95,19 @@ function saveToken() {
 function monthOf(d) { return d.replace(/\//g, "-").slice(0, 7); }
 function setStatus(msg) { document.getElementById("status").textContent = msg; }
 
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+function base64ToUtf8(b64) {
+  const binary = atob(b64.replace(/\n/g, ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
 async function ghGet(path) {
   const token = getToken();
   if (!token) throw new Error("トークンなし");
@@ -107,7 +120,7 @@ async function ghGet(path) {
 }
 async function ghPut(path, content, sha) {
   const token = getToken();
-  const body = { message: "Update " + path, content: btoa(unescape(encodeURIComponent(content))), branch: "main" };
+  const body = { message: "Update " + path, content: utf8ToBase64(content), branch: "main" };
   if (sha) body.sha = sha;
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
     method: "PUT",
@@ -121,7 +134,7 @@ async function loadMonth(ym) {
   const file = await ghGet(ym + ".json");
   if (!file) return [];
   monthShas[ym] = file.sha;
-  const decoded = decodeURIComponent(escape(atob(file.content.replace(/\n/g, ""))));
+  const decoded = base64ToUtf8(file.content);
   return JSON.parse(decoded);
 }
 async function saveMonth(ym, rows) {
@@ -139,16 +152,31 @@ async function loadCurrentMonth() {
     setStatus(ym + " 読み込み完了（" + rows.length + "件）");
   } catch (e) { setStatus("エラー: " + e.message); }
 }
+function parseNum(s) {
+  if (!s) return 0;
+  return parseInt(String(s).replace(/,/g, ""), 10) || 0;
+}
 async function importTSV() {
   const text = document.getElementById("paste").value.trim();
   if (!text) return setStatus("データが空です");
   const byMonth = {};
   text.split(/\r?\n/).forEach(line => {
     const p = line.split("\t").map(s => s.trim());
-    if (p.length < 7) return;
-    const start = parseInt(p[4], 10);
-    if (isNaN(start)) return;
-    const row = { date: p[0], store: p[1].replace(/店$/, ""), machine: p[2], tai: p[3], start, bb: +p[5], rb: +p[6] };
+    if (p.length < 5) return;
+    let date = p[0], store = p[1], machine = p[2], tai = "", start, bb, rb;
+    if (p.length >= 7) {
+      tai = p[3];
+      start = parseNum(p[4]);
+      bb = parseNum(p[5]);
+      rb = parseNum(p[6]);
+    } else {
+      // 台番なしの場合（6列以下）
+      start = parseNum(p[3]);
+      bb = parseNum(p[4]);
+      rb = parseNum(p[5] || 0);
+    }
+    if (isNaN(start) || start === 0 && !p[3]) return;
+    const row = { date, store: store.replace(/店$/, ""), machine, tai, start, bb, rb };
     const ym = monthOf(row.date);
     (byMonth[ym] ||= []).push(row);
   });
