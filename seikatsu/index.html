@@ -75,7 +75,7 @@ textarea{width:100%;min-height:110px;font:12px monospace;border:1px solid #cdd9f
 .tag{display:inline-block;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:800;color:#fff}
 .i1-生活費{background:#1f9bd8}.i1-収入{background:#2fb36b}.i1-ギャンブル{background:#e0283a}
 .hide{display:none}
-</style></head><body>
+.mpick{background:none;border:0;font:inherit;font-size:18px;font-weight:800;color:#14213d;padding:8px 12px;border-radius:10px;min-height:44px}.mpick:active{background:#eef3ff}</style></head><body>
 <header><h1>生活管理ツール</h1><span id="st">読み込み中</span></header>
 <main id="main"></main>
 <nav id="nav"></nav>
@@ -199,7 +199,7 @@ function addPlan(){D.plans.push({name:'',inc:0,exp:0,done:false,ym:CUR});save();
 function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();let h=['日','月','火','水','木','金','土'].map((d,i)=>`<div class="h" style="${i===0?'color:#e0283a':''}">${d}</div>`).join('');for(let i=0;i<first;i++)h+='<div></div>';
  for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${(o.t==='standkado'?'ス稼':TYPES[o.t].slice(0,2))}</div>`;if(isS(o.t)||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(isK(o.t)&&o.ky!=null)v+=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
  const w=workMonth(calYM);
- return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><b>${y}年${m}月</b><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
+ return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><button class="mpick" onclick="openMP('cal')">${y}年${m}月 ▾</button><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
  <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">スタンド</div><div class="v">${w.sd}日 ${yen(w.sp)}</div></div><div class="tile"><div class="l">稼働</div><div class="v ${cls(w.ky)}">${w.kd}日 ${yen(w.ky)}</div></div><div class="tile"><div class="l">その他労働</div><div class="v">${w.od}日 ${yen(w.op)}</div></div><div class="tile"><div class="l">休み</div><div class="v">${w.off}日</div></div></div></div>${monthTable()}`}
 function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),w=workMonth(ym);const lg=(D.ledger[ym]||[]).filter(x=>x.imp&&x.i2==='給料収入').reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);if(!(w.sp+w.op)&&lg){w.sp=lg}R.push({m,ym,w,gd:w.sd+w.od,gh:w.sh+w.oh,gp:w.sp+w.op,td:w.sd+w.od+w.kd,th:w.sh+w.oh+w.kh,ti:w.sp+w.op+w.ky})}
  const act=R.filter(r=>r.td||r.w.off);const k=act.length||1;const S=f=>R.reduce((a,r)=>a+f(r),0);
@@ -222,6 +222,14 @@ function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={stand:'#1f4f
  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn del" style="flex:1" onclick="pick('');saveDay()">消す</button><button class="btn" style="flex:2" onclick="saveDay()">保存</button></div>`}
 function pick(t){cur.t=t;if(isS(t)&&!cur.h){cur.h=D.set.stdH;cur.pay=D.set.stdH*D.set.rate}if(t==='other'&&cur.pay==='')cur.pay=0;drawSheet()}
 function saveDay(){const c=cur;if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.note)r.note=c.note;if(isS(c.t)||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(isK(c.t)&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
+
+function openMP(w){const v=w==='cal'?calYM:monYM;const end=addM(CUR,24);let o='';for(let m=end;m>='2020-06';m=addM(m,-1))o+=`<option value="${m}" ${m===v?'selected':''}>${m.replace('-','/')}</option>`;
+ $('sheetIn').innerHTML=`<div class="mh"><b>月をえらぶ</b><button onclick="closeSheet()">×</button></div>
+ <label style="font-weight:700">一覧から</label><select id="mpSel" style="width:100%;font-size:18px;padding:12px;border-radius:12px;border:1px solid #cfd9ee;margin:6px 0 14px" onchange="goMP('${w}',this.value)">${o}</select>
+ <label style="font-weight:700">入力する</label><div style="display:flex;gap:8px;margin-top:6px"><input id="mpY" class="num" inputmode="numeric" maxlength="4" value="${v.slice(0,4)}" style="flex:1;font-size:18px;padding:12px">年<input id="mpM" class="num" inputmode="numeric" maxlength="2" value="${+v.slice(5)}" style="width:70px;font-size:18px;padding:12px">月</div>
+ <button class="btn" style="width:100%;margin-top:14px;padding:14px;font-size:17px" onclick="const y=+$('mpY').value,m=+$('mpM').value;if(y>=2000&&y<=2100&&m>=1&&m<=12)goMP('${w}',y+'-'+pad(m));else $('mpY').focus()">この月を見る</button>`;
+ $('sheet').classList.add('on')}
+function goMP(w,ym){if(w==='cal')calYM=ym;else monYM=ym;closeSheet();render()}
 function closeSheet(){$('sheet').classList.remove('on')}
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 // お金
@@ -233,7 +241,7 @@ function vMoney(){const L=rows(monYM);const ri=(D.ledger[monYM]||[]);let inc=0,e
  const cats=(()=>{const b=['給料収入','雑収入','生活固定費','生活変動費','税金','貯金','パチスロ','競馬','カジノ','調整'],u=new Set();S.forEach(o=>Object.keys(o.c).forEach(k=>u.add(k)));return[...b.filter(k=>u.has(k)),...[...u].filter(k=>!b.includes(k))]})();
  const cm=(rows(monYM).reduce((a,x)=>{a[x.i2]=(a[x.i2]||0)+(+x.inc||0)-(+x.exp||0);return a},{}));const cmx=Math.max(1,...Object.values(cm).map(Math.abs));
  const st=S.map(o=>`<tr><td>${ymLabel(o.ym)}</td><td>${yen(o.inc)}</td><td>${yen(o.exp)}</td><td>${Y(o.net)}</td><td>${Y(o.cum)}</td>${cats.map(c=>`<td>${o.c[c]?Y(o.c[c]):''}</td>`).join('')}<td>${o.save40?yen(o.save40):''}</td></tr>`).reverse().join('');
- return`<div class="card"><div class="mh"><button onclick="monYM=addM(monYM,-1);render()">‹</button><b>${ymLabel(monYM)}</b><button onclick="monYM=addM(monYM,1);render()">›</button></div>
+ return`<div class="card"><div class="mh"><button onclick="monYM=addM(monYM,-1);render()">‹</button><button class="mpick" onclick="openMP('mon')">${ymLabel(monYM)} ▾</button><button onclick="monYM=addM(monYM,1);render()">›</button></div>
  <div class="tiles"><div class="tile"><div class="l">収入</div><div class="v">${yen(inc)}</div></div><div class="tile"><div class="l">出費</div><div class="v">${yen(exp)}</div></div><div class="tile"><div class="l">収支</div><div class="v ${cls(inc-exp)}">${yen(inc-exp)}</div></div><div class="tile"><div class="l">累計収支</div><div class="v ${cls((S.find(o=>o.ym===monYM)||{}).cum)}">${yen((S.find(o=>o.ym===monYM)||{}).cum||0)}</div></div></div></div>
  <div class="card"><h2>明細</h2><div class="pills" style="margin-bottom:8px">${I2.map(c=>`<button class="pill" onclick="addRow('${c}')">${c}</button>`).join('')}</div><div class="scroll"><table><tr><th>項目1</th><th>項目2</th><th>項目3</th><th>収入</th><th>支出</th><th></th></tr>${lines}</table></div></div>
  <div class="card"><h2>分類</h2>${Object.entries(cm).sort((a,b)=>a[1]-b[1]).map(([k,v])=>`<div class="row bar" style="display:block"><i class="${v<0?'n':''}" style="width:${Math.abs(v)/cmx*100}%"></i><span style="display:flex;justify-content:space-between"><span>${k}</span><b class="${cls(v)}">${yen(v)}</b></span></div>`).join('')}</div>
