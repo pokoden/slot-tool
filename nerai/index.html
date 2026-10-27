@@ -62,7 +62,7 @@ th.fix,td.fix{padding-left:4px;padding-right:6px}
 table td{font-variant-numeric:tabular-nums}td.mkc{text-align:center}
 td.ml{max-width:6em;overflow:hidden;text-overflow:ellipsis}
 th.s{cursor:pointer}th.s.on{color:#1f5fd6}
-.fs{min-width:5.2em;max-width:7.5em;text-align:left!important;white-space:normal!important;line-height:1.25}td.fs b{display:block}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.fs{min-width:5.2em;max-width:7.5em;text-align:left!important;white-space:normal!important;line-height:1.25}td.fs b{display:block}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
 .mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:2px solid #555!important}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:normal!important;max-width:8.5em;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
@@ -159,6 +159,8 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
 // ===== 当日 =====
 let tu=LS.get('nr_tu',{});
 if(!tu.w)tu.w=NC.WIN.map(w=>w[0]);if(!tu.m)tu.m=['g','gs'];if(!tu.r)tu.r=['w'];if(!tu.so)tu.so='t';if(!tu.vm)tu.vm='r';if(!tu.rev)tu.rev=0;
+// 機種の選択欄の並び：最終更新日（全データの最新日）の全店舗合算台数が多い順、同数は名前順
+let GOC=null;function gOrd(){if(GOC&&GOC.r===S.rows)return GOC.f;let hi='0';for(const r of S.rows)if(r.d>hi)hi=r.d;const set=setObj();const c=new Map();for(const r of S.rows)if(r.d===hi){const g=NC.groupOf(r.m,set);c.set(g,(c.get(g)||0)+1)}const f=(a,b)=>(c.get(b)||0)-(c.get(a)||0)||a.localeCompare(b,'ja');GOC={r:S.rows,f};return f}
 const mShort=g=>NC.nz(g).replace(/^(スマスロ|スロット|Lパチスロ|パチスロ|L(?=[^A-Za-z])|S(?=[^A-Za-z]))\s*/,'')||g;
 const sShort=s=>s.replace(/^マルハン/,'');
 window.bandTog=el=>{const n=el.querySelector('.bn');if(el.classList.toggle('open'))n.textContent=el.dataset.full;else n.textContent=el.dataset.short};
@@ -231,7 +233,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  if(flat){const d=tu.rev?-1:1;flatRows.sort((a,b)=>{const ra=a.nm&&a.nm.rank!==''?a.nm.rank:null,rb=b.nm&&b.nm.rank!==''?b.nm.rank:null;if(ra==null&&rb!=null)return 1;if(rb==null&&ra!=null)return-1;if(ra!=null)return(ra-rb)*d;return(b.nm?b.nm.score:0)-(a.nm?a.nm.score:0)||a.s.localeCompare(b.s,'ja')||String(a.t).localeCompare(String(b.t),'ja',{numeric:true})});body=flatRows.map(o=>o.html).join('')}
  $('main').innerHTML=`<div class="card"><h2>🎯 当日データ</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(s=>[s,s])),tu.s)}<b style="font-size:15px">${TD}${TD?'（'+'日月火水木金土'[new Date(TD+'T00:00:00Z').getUTCDay()]+'）':''}</b></div>
- <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),tu.g||'')}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),tu.g||'')}</div>
  <div class="chips" style="margin:6px 0">${[['r','順位表示'],['n','数値表示']].map(([k,t])=>`<button class="${tu.vm===k?'on':''}" onclick="tuVm('${k}')">${t}</button>`).join('')}</div>
  <details><summary>表示する${nmode?'数値':'状態順'}を選ぶ（今 ${cols.length}列）</summary>
  <p class="note">期間</p>${chip('w',NC.WIN)}<p class="note">指標</p>${chip('m',NC.MET)}${nmode?'':`<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}`}
@@ -265,7 +267,7 @@ let LAC=null;function lastTai(){if(LAC&&LAC.r===S.rows)return LAC.m;const set=se
  for(const r of S.rows){const k=r.s+'|'+NC.groupOf(r.m,set);if(!best.has(k)||r.d>best.get(k))best.set(k,r.d)}
  const m=new Map();for(const r of S.rows){const k=r.s+'|'+NC.groupOf(r.m,set);if(r.d===best.get(k)){let a=m.get(k);if(!a)m.set(k,a=new Set());a.add(String(r.t))}}
  LAC={r:S.rows,m};return m}
-let ANC=null,anNb=1,anSig='',anKeep=false;const AN_SAFE=3000,AN_STEP=Math.floor(AN_SAFE*0.7);
+let ANC=null,anKeep=false;
 function anaCalc(sl,from,to,B){const key=[an.ax,from,to,JSON.stringify(B),S.rows.length,sl.join(',')].join('~');if(ANC&&ANC.key===key&&ANC.r===S.rows)return ANC.v;
  const set=setObj(),ranks=allRanks(),base=NC.stdBase(S.rows,set,to);const v={};for(const s of sl)v[s]=NC.analysisFor(S.rows,set,ranks,s,an.ax,from,to,B,base);ANC={key,r:S.rows,v};return v}
 const stLab=k=>{const[w,m]=k.split('_');return NC.WIN.find(x=>x[0]===w)[1]+NC.MET.find(x=>x[0]===m)[1]};
@@ -308,8 +310,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   const mk=man==null?(u.auto?'<span class="mk a">○</span>':'・'):man?'<span class="mk m">○</span>':'<span class="mk x">×</span>';
   return`<tr><td class="fix f1">${vShort(u.v)}</td><td class="fix f2 l">${u.isT?esc(u.k):`<span style="color:#1f5fd6">${stLab(u.k)}</span>`}</td><td class="mkc" data-k="${esc(k)}" data-a="${u.auto?1:0}" onclick="anMark(this.dataset.k,+this.dataset.a)">${mk}</td>${COLS.slice(1).map(c=>`<td${cellSty(c,u,st)}>${c.c(u)}</td>`).join('')}</tr>`};
  // 先に全行を集めて（○のみ・並べ替えはぜんぶの行に対して）、そのあと表示ぶんだけHTMLにする
- const sig=[an.ax,an.s,an.g,an.val,an.so,an.rev,an.only,from,to,R.length].join('|');if(sig!==anSig){anSig=sig;anNb=1}
- const LIM=AN_STEP*anNb;const blocks=[];
+ const blocks=[];
  for(const s of sl){const vv=an.val==='all'?null:String(an.val);
   for(const g of groups){if(an.g&&g!==an.g)continue;const o=AN[s].get(g);if(!o)continue;const lt=LT.get(s+'|'+g)||new Set();
    const T=o.taiL.filter(u=>lt.has(String(u.k))&&(vv==null||u.v===vv));const X=o.stL.filter(u=>vv==null||u.v===vv);
@@ -322,10 +323,9 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
    const nTs=A.filter(u=>u.isT).length;
    blocks.push({s,g,vv,st,A:sortA(A),full:sShort(s)+'｜'+[...new Set(o.taiL.map(u=>u.m))].join('／'),cnt:`${vv!=null?vLab(an.ax,vv)+' ':''}${nTs}${an.only?'/'+nT:''}台`})}}
  let body='',shown=0;
- for(const bk of blocks){if(shown>=LIM)break;const part=bk.A.slice(0,LIM-shown);shown+=part.length;
+ for(const bk of blocks){const part=bk.A;shown+=part.length;
   body+=band(NCOL,(an.s==='*'?sShort(bk.s)+'｜':'')+mShort(bk.g),bk.full,bk.cnt)+part.map(u=>row(u,bk.s,bk.g,bk.st)).join('')}
- const more=nRow-shown;
- const sel=(id,L,v,extra='')=>`<select onchange="an.${id}=this.value;${extra}anaPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+  const sel=(id,L,v,extra='')=>`<select onchange="an.${id}=this.value;${extra}anaPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const th1=[];const th2=[];
  for(let i=0;i<COLS.length;i++){const c=COLS[i];const cls=`s ${an.so===c.k?'on':''}`;
   if(c.grp){th1.push(`<th colspan="4">${c.grp}</th>`)}
@@ -337,12 +337,11 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="an.from=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="an.to=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"><button class="b sub" onclick="an.from='';an.to='';NRC={};anaPage()">全期間</button></div>
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
- <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),an.g)}</div>
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['all','全部']].concat(vals),an.val)}</div>
- ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="anMore()">もっと見る（残り ${more.toLocaleString()}行）</button></div>`:''}`:'<p class="note">データがないよ</p>'}
+ ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>`:'<p class="note">データがないよ</p>'}
 </div>`;
  const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
-window.anMore=()=>{anNb++;anKeep=true;anaPage()};
 window.anAx=k=>{an.ax=k;an.val=dVal();an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
@@ -357,7 +356,7 @@ window.anMachDel=i=>{delete bord().mach[mkeys()[i]];anDirty=true;NRC={};borPage(
 window.anMachSet=(i,k,v)=>{bord().mach[mkeys()[i]][k]=v;anDirty=true;NRC={};borPage()};
 function borPage(){const B=bord();const set=setObj();
  const inp=(p,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
- const groups=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
+ const groups=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());
  const blk=(t,k,extra)=>`<div class="card"><h2>${t}</h2>${extra||''}
  <div class="row"><label>指数 ${inp(k+'.idx')} 以上</label></div>
  <div class="row"><label>店舗機種 上位 ${inp(k+'.sp')} %以内</label></div>
@@ -458,7 +457,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="row"><label>使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転指数'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
  <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○を×にする</label></div></div>
 <div class="card"><h2>🏆 狙いリスト</h2>
- <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"></div>
  ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
 </div>`}
@@ -598,6 +597,7 @@ window.zuSave=async()=>{const sv=$('sv');try{const out={'nerai/zumen.json':JSON.
 const KN0=()=>({st:[],g:'',ty:'',from:'',to:'',mt:[],hi:'',yo:[],tai:'',gmin:'',gmax:'',bmin:'',bmax:'',rmin:'',rmax:'',smin:'',smax:'',w:'',m:'gs',dr:'w',n:'',so:'d-'});
 let kn=Object.assign(KN0(),LS.get('nr_kn',{}));
 function kenParse(txt){const o=new Set();for(const w of NC.nz(String(txt).replace(/[\n,、]/g,' ')).split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&Math.abs(+m[2]-+m[1])<=500){const a=Math.min(+m[1],+m[2]),b=Math.max(+m[1],+m[2]);for(let i=a;i<=b;i++)o.add(String(i))}else o.add(w)}return o}
+const KCOL=new Intl.Collator('ja',{numeric:true}).compare;
 function kenRun(){const R=S.rows,set=setObj();const nn=v=>v===''||v==null||isNaN(+v)?null:+v;
  const tai=kn.tai.trim()?kenParse(kn.tai):null;const his=kn.hi.trim()?new Set([...kenParse(kn.hi)].map(Number)):null;
  const g0=nn(kn.gmin),g1=nn(kn.gmax),b0=nn(kn.bmin),b1=nn(kn.bmax),r0=nn(kn.rmin),r1=nn(kn.rmax),s0=nn(kn.smin),s1=nn(kn.smax);
@@ -611,15 +611,15 @@ function kenRun(){const R=S.rows,set=setObj();const nn=v=>v===''||v==null||isNaN
   if(!ok(bd,b0,b1)||!ok(rd,r0,r1)||!ok(sd,s0,s1))continue;
   let rank=0;if(wi>=0){const x=(((S.agg[r.d.slice(0,7)]||{}).ranks||{})[r.d]||{})[r.s+'|'+r.t];rank=x?x[wi]:0;if(!rank)continue;if(N!=null&&rank>N)continue}
   out.push({r,bd,rd,sd,rank})}
- const so=kn.so;const cmp={'d-':(a,b)=>b.r.d.localeCompare(a.r.d),'d+':(a,b)=>a.r.d.localeCompare(b.r.d),'t':(a,b)=>a.r.t.localeCompare(b.r.t,'ja',{numeric:true}),'g-':(a,b)=>b.r.g-a.r.g,'g+':(a,b)=>a.r.g-b.r.g,'s+':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?-1:1),'s-':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?1:-1),'k':(a,b)=>a.rank-b.rank}[so]||((a,b)=>0);
- out.sort((a,b)=>cmp(a,b)||b.r.d.localeCompare(a.r.d)||a.r.t.localeCompare(b.r.t,'ja',{numeric:true}));return{out,wi}}
+ const so=kn.so;const cmp={'d-':(a,b)=>a.r.d<b.r.d?1:a.r.d>b.r.d?-1:0,'d+':(a,b)=>a.r.d<b.r.d?-1:a.r.d>b.r.d?1:0,'t':(a,b)=>KCOL(a.r.t,b.r.t),'g-':(a,b)=>b.r.g-a.r.g,'g+':(a,b)=>a.r.g-b.r.g,'s+':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?-1:1),'s-':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?1:-1),'k':(a,b)=>a.rank-b.rank}[so]||((a,b)=>0);
+ out.sort((a,b)=>cmp(a,b)||(a.r.d<b.r.d?1:a.r.d>b.r.d?-1:0)||KCOL(a.r.t,b.r.t));return{out,wi}}
 // 機種の横の○：回転指数・RB確率指数・合算確率指数がぜんぶ55以上（標準指数。登録初日〜最終日の全データが母集団）
 let KBC=null;function kenBase(){if(!KBC||KBC.r!==S.rows){let hi='0';for(const r of S.rows)if(r.d>hi)hi=r.d;KBC={r:S.rows,b:NC.stdBase(S.rows,setObj(),hi)}}return KBC.b}
 const todayS=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const kenPer=()=>{const t=todayS();return{1:[NC.addDay(t,-1),NC.addDay(t,-1)],2:[NC.addDay(t,-2),NC.addDay(t,-1)],3:[NC.addDay(t,-3),NC.addDay(t,-1)],6:[NC.addDay(t,-6),NC.addDay(t,-1)]}};
 function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
- const {wi}=kenRun();
+ const wi=kn.w?NC.RANK_KEYS.indexOf(kn.w+'_'+kn.m+'_'+kn.dr):-1;
  const sel=(id,L,v)=>`<select onchange="kn.${id}=this.value;kenPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${kn[id].includes(k)?'on':''}" onclick="knTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
  const num=(id,ph,w=70)=>`<input type="number" inputmode="decimal" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
@@ -629,7 +629,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  const dayOn=one&&!Object.values(per).some(p=>p[0]===kn.from&&p[1]===kn.to);
  $('main').innerHTML=`<div class="card"><h2>🔎 データ検索 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="knReset()">条件をリセット</button></h2>
 <p class="note">店舗</p>${chip('st',stores.map(s=>[s,s.replace(/^マルハン/,'')]))}
-<div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
+<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
 <p class="note">期間</p><div class="chips">${pb}<button class="${!kn.from&&!kn.to?'on':''}" onclick="knAllP()">全期間</button></div>
 <div class="row"><input id="kd" type="date" value="${dayOn?kn.from:''}" onchange="knDay(this.value)" style="width:150px"></div>
 <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
@@ -642,19 +642,27 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
 <div class="row">${sel('w',[['','指定しない']].concat(NC.WIN.map(w=>[w[0],w[1]])),kn.w)}${sel('m',NC.MET.map(m=>[m[0],m[1]]),kn.m)}${sel('dr',[['y','良い順'],['w','悪い順']],kn.dr)}<label>${num('n','○位まで',64)}位まで</label></div>
 <div class="row"><label>並び ${sel('so',[['d-','日付が新しい順'],['d+','日付が古い順'],['t','台番順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']].concat(wi>=0?[['k','状態順の順位']]:[]),kn.so)}</label></div></div>
 <div id="kres"></div>`;kenRes()}
-let knNb=1,knSig='';const KN_STEP=3000;
-function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();const {out,wi}=kenRun();const sg=JSON.stringify(kn);if(sg!==knSig){knSig=sg;knNb=1}const lim=KN_STEP*knNb;const more=out.length-lim;const P=(g,n)=>NC.fmtP(NC.den(g,n));
+// 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える（約10万行でもiPhoneで重くならない）
+const KRH=30,KBUF=40;let KV=null;
+function kenRow(x){const r=x.r,P=(g,n)=>NC.fmtP(NC.den(g,n));const ix=NC.rowIdx(r,KV.set,KV.base);const hit=ix.g!=null&&ix.rb!=null&&ix.gs!=null&&ix.g>=55&&ix.rb>=55&&ix.gs>=55;
+ return`<tr class="kr"><td class="fix">${esc(r.t)}</td><td class="l">${r.d.slice(5)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${KV.wi>=0?`<td>${x.rank}</td>`:''}${stTd(r.s)}<td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(r.m))}</span>${hit?' <span class="mk a">○</span>':''}</td></tr>`}
+function knPaint(force){const tb=$('kvb');const tbl=$('kvt');if(!KV||!tb||!tbl)return;const n=KV.out.length;
+ const top=tbl.getBoundingClientRect().top+(tbl.tHead?tbl.tHead.offsetHeight:0);
+ const step=KBUF/2;let first=Math.max(0,Math.floor((-top/KRH-KBUF)/step)*step);if(first>n)first=Math.max(0,n-KBUF);
+ if(!force&&first===KV.first)return;KV.first=first;const end=Math.min(n,first+Math.ceil(window.innerHeight/KRH)+2*KBUF+step);const nc=tbl.tHead.rows[0].cells.length;
+ const sp=h=>h>0?`<tr class="ksp"><td colspan="${nc}" style="height:${h}px;padding:0;border:0"></td></tr>`:'';
+ let h=sp(first*KRH);for(let i=first;i<end;i++)h+=kenRow(KV.out[i]);h+=sp((n-end)*KRH);tb.innerHTML=h}
+let knSc=0;window.addEventListener('scroll',()=>{if(tab!=='ken'||!KV||knSc)return;knSc=requestAnimationFrame(()=>{knSc=0;knPaint(false)})},{passive:true});
+function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();const {out,wi}=kenRun();const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const t={n:out.length,g:0,bb:0,rb:0};for(const x of out){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb}
- const base=out.length?kenBase():null;
- const rows=out.slice(0,lim).map(x=>{const r=x.r;const ix=NC.rowIdx(r,set,base);const hit=ix.g!=null&&ix.rb!=null&&ix.gs!=null&&ix.g>=55&&ix.rb>=55&&ix.gs>=55;
-  const bg=stBg(r.s);
-  return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${r.d.slice(5)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${wi>=0?`<td>${x.rank}</td>`:''}${stTd(r.s)}<td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(r.m))}</span>${hit?' <span class="mk a">○</span>':''}</td></tr>`}).join('');
+ KV={out,wi,set,base:out.length?kenBase():null,first:-1};
+ const cw=[52,52,56,40,40,58,58,50].concat(wi>=0?[44]:[],[66,120]);
  el.innerHTML=`<div class="card"><h2>📋 結果 ${out.length.toLocaleString()}件</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
 <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td rowspan="2">${P(t.g,t.bb)}</td><td rowspan="2">${P(t.g,t.rb)}</td><td rowspan="2">${P(t.g,t.bb+t.rb)}</td></tr>
 <tr class="sum"><td class="l">平均</td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td></tr></table></div>
-<div class="tw" style="margin-top:8px"><table><tr><th class="fix">台番</th><th class="l">月日</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${wi>=0?'<th>順位</th>':''}<th class="l">店舗</th><th class="l">機種</th></tr>${rows}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="knMore()">もっと見る（残り ${more.toLocaleString()}件）</button></div>`:''}`:'<p class="note">条件に合うデータがないよ</p>'}</div>`}
-window.knMore=()=>{knNb++;const y=window.scrollY;kenRes();window.scrollTo(0,y)};
+<div class="tw" style="margin-top:8px"><table id="kvt" style="table-layout:fixed;width:${cw.reduce((a,b)=>a+b,0)}px"><colgroup>${cw.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix">台番</th><th class="l">月日</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${wi>=0?'<th>順位</th>':''}<th class="l">店舗</th><th class="l">機種</th></tr></thead><tbody id="kvb"></tbody></table></div>`:'<p class="note">条件に合うデータがないよ</p>'}</div>`;
+ if(out.length)knPaint(true)}
 window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kenPage()};
 window.knPer=n=>{const p=kenPer()[n];kn.from=p[0];kn.to=p[1];kenPage()};
 window.knAllP=()=>{kn.from='';kn.to='';kenPage()};
