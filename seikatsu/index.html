@@ -189,7 +189,7 @@ function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w
  <div class="row"><span>目標差額</span><b>${Y(diff)}</b><span>${spark(last)}</span></div>
  </div>
  <div class="tiles" style="margin-bottom:12px"><div class="tile card" style="margin:0"><div class="l">スタンド残り日数</div><div class="v">${sL}日</div></div><div class="tile card" style="margin:0"><div class="l">休み予定日数</div><div class="v">${oL}日</div></div><div class="tile card" style="margin:0"><div class="l">今月残り予定</div><div class="v">${rest}日</div></div><div class="tile card" style="margin:0"><div class="l">今月出勤</div><div class="v">${wm.sd+wm.od}日</div></div>
- <div class="tile card" style="margin:0"><div class="l">扶養まで</div><div class="v ${fuyoInfo().left<0?'neg':''}">${yen(fuyoInfo().left)}</div></div></div>
+ <div class="tile card" style="margin:0"><div class="l">扶養まで</div><div class="v ${fuyoInfo().left<0?'neg':''}">${yen(fuyoInfo().left)}</div><div style="font-weight:700;margin-top:4px">${fuyoInfo().months}ヶ月 月${yen(fuyoInfo().per)}・${fuyoInfo().hours}時間</div></div></div>
  <div class="card"><h2>今月の予定<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="addPlan()">＋</button></h2>
  <table><tr><th>済</th><th>項目</th><th>収入予定</th><th>支払い予定</th><th></th></tr>${D.plans.map((p,i)=>`<tr><td><input type="checkbox" style="width:auto" ${p.done?'checked':''} onchange="D.plans[${i}].done=this.checked;save();render()"></td><td class="l"><input value="${esc(p.name)}" onchange="D.plans[${i}].name=this.value;save()" style="width:96px"></td><td><input class="num" inputmode="numeric" value="${p.inc||''}" onchange="D.plans[${i}].inc=+this.value||0;save();render()" style="width:80px"></td><td><input class="num" inputmode="numeric" value="${p.exp||''}" onchange="D.plans[${i}].exp=+this.value||0;save();render()" style="width:80px"></td><td><button class="btn del" style="padding:4px 8px" onclick="D.plans.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
  <tr class="sum"><td></td><td class="l">残り</td><td>${yen(pInc)}</td><td>${yen(pExp)}</td><td></td></tr></table></div>
@@ -235,12 +235,12 @@ function goMP(w,ym){if(w==='cal')calYM=ym;else monYM=ym;closeSheet();render()}
 
 // 扶養
 function fuyoInfo(){const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;let earned=0,plan=0;for(const[d,r]of Object.entries(D.sched)){if(!d.startsWith(y+'-')||!isS(r.t))continue;const p=+r.pay||0;if(d<=TD)earned+=p;else plan+=p}
- const lim=+D.set.fuyo||0,left=lim-earned,months=12-mo+1,per=Math.max(0,Math.floor(left/months)),hours=D.set.rate?Math.floor(per/D.set.rate):0,proj=earned+plan;return{y,lim,earned,plan,left,months,per,hours,proj}}
+ const lim=+D.set.fuyo||0,left=lim-earned,autoM=12-mo+1,months=+D.set.fuyoMonths>0?+D.set.fuyoMonths:autoM,per=Math.max(0,Math.floor(left/months)),hours=D.set.rate?Math.floor(per/D.set.rate):0,proj=earned+plan;return{y,lim,earned,plan,left,months,autoM,per,hours,proj}}
 function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
  <div class="row"><span>上限</span><input class="num" inputmode="numeric" style="width:130px" value="${D.set.fuyo??''}" onchange="D.set.fuyo=+this.value||0;save();render()"></div>
  <div class="row"><span>今年のスタンド給料</span><b>${yen(F.earned)}</b></div>
  <div class="row"><span>上限まで残り</span><b class="${F.left<0?'neg':''}">${yen(F.left)}</b></div>
- <div class="row"><span>残り月数</span><b>${F.months}ヶ月</b></div>
+ <div class="row"><span>残り月数</span><input class="num" inputmode="numeric" style="width:90px" value="${F.months}" onchange="const v=+this.value;D.set.fuyoMonths=v>0&&v!==fuyoInfo().autoM?v:null;save();render()"></div>
  <div class="row"><span>1ヶ月あたり</span><b>${yen(F.per)}</b></div>
  <div class="row"><span>1ヶ月あたり時間</span><b>${F.hours}時間</b></div>
  <div class="row"><span>予定込みの見込み</span><b class="${F.proj>F.lim?'neg':''}">${yen(F.proj)}</b></div>`}
