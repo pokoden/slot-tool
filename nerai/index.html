@@ -54,7 +54,11 @@ th.fix{background:#f6f7fa;z-index:2}
 .zl{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-right:10px}.zl i{width:12px;height:12px;border-radius:3px;display:inline-block}.zleg{margin:6px 0}
 .r1{color:#c62828;font-weight:700}.r2{color:#d4561c;font-weight:600}
 tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
-tr.gh td{background:#20242c;color:#e9c46a;font-weight:600;text-align:left}
+tr.gh td{background:#20242c;padding:0;text-align:left}
+.bd{position:sticky;left:0;display:flex;gap:6px;width:calc(100vw - 56px);box-sizing:border-box;padding:1px 6px;font-size:11px;line-height:1.35;color:#e9c46a;font-weight:600;cursor:pointer}
+.bd.st{color:#9fd3ff}.bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bd.open .bn{white-space:normal}.bc{white-space:nowrap;color:#fff;font-weight:400}
+th.fix,td.fix{padding-left:4px;padding-right:6px}
+td.ml{max-width:6em;overflow:hidden;text-overflow:ellipsis}
 th.s{cursor:pointer}th.s.on{color:#1f5fd6}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
@@ -171,40 +175,50 @@ function chkPage(){const R=S.rows;const stores=[...new Set(R.map(r=>r.s))].sort(
 // ===== 当日 =====
 let tu=LS.get('nr_tu',{});
 if(!tu.w)tu.w=NC.WIN.map(w=>w[0]);if(!tu.m)tu.m=['g','gs'];if(!tu.r)tu.r=['w'];if(!tu.so)tu.so='t';
-function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!tu.s||!stores.includes(tu.s))tu.s=stores[0]||'';
- const dates=[...new Set(R.filter(r=>r.s===tu.s).map(r=>r.d))].sort().reverse();
- const nx=tu.s?NC.nextDay(R,set,tu.s):null;const NX='next';
- if(!tu.d||(tu.d!==NX&&!dates.includes(tu.d)))tu.d=NX;
- let day,rk,keys=NC.RANK_KEYS,virt=false;
- if(tu.d===NX&&nx){day=nx.rows;rk=nx.ranks;virt=true}else{day=R.filter(r=>r.s===tu.s&&r.d===tu.d);const A=S.agg[tu.d.slice(0,7)]||{};rk=(A.ranks||{})[tu.d]||{};keys=A.rankKeys||keys}
- const groups=[...new Set(day.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));if(tu.g&&!groups.includes(tu.g))tu.g='';
+const mShort=g=>NC.nz(g).replace(/^(スマスロ|スロット|Lパチスロ|パチスロ|L(?=[^A-Za-z])|S(?=[^A-Za-z]))\s*/,'')||g;
+const sShort=s=>s.replace(/^マルハン/,'');
+window.bandTog=el=>{const n=el.querySelector('.bn');if(el.classList.toggle('open'))n.textContent=el.dataset.full;else n.textContent=el.dataset.short};
+const band=(n,short,full,cnt,cls='')=>`<tr class="gh"><td colspan="${n}"><div class="bd ${cls}" data-short="${esc(short)}" data-full="${esc(full)}" onclick="bandTog(this)"><span class="bn">${esc(short)}</span><span class="bc">${esc(cnt)}</span></div></td></tr>`;
+// 店舗ごとの「その日」のまとまり（全店舗のときは店舗ぶん）
+function unitsFor(st,stores,R,set){const all=st.s==='*';const sl=all?stores:[st.s];const out=[];
+ for(const s of sl){let day,rk,virt=false,date;
+  if(st.d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
+  else{date=st.d;day=R.filter(r=>r.s===s&&r.d===date);if(!day.length)continue;rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+  out.push({s,day,rk,virt,date,L:nerFor(s,date,day,rk)})}
+ return out}
+function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!tu.s||(tu.s!=='*'&&!stores.includes(tu.s)))tu.s=stores[0]||'';
+ const all=tu.s==='*';const dates=[...new Set(R.filter(r=>all||r.s===tu.s).map(r=>r.d))].sort().reverse();
+ if(!tu.d||(tu.d!=='next'&&!dates.includes(tu.d)))tu.d='next';
+ const units=unitsFor(tu,stores,R,set);const virtAll=units.length&&units.every(u=>u.virt);
+ const groups=[...new Set(units.flatMap(u=>u.day.map(r=>NC.groupOf(r.m,set))))].sort((a,b)=>a.localeCompare(b,'ja'));if(tu.g&&!groups.includes(tu.g))tu.g='';
  LS.set('nr_tu',tu);
- const cols=[];for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0]))for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(r==='y'?'良':'悪')+'順'});
- const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const keys=NC.RANK_KEYS;const cols=[];for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0]))for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(r==='y'?'良':'悪')+'順'});
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=9+cols.length;
  const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
- // 並び
- const val=(r,c)=>{const x=rk[r.s+'|'+r.t]||[];return x[c.i]||0};
  const soC=cols.find(c=>c.k===tu.so);
- const sorter=(a,b)=>{if(soC){const va=val(a,soC)||1e9,vb=val(b,soC)||1e9;if(va!==vb)return va-vb}return a.t.localeCompare(b.t,'ja',{numeric:true})};
- const NR=tu.s&&day.length?nerFor(tu.s,virt?nx.date:tu.d,day,rk):[];const NM=new Map(NR.map(x=>[String(x.t),x]));
  const rkCell=v=>`<td class="${v===1?'r1':v===2?'r2':''}">${v||''}</td>`;
- let body='';const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th class="l">店舗</th><th class="l">機種</th><th>狙い順</th><th>狙い印</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
- for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=day.filter(r=>NC.groupOf(r.m,set)===g).sort(sorter);
-  const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}
-  body+=`<tr class="gh"><td class="fix" style="background:#20242c">${esc(g)}</td><td colspan="${10+cols.length}">${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}</td></tr>`;
-  body+=L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td>${NM.get(String(r.t))?.rank||''}</td><td>${NM.get(String(r.t))?.mark||''}</td>${virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>rkCell(x[c.i])).join('')}</tr>`}).join('');
-  if(!virt&&L.length){const e='<td></td>'.repeat(cols.length);
-   body+=`<tr class="sum"><td class="fix">合計</td><td></td><td class="l">${L.length}台</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
-   body+=`<tr class="sum"><td class="fix">平均</td><td></td><td class="l">1台あたり</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`}}
+ const e='<td></td>'.repeat(cols.length);
+ const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th>狙い<br>順</th><th>狙い<br>印</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ let body='';
+ for(const u of units){const NM=new Map(u.L.map(x=>[String(x.t),x]));const sorter=(a,b)=>{if(soC){const va=(u.rk[a.s+'|'+a.t]||[])[soC.i]||1e9,vb=(u.rk[b.s+'|'+b.t]||[])[soC.i]||1e9;if(va!==vb)return va-vb}return a.t.localeCompare(b.t,'ja',{numeric:true})};
+  const st={n:0,g:0,bb:0,rb:0};let ng=0;
+  for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>NC.groupOf(r.m,set)===g).sort(sorter);if(!L.length)continue;ng++;
+   const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;
+   const full=(all?sShort(u.s)+'｜':'')+[...new Set(L.map(r=>r.m))].join('／');
+   body+=band(NCOL,(all?sShort(u.s)+'｜':'')+mShort(g),full,`${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}`);
+   body+=L.map(r=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));return`<tr><td class="fix">${esc(r.t)}</td><td>${nm?.rank||''}</td><td>${nm?.mark||''}</td>${u.virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>rkCell(x[c.i])).join('')}</tr>`}).join('');
+   if(!u.virt)body+=sums('合計','平均',t)}
+  if(all&&!u.virt&&!tu.g&&ng>1)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${st.n}台`,'st')+sums('店計','店平均',st)}
  $('main').innerHTML=`<div class="card"><h2>🎯 当日データ</h2>
- <div class="row">${sel('s',stores.map(s=>[s,s]),tu.s)}${sel('d',(nx?[[NX,nx.date+'（次の日・データなし）']]:[]).concat(dates.map(d=>[d,d+'（'+'日月火水木金土'[new Date(d+'T00:00:00Z').getUTCDay()]+'）'])),tu.d)}</div>
- <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),tu.g||'')}</div>
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(s=>[s,s])),tu.s)}${sel('d',[['next',all?'次の日（各店の最終日の翌日）':(units[0]?units[0].date+'（次の日・データなし）':'次の日')]].concat(dates.map(d=>[d,d+'（'+'日月火水木金土'[new Date(d+'T00:00:00Z').getUTCDay()]+'）'])),tu.d)}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),tu.g||'')}</div>
  <details><summary>表示する状態順を選ぶ（今 ${cols.length}列）</summary>
  <p class="note">期間</p>${chip('w',NC.WIN)}<p class="note">指標</p>${chip('m',NC.MET)}<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}
  <div class="row"><button class="b sub" onclick="tuAll(1)">全部（56列）</button><button class="b sub" onclick="tuAll(0)">おすすめに戻す</button></div></details>
- <p class="note">順位はその日の朝の時点（前の日までのデータで比較）。同じ値の台・データがない台は空白。見出しをタップでその順に並べ替え。${virt?`<br>次の日の台の並びは ${nx.base} と同じとみなしてる。`:''}</p>
- ${day.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
+ <p class="note">順位はその日の朝の時点（前の日までのデータで比較）。同じ値の台・データがない台は空白。見出しをタップでその順に並べ替え。帯をタップで機種の正式名。${virtAll?'<br>次の日の台の並びは最後の日と同じとみなしてる。':''}</p>
+ ${units.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
 window.tuSo=k=>{tu.so=k;touPage()};
 window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['y','w']}else{tu.w=NC.WIN.map(w=>w[0]);tu.m=['g','gs'];tu.r=['w']}touPage()};
@@ -269,28 +283,31 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
  const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:S.an.border||{},marks:S.an.marks||{},cfg:nerCfg()});L.from=from;L.to=to;return NRC[k]=L}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
 const SEGN={all:'全期間',matsu:'日末尾',hi:'日',you:'曜日'};
-function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!nr.s||!stores.includes(nr.s))nr.s=stores[0]||'';
- const dates=[...new Set(R.filter(r=>r.s===nr.s).map(r=>r.d))].sort().reverse();const nx=nr.s?NC.nextDay(R,set,nr.s):null;
+function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!nr.s||(nr.s!=='*'&&!stores.includes(nr.s)))nr.s=stores[0]||'';
+ const all=nr.s==='*';const dates=[...new Set(R.filter(r=>all||r.s===nr.s).map(r=>r.d))].sort().reverse();
  if(!nr.d||(nr.d!=='next'&&!dates.includes(nr.d)))nr.d='next';
- let date,mem,rk;if(nr.d==='next'&&nx){date=nx.date;mem=nx.rows;rk=nx.ranks}else{date=nr.d;mem=R.filter(r=>r.s===nr.s&&r.d===date);rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
  LS.set('nr_nr',nr);const cfg=nerCfg();
- const L=mem&&mem.length?nerFor(nr.s,date,mem,rk):[];const groups=[...new Set(L.map(x=>x.g))].sort((a,b)=>a.localeCompare(b,'ja'));if(nr.g&&!groups.includes(nr.g))nr.g='';
- const V=L.filter(x=>!nr.g||x.g===nr.g);const P=(g,n)=>NC.fmtP(NC.den(g,n));const f=v=>v==null?'-':v.toFixed(1);
- const sv=val=>val==='all'?'':sg=>'';const segv=sg=>sg==='all'?'':sg==='matsu'?NC.segOf(date,'matsu')+'の日':sg==='hi'?NC.segOf(date,'hi')+'日':'日月火水木金土'[NC.segOf(date,'you')]+'曜';
+ const units=unitsFor(nr,stores,R,set);const date=units[0]?units[0].date:'';
+ const groups=[...new Set(units.flatMap(u=>u.L.map(x=>x.g)))].sort((a,b)=>a.localeCompare(b,'ja'));if(nr.g&&!groups.includes(nr.g))nr.g='';
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const f=v=>v==null?'-':v.toFixed(1);
+ const segv=sg=>sg==='all'?'':sg==='matsu'?NC.segOf(date,'matsu')+'の日':sg==='hi'?NC.segOf(date,'hi')+'日':'日月火水木金土'[NC.segOf(date,'you')]+'曜';
  const sel=(id,Lx,v)=>`<select onchange="nr.${id}=this.value;nerPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,Lx)=>`<div class="chips">${Lx.map(([k,t])=>`<button class="${nr[id].includes(k)?'on':''}" onclick="nrTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
- const head=`<tr><th class="fix" rowspan="2">狙い順</th><th rowspan="2">台番</th><th class="l" rowspan="2">機種</th><th rowspan="2">狙い印</th><th rowspan="2">○点数</th><th rowspan="2">サブ</th>${NC.SEGS.map(sg=>`<th colspan="5">${SEGN[sg]} ${segv(sg)}</th>`).join('')}</tr><tr>${NC.SEGS.map(()=>'<th>台○</th><th>状態○</th><th>平均回転</th><th>合算</th><th>総合</th>').join('')}</tr>`;
- const body=V.map(x=>`<tr><td class="fix"><b>${x.rank}</b></td><td>${esc(x.t)}</td><td class="l">${esc(x.m)}</td><td style="font-size:16px">${x.mark}</td><td>${x.pts}</td><td>${x.sub.toFixed(1)}</td>${NC.SEGS.map(sg=>{const q=x.seg[sg];return`<td>${q.o?'○':''}</td><td>${q.ost.length||''}</td><td>${q.u?Math.round(q.u.avg).toLocaleString():'-'}</td><td>${q.u?P(q.u.g,q.u.bb+q.u.rb):'-'}</td><td>${q.ix?f(q.ix.t):'-'}</td>`}).join('')}</tr>`).join('');
+ const head=`<tr><th class="fix" rowspan="2">狙い<br>順</th><th rowspan="2">台番</th><th class="l" rowspan="2">機種</th><th rowspan="2">狙い<br>印</th><th rowspan="2">○<br>点数</th><th rowspan="2">サブ</th>${NC.SEGS.map(sg=>`<th colspan="5">${SEGN[sg]} ${segv(sg)}</th>`).join('')}</tr><tr>${NC.SEGS.map(()=>'<th>台○</th><th>状態○</th><th>平均回転</th><th>合算</th><th>総合</th>').join('')}</tr>`;
+ const NCOL=26;let body='',nV=0;
+ for(const u of units){const V=u.L.filter(x=>!nr.g||x.g===nr.g);if(!V.length)continue;nV+=V.length;
+  if(all)body+=band(NCOL,sShort(u.s),sShort(u.s)+'｜'+date,`${V.length}台`);
+  body+=V.map(x=>`<tr><td class="fix"><b>${x.rank}</b></td><td>${esc(x.t)}</td><td class="l ml" title="${esc(x.m)}">${esc(mShort(x.m))}</td><td style="font-size:16px">${x.mark}</td><td>${x.pts}</td><td>${x.sub.toFixed(1)}</td>${NC.SEGS.map(sg=>{const q=x.seg[sg];return`<td>${q.o?'○':''}</td><td>${q.ost.length||''}</td><td>${q.u?Math.round(q.u.avg).toLocaleString():'-'}</td><td>${q.u?P(q.u.g,q.u.bb+q.u.rb):'-'}</td><td>${q.ix?f(q.ix.t):'-'}</td>`}).join('')}</tr>`).join('')}
  // 状態順1位の台番
  const keys=NC.RANK_KEYS.filter(k=>{const[,m,r]=k.split('_');return nr.m.includes(m)&&nr.r.includes(r)});
- const one=groups.filter(g=>!nr.g||g===nr.g).map(g=>{const M=mem.filter(r=>NC.groupOf(r.m,set)===g);return`<tr class="gh"><td class="fix" style="background:#20242c">${esc(g)}</td><td></td></tr>`+keys.map(k=>{const i=NC.RANK_KEYS.indexOf(k);const t=M.filter(r=>((rk[r.s+'|'+r.t]||[])[i])===1).map(r=>r.t);return`<tr><td class="fix l">${NC.RANK_LABEL(k)}1位</td><td class="l">${t.length?esc(t.join('・'))+'番台':'-'}</td></tr>`}).join('')}).join('');
+ const one=units.map(u=>groups.filter(g=>!nr.g||g===nr.g).map(g=>{const M=u.day.filter(r=>NC.groupOf(r.m,set)===g);if(!M.length)return'';return band(2,(all?sShort(u.s)+'｜':'')+mShort(g),(all?sShort(u.s)+'｜':'')+[...new Set(M.map(r=>r.m))].join('／'),'')+keys.map(k=>{const i=NC.RANK_KEYS.indexOf(k);const t=M.filter(r=>((u.rk[r.s+'|'+r.t]||[])[i])===1).map(r=>r.t);return`<tr><td class="fix l">${NC.RANK_LABEL(k)}1位</td><td class="l">${t.length?esc(t.join('・'))+'番台':'-'}</td></tr>`}).join('')}).join('')).join('');
  const num=(path,v)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:64px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(16).keys()].map(i=>i.toString(2).padStart(4,'0')).reverse().filter(c=>c!=='0000');
  $('main').innerHTML=`<div class="card"><h2>🏆 狙いリスト</h2>
- <div class="row">${sel('s',stores.map(x=>[x,x]),nr.s)}${sel('d',(nx?[['next',nx.date+'（次の日）']]:[]).concat(dates.map(d=>[d,d])),nr.d)}</div>
- <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),nr.g||'')}</div>
- <p class="note">分析の期間：${L.from||'-'} 〜 ${L.to||'-'}（分析タブの期間。終わりは狙う日の前日まで）。狙い順は店舗内の全機種で1から。</p>
- ${V.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('d',[['next',all?'次の日（各店の最終日の翌日）':(date?date+'（次の日）':'次の日')]].concat(dates.map(d=>[d,d])),nr.d)}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
+ <p class="note">分析の期間：分析タブの期間（終わりは狙う日の前日まで）。狙い順は店舗内の全機種で1から。帯をタップで正式名。</p>
+ ${nV?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}
  <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">設定を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
  <div class="card"><h2>🥇 状態順1位の台番（${esc(date)}）</h2>${chip('m',NC.MET)}<div style="height:4px"></div>${chip('r',[['y','良い順'],['w','悪い順']])}
  <div class="tw"><table>${one}</table></div></div>
@@ -377,7 +394,7 @@ window.zuAddAll=()=>{const{SR,dataDay,Z}=_z;const day=SR.filter(r=>r.d===dataDay
 // ----- マス目の図 -----
 function zGridOf(Z,store){if(Z.grid)return Z.grid;if(!Z.noGrid&&typeof DEFAULT_LAYOUT!=='undefined'&&DEFAULT_LAYOUT[store])return DEFAULT_LAYOUT[store];return null}
 function zGE(){const Z=_z.Z;if(!Z.grid)Z.grid=JSON.parse(JSON.stringify(zGridOf(Z,zu.s)));return Z.grid}
-function zAbbr(g){const o=(S.zu.abbr||{})[g];if(o!=null)return o;if(g.includes('カバネリ'))return'カ';return NC.nz(g).replace(/^(スマスロ|スロット|Lパチスロ|パチスロ|A‐SLOT\+|A-SLOT\+|L|S)\s*/,'').charAt(0)}
+function zAbbr(g){const o=(S.zu.abbr||{})[g];if(o!=null)return o;if(g.includes('カバネリ'))return'カ';return mShort(g).charAt(0)}
 function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=+zu.top||0;let html='';const set=x.set;
  const cell=(r,cc,cls,txt,ex='')=>`<div class="g ${cls}" style="grid-row:${r+1};grid-column:${cc+1}" ${ex}>${txt}</div>`;
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
@@ -452,10 +469,10 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  const num=(id,ph,w=70)=>`<input type="number" inputmode="decimal" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kn.open=10;kenPage()">`;
  const txt=(id,ph,w=140)=>`<input value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kn.open=10;kenPage()">`;
  const shown=out.slice(0,kn.open);
- const rows=shown.map(x=>{const r=x.r;return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${r.d.slice(2)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${wi>=0?`<td>${x.rank}</td>`:''}</tr>`}).join('');
+ const rows=shown.map(x=>{const r=x.r;return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${r.d.slice(5)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${wi>=0?`<td>${x.rank}</td>`:''}<td class="l">${esc(sShort(r.s))}</td><td class="l ml" title="${esc(r.m)}">${esc(mShort(r.m))}</td></tr>`}).join('');
  $('main').innerHTML=`<div class="card"><h2>🔎 データ検索 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="knReset()">条件をリセット</button></h2>
  <p class="note">店舗（押さなければ全店）</p>${chip('st',stores.map(s=>[s,s.replace(/^マルハン/,'')]))}
- <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
  <p class="note">期間</p><div class="row"><input type="date" value="${kn.from}" onchange="kn.from=this.value;kn.open=10;kenPage()" style="width:150px">〜<input type="date" value="${kn.to}" onchange="kn.to=this.value;kn.open=10;kenPage()" style="width:150px"></div>
  <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
  <p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
@@ -470,7 +487,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  ${out.length?`<p class="note">${days.size}日分・${tais.size.toLocaleString()}台</p><div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
  <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td></tr>
  <tr class="sum"><td class="l">平均（1件）</td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td></tr></table></div>
- ${shown.length?`<div class="tw" style="margin-top:8px"><table><tr><th class="fix">台番</th><th class="l">日付</th><th class="l">店舗</th><th class="l">機種</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${wi>=0?'<th>順位</th>':''}</tr>${rows}</table></div>`:''}
+ ${shown.length?`<div class="tw" style="margin-top:8px"><table><tr><th class="fix">台番</th><th class="l">月日</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${wi>=0?'<th>順位</th>':''}<th class="l">店舗</th><th class="l">機種</th></tr>${rows}</table></div>`:''}
  <div class="row"><span class="note">${shown.length}/${out.length.toLocaleString()}件を表示中</span>${shown.length<out.length?`<button class="b sub" onclick="kn.open+=10;kenPage()">さらに10件開く</button>`:''}${kn.open>0?`<button class="b sub" onclick="kn.open=0;kenPage()">閉じる</button>`:`<button class="b sub" onclick="kn.open=10;kenPage()">10件開く</button>`}</div>`:'<p class="note">条件に合うデータがないよ</p>'}</div>`}
 window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kn.open=10;kenPage()};
 window.knReset=()=>{kn=KN0();kenPage()};
