@@ -181,8 +181,8 @@ const PBC=new WeakMap();
 function stdBaseAt(rows,set,to){let m=PBC.get(rows);if(!m)PBC.set(rows,m=new Map());let b=m.get(to);if(!b){if(m.size>40)m.clear();b=stdBase(rows,set,to);m.set(to,b)}return b}
 function rowIdx(r,set,base){const pb=base.prob[groupOf(r.m,set)]||{};const rT=dev(r.g,base.rot[typeOf(r.m,set)]);const rbT=dev(r.g>0?r.rb/r.g:0,pb.rb);const gsT=dev(r.g>0?(r.bb+r.rb)/r.g:0,pb.gs);const i=idx(rT,rbT,gsT);return{g:rT,rb:rbT,gs:gsT,p:i.p,t:i.t}}
 const PREV_BORDER=55;
-// 前日（date の前の日）の標準指数（総合）。台番→指数。前日のデータがない台は入らない
-function prevStd(rows,set,store,date){const pv=addDay(date,-1);const m=new Map();const R=storeRows(rows,store).filter(r=>r.d===pv);if(!R.length)return m;const base=stdBaseAt(rows,set,pv);for(const r of R)m.set(String(r.t),rowIdx(r,set,base).t);return m}
+// 前日（date の前の日）の回転・RB・合算の指数のうち一番低い値。台番→値（どれかの指数がないと null）。前日のデータがない台は入らない。55以上＝3つともが55以上
+function prevStd(rows,set,store,date){const pv=addDay(date,-1);const m=new Map();const R=storeRows(rows,store).filter(r=>r.d===pv);if(!R.length)return m;const base=stdBaseAt(rows,set,pv);for(const r of R){const x=rowIdx(r,set,base);m.set(String(r.t),x.g==null||x.rb==null||x.gs==null?null:Math.min(x.g,x.rb,x.gs))}return m}
 // o:{store,date,members,tRanks,from,to,border,marks,cfg,hasPrev}
 // 戻り値：台番ごとの行（図面・当日用。台番の○＋その日1位になる状態順の○を合わせた点数）
 //   と、.targets＝狙いタブ用の「1狙い1行」（台番の○だけの行／状態順の○だけの行）
