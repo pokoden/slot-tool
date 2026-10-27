@@ -54,7 +54,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=4"></script>
+<script src="core.js?v=5"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -62,16 +62,18 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['chk','状態順'],['set','設定'],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
+const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['ner','狙い'],['chk','状態順'],['set','設定'],['zu','図面',1],['ken','検索',1]];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
+let anDirty=false;
+let NRC={};
 const S={an:{v:1,border:{},marks:{}},loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
 const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});
 
 async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
 function b64dec(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
 function b64enc(s){const u=new TextEncoder().encode(s);let bin='';for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(bin)}
-async function loadAll(){S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg={};
+async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg={};
  if(!tok()){S.loadErr='この画面にはGitHubトークンが入ってないよ。下の欄に、スロ判別ツールと同じトークンを入れてね。';S.needTok=true;return}
  S.needTok=false;const why=st=>st===401?'トークンが違うか期限切れみたい（401）':st===403?'トークンに slot-data の読み書き権限がないか、回数制限（403）':st===404?'slot-data が見えない（404）。トークンの対象リポジトリを確認してね':'通信エラー（'+st+'）';
  const r=await gh('contents/nerai'); if(!r.ok){if(r.status===401||r.status===404)S.needTok=true;throw new Error('一覧の読み込みに失敗：'+why(r.status))}
@@ -81,7 +83,7 @@ async function loadAll(){S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg=
   if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
   const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
  await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
- const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};
+ const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
  for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
@@ -99,10 +101,10 @@ function allFiles(rows){const out=NC.monthFiles(rows,setObj());out['nerai/settin
 function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(out[k])}
 
 function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
-window.go=t=>{tab=t;LS.set('nr_tab',t);render()};
+window.go=t=>{if(anDirty&&t!==tab&&!confirm('ボーダー・○・狙いの設定が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}tab=t;LS.set('nr_tab',t);render()};
 function render(){nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage()}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='ner')return nerPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -130,7 +132,7 @@ window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const
  <div class="row"><button class="b" ${m.add+m.rep?'':'disabled'} onclick="doSave()">保存する</button><button class="b sub" onclick="S.pending=null;$('pv').innerHTML=''">やめる</button></div><div id="sv" class="st"></div>`};
 window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document.querySelectorAll('#pv button').forEach(b=>b.disabled=true);
  try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));const out=allFiles(m.rows);
-  const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;
+  NRC={};const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新）`;$('paste').value='';$('f').value=''}
  catch(e){sv.className='st ng';sv.textContent=e.message}};
 
@@ -173,12 +175,13 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const val=(r,c)=>{const x=rk[r.s+'|'+r.t]||[];return x[c.i]||0};
  const soC=cols.find(c=>c.k===tu.so);
  const sorter=(a,b)=>{if(soC){const va=val(a,soC)||1e9,vb=val(b,soC)||1e9;if(va!==vb)return va-vb}return a.t.localeCompare(b.t,'ja',{numeric:true})};
+ const NR=tu.s&&day.length?nerFor(tu.s,virt?nx.date:tu.d,day,rk):[];const NM=new Map(NR.map(x=>[String(x.t),x]));
  const rkCell=v=>`<td class="${v===1?'r1':v===2?'r2':''}">${v||''}</td>`;
  let body='';const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th class="l">店舗</th><th class="l">機種</th><th>狙い順</th><th>狙い印</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=day.filter(r=>NC.groupOf(r.m,set)===g).sort(sorter);
   const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}
   body+=`<tr class="gh"><td class="fix" style="background:#20242c">${esc(g)}</td><td colspan="${10+cols.length}">${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}</td></tr>`;
-  body+=L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td></td><td></td>${virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>rkCell(x[c.i])).join('')}</tr>`}).join('');
+  body+=L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td>${NM.get(String(r.t))?.rank||''}</td><td>${NM.get(String(r.t))?.mark||''}</td>${virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>rkCell(x[c.i])).join('')}</tr>`}).join('');
   if(!virt&&L.length){const e='<td></td>'.repeat(cols.length);
    body+=`<tr class="sum"><td class="fix">合計</td><td></td><td class="l">${L.length}台</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
    body+=`<tr class="sum"><td class="fix">平均</td><td></td><td class="l">1台あたり</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`}}
@@ -196,7 +199,6 @@ window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['
 
 // ===== 分析 =====
 let an=LS.get('nr_an',{});if(!an.seg)an.seg='matsu';if(!an.v)an.v='tai';if(!an.m)an.m=NC.MET.map(m=>m[0]);if(!an.r)an.r=['w'];
-let anDirty=false;
 const SEG=[['all','全期間'],['matsu','日末尾'],['hi','日'],['you','曜日']];
 const segVals=t=>t==='matsu'?[...Array(10).keys()].map(i=>[String(i),i+'の日']):t==='hi'?[...Array(31).keys()].map(i=>[String(i+1),(i+1)+'日']):t==='you'?[...'日月火水木金土'].map((c,i)=>[String(i),c+'曜']):[['all','全期間']];
 function allRanks(){const o={};for(const ym in S.agg)Object.assign(o,S.agg[ym].ranks||{});return o}
@@ -241,9 +243,57 @@ function anaPage(){const R=S.rows,set=setObj();const B=S.an.border||(S.an.border
  <div class="row"><label>偏差値で見る指数 <select onchange="anB('by',this.value)">${[['hy','標準指数'],['tk','店舗機種指数'],['both','両方']].map(([k,t])=>`<option value="${k}" ${B.by===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
  <p class="note">・件数割合＝その台にデータがある日数÷対象の日数。「当たり日の合算」を入れたときは、その日の合算がそれ以下だった日数÷対象の日数。<br>・偏差値は当たり率（当たり回数÷回転）で計算してるから、分母が小さい台ほど高くなる。<br>・店舗機種指数＝この表に出てる台同士で比べた偏差値。標準指数＝登録初日から期間の最終日までの全データ（1台1日を1件）と比べた偏差値。回転はノーマル同士・AT同士、確率は同じ機種（まとめ名）で回転偏差値55以上の台・日だけと比べる。<br>・確率指数＝RB×40%＋合算×60%、総合指数＝回転×60%＋確率指数×40%。</p></div>`}
 window.anTog=(id,k)=>{const a=an[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);anaPage()};
-window.anB=(k,v)=>{S.an.border[k]=v;anDirty=true;anaPage()};
-window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;anaPage()};
-window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;anaPage();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+window.anB=(k,v)=>{S.an.border[k]=v;anDirty=true;NRC={};anaPage()};
+window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anaPage()};
+window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+
+// ===== 狙いリスト =====
+function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.pts=c.pts||{};c.pts.tai=Object.assign({},NC.DEF_CFG.pts.tai,c.pts.tai);c.pts.st=Object.assign({},NC.DEF_CFG.pts.st,c.pts.st);c.combo=c.combo||{};c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);return c}
+// 分析タブの期間を使う。終わりは狙う日の前日まで
+function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
+ let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
+ const from=an.s===store&&an.from?an.from:first;let to=an.s===store&&an.to?an.to:'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
+ const base=NC.stdBase(S.rows,set,to);
+ const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:S.an.border||{},marks:S.an.marks||{},cfg:nerCfg()});L.from=from;L.to=to;return NRC[k]=L}
+let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
+const SEGN={all:'全期間',matsu:'日末尾',hi:'日',you:'曜日'};
+function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!nr.s||!stores.includes(nr.s))nr.s=stores[0]||'';
+ const dates=[...new Set(R.filter(r=>r.s===nr.s).map(r=>r.d))].sort().reverse();const nx=nr.s?NC.nextDay(R,set,nr.s):null;
+ if(!nr.d||(nr.d!=='next'&&!dates.includes(nr.d)))nr.d='next';
+ let date,mem,rk;if(nr.d==='next'&&nx){date=nx.date;mem=nx.rows;rk=nx.ranks}else{date=nr.d;mem=R.filter(r=>r.s===nr.s&&r.d===date);rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+ LS.set('nr_nr',nr);const cfg=nerCfg();
+ const L=mem&&mem.length?nerFor(nr.s,date,mem,rk):[];const groups=[...new Set(L.map(x=>x.g))].sort((a,b)=>a.localeCompare(b,'ja'));if(nr.g&&!groups.includes(nr.g))nr.g='';
+ const V=L.filter(x=>!nr.g||x.g===nr.g);const P=(g,n)=>NC.fmtP(NC.den(g,n));const f=v=>v==null?'-':v.toFixed(1);
+ const sv=val=>val==='all'?'':sg=>'';const segv=sg=>sg==='all'?'':sg==='matsu'?NC.segOf(date,'matsu')+'の日':sg==='hi'?NC.segOf(date,'hi')+'日':'日月火水木金土'[NC.segOf(date,'you')]+'曜';
+ const sel=(id,Lx,v)=>`<select onchange="nr.${id}=this.value;nerPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+ const chip=(id,Lx)=>`<div class="chips">${Lx.map(([k,t])=>`<button class="${nr[id].includes(k)?'on':''}" onclick="nrTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
+ const head=`<tr><th class="fix" rowspan="2">狙い順</th><th rowspan="2">台番</th><th class="l" rowspan="2">機種</th><th rowspan="2">狙い印</th><th rowspan="2">○点数</th><th rowspan="2">サブ</th>${NC.SEGS.map(sg=>`<th colspan="5">${SEGN[sg]} ${segv(sg)}</th>`).join('')}</tr><tr>${NC.SEGS.map(()=>'<th>台○</th><th>状態○</th><th>平均回転</th><th>合算</th><th>総合</th>').join('')}</tr>`;
+ const body=V.map(x=>`<tr><td class="fix"><b>${x.rank}</b></td><td>${esc(x.t)}</td><td class="l">${esc(x.m)}</td><td style="font-size:16px">${x.mark}</td><td>${x.pts}</td><td>${x.sub.toFixed(1)}</td>${NC.SEGS.map(sg=>{const q=x.seg[sg];return`<td>${q.o?'○':''}</td><td>${q.ost.length||''}</td><td>${q.u?Math.round(q.u.avg).toLocaleString():'-'}</td><td>${q.u?P(q.u.g,q.u.bb+q.u.rb):'-'}</td><td>${q.ix?f(q.ix.t):'-'}</td>`}).join('')}</tr>`).join('');
+ // 状態順1位の台番
+ const keys=NC.RANK_KEYS.filter(k=>{const[,m,r]=k.split('_');return nr.m.includes(m)&&nr.r.includes(r)});
+ const one=groups.filter(g=>!nr.g||g===nr.g).map(g=>{const M=mem.filter(r=>NC.groupOf(r.m,set)===g);return`<tr class="gh"><td class="fix" style="background:#20242c">${esc(g)}</td><td></td></tr>`+keys.map(k=>{const i=NC.RANK_KEYS.indexOf(k);const t=M.filter(r=>((rk[r.s+'|'+r.t]||[])[i])===1).map(r=>r.t);return`<tr><td class="fix l">${NC.RANK_LABEL(k)}1位</td><td class="l">${t.length?esc(t.join('・'))+'番台':'-'}</td></tr>`}).join('')}).join('');
+ const num=(path,v)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:64px" onchange="nrSet('${path}',this.value)">`;
+ const combos=[...Array(16).keys()].map(i=>i.toString(2).padStart(4,'0')).reverse().filter(c=>c!=='0000');
+ $('main').innerHTML=`<div class="card"><h2>🏆 狙いリスト</h2>
+ <div class="row">${sel('s',stores.map(x=>[x,x]),nr.s)}${sel('d',(nx?[['next',nx.date+'（次の日）']]:[]).concat(dates.map(d=>[d,d])),nr.d)}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),nr.g||'')}</div>
+ <p class="note">分析の期間：${L.from||'-'} 〜 ${L.to||'-'}（分析タブの期間。終わりは狙う日の前日まで）。狙い順は店舗内の全機種で1から。</p>
+ ${V.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">設定を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
+ <div class="card"><h2>🥇 状態順1位の台番（${esc(date)}）</h2>${chip('m',NC.MET)}<div style="height:4px"></div>${chip('r',[['y','良い順'],['w','悪い順']])}
+ <div class="tw"><table>${one}</table></div></div>
+ <div class="card"><h2>🧮 点数とサブ評価</h2><p class="note">○点数＝台番の○の点数＋状態順の○の点数（その日に1位になる状態順のうち、分析で○が付いてるもの1つごと）。</p>
+ <div class="tw"><table><tr><th class="l fix"></th>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr>
+ <tr><td class="l fix">台番の○</td>${NC.SEGS.map(sg=>`<td>${num('pts.tai.'+sg,cfg.pts.tai[sg])}</td>`).join('')}</tr>
+ <tr><td class="l fix">状態順の○</td>${NC.SEGS.map(sg=>`<td>${num('pts.st.'+sg,cfg.pts.st[sg])}</td>`).join('')}</tr>
+ <tr><td class="l fix">サブ評価 %</td>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg])}</td>`).join('')}</tr></table></div>
+ <div class="row"><label>サブ評価で使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転偏差値'],['p','確率指数'],['t','総合指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
+ <p class="note">サブ評価＝各区分の台番の数字×割合の合計。これを÷1,000,000して○点数に足して並べる。指数は分析タブの「偏差値で見る指数」と同じもの（両方のときは標準指数）。</p></div>
+ <div class="card"><h2>🎖 評価印</h2><p class="note">どの区分に○（台番か状態順）があるかの組み合わせで印を決める。「おまかせ」は○が3〜4個で○、2個で△、1個で×。</p>
+ <div class="tw"><table><tr><th class="l fix">組み合わせ</th><th>印</th></tr>${combos.map(c=>`<tr><td class="l fix">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>SEGN[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)">${[['auto','おまかせ（'+NC.comboMark(c,{combo:{}})+'）'],['○','○'],['△','△'],['×','×'],['','なし']].map(([k,t])=>`<option value="${k}" ${(cfg.combo[c]==null?'auto':cfg.combo[c])===k?'selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')}</table></div></div>`}
+window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);nerPage()};
+window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let i=0;i<p.length-1;i++)o=o[p[i]];const last=p[p.length-1];
+ if(p[0]==='combo'){if(v==='auto')delete o[last];else o[last]=v}else if(last==='metric')o[last]=v;else o[last]=v===''?0:+v;anDirty=true;NRC={};nerPage()};
 
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
@@ -262,10 +312,11 @@ window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups=
  try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));
   // 言いかえを今のデータにも反映（重複は削除）
   const ren=S.rows.map(r=>Object.assign({},r,{m:NC.normMachine(r.m,{alias})}));const m=NC.merge([],ren,{alias});
-  const out=allFiles(m.rows);const n=await saveFiles(out,'設定狙い設定',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);
+  NRC={};const out=allFiles(m.rows);const n=await saveFiles(out,'設定狙い設定',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新${m.dup?`・重複${m.dup}件削除`:''}）`}
  catch(e){S.set=old;sv.className='st ng';sv.textContent=e.message}};
 
+window.addEventListener('beforeunload',e=>{if(anDirty){e.preventDefault();e.returnValue=''}});
 reload();
 </script>
 </body>

@@ -127,6 +127,27 @@ function judge(u,b){let any=false;const chk=(v,f)=>{if(v===''||v==null||isNaN(v)
  const idxs=b.by==='tk'?[u.tk]:b.by==='hy'?[u.hy]:[u.tk,u.hy];
  const ok=chk(b.ratio,v=>u.ratio*100>=v)&&chk(b.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v)&&chk(b.rb,v=>u.rb>0&&u.g/u.rb<=v)
   &&['g','rb','gs','p','t'].every(k=>chk(b['t_'+k],v=>idxs.every(x=>x[k]!=null&&x[k]>=v)));return any&&ok}
-const api={stat,dev,segOf,stdBase,analyze,judge,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+// ===== 狙いリスト =====
+const SEGS=['all','matsu','hi','you'];
+const DEF_CFG={pts:{tai:{all:1,matsu:3,hi:1,you:1},st:{all:0,matsu:1,hi:0,you:0}},combo:{},sub:{metric:'t',w:{all:0,matsu:50,hi:25,you:25}}};
+// 組み合わせ（全期間・日末尾・日・曜日の○有無を4桁の0/1）→ 評価印。未設定は○の数で（3〜4個○、2個△、1個×）
+function comboMark(code,cfg){const c=cfg.combo||{};if(c[code]!=null)return c[code];const n=[...code].filter(x=>x==='1').length;return n>=3?'○':n===2?'△':n===1?'×':''}
+// o:{store,date,members,tRanks,from,to,border,marks,cfg}
+function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.marks||{};const hitLine=+B.hit||0;const out=[];
+ const SR=rows.filter(r=>r.s===o.store);const groups=[...new Set(o.members.map(r=>groupOf(r.m,set)))];
+ for(const g of groups){const mem=o.members.filter(r=>groupOf(r.m,set)===g);const seg={};
+  for(const sg of SEGS){const val=sg==='all'?'all':String(segOf(o.date,sg));
+   const A=analyze(SR,set,ranks,{store:o.store,group:g,from:o.from,to:o.to,seg:sg,val,hitLine},base);
+   const mk=u=>{const k=[o.store,g,sg,val,u.k].join('|');return M[k]==null?judge(u,B):!!M[k]};
+   seg[sg]={tai:new Map(A.tai.map(u=>[String(u.k),{u,o:mk(u)}])),st:new Map(A.st.map(u=>[u.k,{u,o:mk(u)}]))}}
+  for(const r of mem){const x=(o.tRanks||{})[r.s+'|'+r.t]||[];const one=RANK_KEYS.filter((k,i)=>x[i]===1);
+   const res={};let pts=0,sub=0,code='';
+   for(const sg of SEGS){const T=seg[sg].tai.get(String(r.t));const ost=one.filter(k=>{const s=seg[sg].st.get(k);return s&&s.o});
+    const to=!!(T&&T.o);pts+=(to?+cfg.pts.tai[sg]||0:0)+ost.length*(+cfg.pts.st[sg]||0);code+=(to||ost.length)?'1':'0';
+    const ix=T?(B.by==='tk'?T.u.tk:T.u.hy):null;const mv=ix?ix[cfg.sub.metric]:null;if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;
+    res[sg]={o:to,ost,u:T&&T.u,ix}}
+   out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/1000000,code,mark:comboMark(code,cfg),seg:res,one})}}
+ out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);return out}
+const api={SEGS,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyze,judge,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
