@@ -54,7 +54,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=2"></script>
+<script src="core.js?v=3"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -62,10 +62,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取込'],['tou','当日'],['chk','状態順'],['set','設定'],['ana','分析',1],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
+const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['chk','状態順'],['set','設定'],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
-const S={loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
+const S={an:{v:1,border:{},marks:{}},loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
 const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});
 
 async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
@@ -78,6 +78,7 @@ async function loadAll(){S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg=
  const list=(await r.json()).filter(f=>f.type==='file'&&/\.json$/.test(f.name));
  await Promise.all(list.map(async f=>{const b=await gh('git/blobs/'+f.sha);if(!b.ok)throw new Error(f.name+' の読み込みに失敗（'+b.status+'）');
   const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt}}));
+ const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
  for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
@@ -98,7 +99,7 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{tab=t;LS.set('nr_tab',t);render()};
 function render(){nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>`;return}
- if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage()}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== 取込 =====
@@ -185,6 +186,57 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
 window.tuSo=k=>{tu.so=k;touPage()};
 window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['y','w']}else{tu.w=NC.WIN.map(w=>w[0]);tu.m=['g','gs'];tu.r=['w']}touPage()};
+
+// ===== 分析 =====
+let an=LS.get('nr_an',{});if(!an.seg)an.seg='matsu';if(!an.v)an.v='tai';if(!an.m)an.m=NC.MET.map(m=>m[0]);if(!an.r)an.r=['w'];
+let anDirty=false;
+const SEG=[['all','全期間'],['matsu','日末尾'],['hi','日'],['you','曜日']];
+const segVals=t=>t==='matsu'?[...Array(10).keys()].map(i=>[String(i),i+'の日']):t==='hi'?[...Array(31).keys()].map(i=>[String(i+1),(i+1)+'日']):t==='you'?[...'日月火水木金土'].map((c,i)=>[String(i),c+'曜']):[['all','全期間']];
+function allRanks(){const o={};for(const ym in S.agg)Object.assign(o,S.agg[ym].ranks||{});return o}
+function anaPage(){const R=S.rows,set=setObj();const B=S.an.border||(S.an.border={});if(!B.by)B.by='hy';
+ const stores=[...new Set(R.map(r=>r.s))].sort();if(!an.s||!stores.includes(an.s))an.s=stores[0]||'';
+ const SR=R.filter(r=>r.s===an.s);const groups=[...new Set(SR.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));if(!an.g||!groups.includes(an.g))an.g=groups[0]||'';
+ let first='9',last='0';for(const r of SR){if(r.d<first)first=r.d;if(r.d>last)last=r.d}
+ if(!an.from)an.from=first;if(!an.to)an.to=last;
+ const nx=NC.addDay(last,1);if(an.val==null||!segVals(an.seg).some(x=>x[0]===String(an.val)))an.val=String(an.seg==='all'?'all':NC.segOf(nx,an.seg));
+ LS.set('nr_an',an);
+ const base=NC.stdBase(R,set,an.to);const hitLine=+B.hit||0;
+ const A=NC.analyze(R,set,allRanks(),{store:an.s,group:an.g,from:an.from,to:an.to,seg:an.seg,val:an.val,hitLine},base);
+ const mkey=u=>[an.s,an.g,an.seg,an.val,u.k].join('|');const MK=S.an.marks||(S.an.marks={});
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const f=v=>v==null?'-':v.toFixed(1);
+ const sel=(id,L,v,fn='anaPage()')=>`<select onchange="an.${id}=this.value;${id==='seg'?'an.val=null;':''}${fn}">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+ const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${an[id].includes(k)?'on':''}" onclick="anTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
+ const list=an.v==='tai'?A.tai:A.st.filter(u=>{const[,m,r]=u.k.split('_');return an.m.includes(m)&&an.r.includes(r)});
+ const lab=u=>an.v==='tai'?esc(u.k):NC.RANK_LABEL(u.k).replace('順','順1位');
+ const rows=list.map(u=>{const auto=NC.judge(u,B);const k=mkey(u);const man=MK[k];const on=man==null?auto:!!man;
+  const mark=man==null?(auto?'○':''):(man?'◎':'×');
+  return`<tr><td class="fix l">${lab(u)}</td><td style="font-size:16px;cursor:pointer" onclick="anMark('${esc(k).replace(/'/g,"\\'")}',${auto?1:0})">${mark||'・'}</td><td>${u.cnt}</td><td>${(u.ratio*100).toFixed(0)}%</td><td>${Math.round(u.avg).toLocaleString()}</td><td>${P(u.g,u.bb)}</td><td>${P(u.g,u.rb)}</td><td>${P(u.g,u.bb+u.rb)}</td>
+  <td>${f(u.tk.g)}</td><td>${f(u.tk.rb)}</td><td>${f(u.tk.gs)}</td><td>${f(u.tk.p)}</td><td><b>${f(u.tk.t)}</b></td>
+  <td>${f(u.hy.g)}</td><td>${f(u.hy.rb)}</td><td>${f(u.hy.gs)}</td><td>${f(u.hy.p)}</td><td><b>${f(u.hy.t)}</b></td>
+  <td>${u.g.toLocaleString()}</td><td>${u.bb}</td><td>${u.rb}</td></tr>`}).join('');
+ const inp=(k,lab,ph)=>`<label>${lab}<br><input type="number" inputmode="decimal" step="any" value="${esc(B[k]??'')}" placeholder="${ph||'なし'}" style="width:84px" onchange="anB('${k}',this.value)"></label>`;
+ const marks=list.filter(u=>{const m=MK[mkey(u)];return m==null?NC.judge(u,B):!!m}).length;
+ $('main').innerHTML=`<div class="card"><h2>🔍 集計と分析</h2>
+ <div class="row">${sel('s',stores.map(x=>[x,x]),an.s,'an.g=null;an.from=null;an.to=null;anaPage()')}${sel('g',groups.map(x=>[x,x]),an.g)}</div>
+ <div class="row"><input type="date" value="${an.from}" onchange="an.from=this.value;anaPage()" style="width:150px">〜<input type="date" value="${an.to}" onchange="an.to=this.value;anaPage()" style="width:150px"></div>
+ <div class="row">${sel('seg',SEG,an.seg)}${an.seg==='all'?'':sel('val',segVals(an.seg),an.val)}<button class="b sub" onclick="an.val=null;anaPage()">次の日に合わせる</button></div>
+ <p class="note">対象の日：${A.days.length}日（${A.days.length?A.days[0]+' 〜 '+A.days[A.days.length-1]:'なし'}）　○：${marks}件</p>
+ <div class="chips" style="margin:6px 0"><button class="${an.v==='tai'?'on':''}" onclick="an.v='tai';anaPage()">台番別</button><button class="${an.v==='st'?'on':''}" onclick="an.v='st';anaPage()">状態順1位</button></div>
+ ${an.v==='st'?`<details><summary>出す状態順を選ぶ</summary><p class="note">指標</p>${chip('m',NC.MET)}<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}</details>`:''}
+ ${list.length?`<div class="tw"><table><tr><th class="fix l" rowspan="2">${an.v==='tai'?'台番':'状態順'}</th><th rowspan="2">○</th><th rowspan="2">件数</th><th rowspan="2">割合</th><th rowspan="2">平均<br>回転</th><th rowspan="2">BB確率</th><th rowspan="2">RB確率</th><th rowspan="2">合算</th><th colspan="5">店舗機種指数</th><th colspan="5">標準指数</th><th rowspan="2">合計<br>回転</th><th rowspan="2">BB</th><th rowspan="2">RB</th></tr>
+ <tr><th>回転</th><th>RB</th><th>合算</th><th>確率</th><th>総合</th><th>回転</th><th>RB</th><th>合算</th><th>確率</th><th>総合</th></tr>${rows}</table></div>`:'<p class="note">データがないよ</p>'}
+ <p class="note">○は自動、◎は手動で付けた○、×は手動で外したもの。○の欄をタップで切り替え。</p>
+ <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">ボーダーと○を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
+ <div class="card"><h2>📏 ボーダー</h2><p class="note">入れた条件を全部満たす台に自動で○。空欄の条件は見ない。</p>
+ <div class="row">${inp('ratio','件数割合 %以上')}${inp('hit','当たり日の合算 1/○以下','例 130')}</div>
+ <div class="row">${inp('gs','合算 1/○以下')}${inp('rb','RB 1/○以下')}</div>
+ <div class="row">${inp('t_g','回転偏差値')}${inp('t_rb','RB偏差値')}${inp('t_gs','合算偏差値')}${inp('t_p','確率指数')}${inp('t_t','総合指数')}</div>
+ <div class="row"><label>偏差値で見る指数 <select onchange="anB('by',this.value)">${[['hy','標準指数'],['tk','店舗機種指数'],['both','両方']].map(([k,t])=>`<option value="${k}" ${B.by===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
+ <p class="note">・件数割合＝その台にデータがある日数÷対象の日数。「当たり日の合算」を入れたときは、その日の合算がそれ以下だった日数÷対象の日数。<br>・偏差値は当たり率（当たり回数÷回転）で計算してるから、分母が小さい台ほど高くなる。<br>・店舗機種指数＝この表に出てる台同士で比べた偏差値。標準指数＝登録初日から期間の最終日までの全データ（1台1日を1件）と比べた偏差値。回転はノーマル同士・AT同士、確率は同じ機種（まとめ名）で回転偏差値55以上の台・日だけと比べる。<br>・確率指数＝RB×40%＋合算×60%、総合指数＝回転×60%＋確率指数×40%。</p></div>`}
+window.anTog=(id,k)=>{const a=an[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);anaPage()};
+window.anB=(k,v)=>{S.an.border[k]=v;anDirty=true;anaPage()};
+window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;anaPage()};
+window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;anaPage();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
 
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));

@@ -96,6 +96,37 @@ const fmtP=v=>v===Infinity||!Number.isFinite(v)?'-':'1/'+v.toFixed(1);
 function addDay(d,n){const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)}
 function nextDay(rows,set,store){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let L='0';for(const r of R)if(r.d>L)L=r.d;
  const d=addDay(L,1);const v=R.filter(r=>r.d===L).map(r=>Object.assign({},r,{d,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(v),set);return{date:d,base:L,rows:v,ranks:b.ranks[d]||{}}}
-const api={addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+// ===== 分析 =====
+function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x of a)s+=x;const m=s/n;let v=0;for(const x of a)v+=(x-m)*(x-m);return{m,sd:Math.sqrt(v/n),n}}
+// 偏差値。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
+const dev=(x,st)=>x==null||!st||!st.n?null:st.sd>0?50+10*(x-st.m)/st.sd:50;
+const segOf=(d,type)=>type==='matsu'?+d.slice(8)%10:type==='hi'?+d.slice(8):type==='you'?dow(d):'all';
+// 標準指数の母集団：登録初日〜期間の最終日の全データ（1台1日を1件）
+function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<=to);
+ for(const r of L)rot[typeOf(r.m,set)].push(r.g);const rs={N:stat(rot.N),AT:stat(rot.AT)};
+ const pr={};for(const r of L){if(r.g<=0)continue;const t=dev(r.g,rs[typeOf(r.m,set)]);if(t<55)continue;const g=groupOf(r.m,set);const o=pr[g]||(pr[g]={rb:[],gs:[]});o.rb.push(r.rb/r.g);o.gs.push((r.bb+r.rb)/r.g)}
+ const ps={};for(const g in pr)ps[g]={rb:stat(pr[g].rb),gs:stat(pr[g].gs)};return{rot:rs,prob:ps}}
+function idx(rT,rbT,gsT){if(rT==null||rbT==null||gsT==null)return{p:null,t:null};const p=rbT*0.4+gsT*0.6;return{p,t:rT*0.6+p*0.4}}
+// opt:{store,group,from,to,seg,val,hitLine}  ranks: d→{store|tai:[...]}
+function analyze(rows,set,ranks,opt,base){const typ=null;
+ const R=rows.filter(r=>r.s===opt.store&&groupOf(r.m,set)===opt.group&&r.d>=opt.from&&r.d<=opt.to&&(opt.seg==='all'||segOf(r.d,opt.seg)===+opt.val));
+ const days=[...new Set(R.map(r=>r.d))].sort();const byD=new Map();for(const r of R)(byD.get(r.d)||byD.set(r.d,[]).get(r.d)).push(r);
+ const mk=k=>({k,cnt:0,hit:0,g:0,bb:0,rb:0});const add=(u,r)=>{u.cnt++;u.g+=r.g;u.bb+=r.bb;u.rb+=r.rb;if(opt.hitLine>0&&r.bb+r.rb>0&&r.g/(r.bb+r.rb)<=opt.hitLine)u.hit++};
+ const tai=new Map();for(const r of R){let u=tai.get(r.t);if(!u)tai.set(r.t,u=mk(r.t));u.m=r.m;add(u,r)}
+ const st=RANK_KEYS.map(k=>mk(k));
+ for(const d of days){const rk=(ranks[d]||{});for(const r of byD.get(d)){const x=rk[r.s+'|'+r.t];if(!x)continue;x.forEach((v,i)=>{if(v===1)add(st[i],r)})}}
+ const typeN=R.length?typeOf(R[0].m,set):'AT';const sb=base.rot[typeN],pb=base.prob[opt.group]||{};
+ const fin=list=>{list=list.filter(u=>u.cnt>0);for(const u of list){u.avg=u.g/u.cnt;u.ratio=days.length?(opt.hitLine>0?u.hit:u.cnt)/days.length:0;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0}
+  const s1={g:stat(list.map(u=>u.avg)),rb:stat(list.map(u=>u.rbR)),gs:stat(list.map(u=>u.gsR))};
+  for(const u of list){const a=[dev(u.avg,s1.g),dev(u.rbR,s1.rb),dev(u.gsR,s1.gs)];const i1=idx(...a);u.tk={g:a[0],rb:a[1],gs:a[2],p:i1.p,t:i1.t};
+   const b=[dev(u.avg,sb),dev(u.rbR,pb.rb),dev(u.gsR,pb.gs)];const i2=idx(...b);u.hy={g:b[0],rb:b[1],gs:b[2],p:i2.p,t:i2.t}}
+  return list};
+ return{days,tai:fin([...tai.values()]).sort((a,b)=>String(a.k).localeCompare(String(b.k),'ja',{numeric:true})),st:fin(st)}}
+// ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし
+function judge(u,b){let any=false;const chk=(v,f)=>{if(v===''||v==null||isNaN(v))return true;any=true;return f(+v)};
+ const idxs=b.by==='tk'?[u.tk]:b.by==='hy'?[u.hy]:[u.tk,u.hy];
+ const ok=chk(b.ratio,v=>u.ratio*100>=v)&&chk(b.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v)&&chk(b.rb,v=>u.rb>0&&u.g/u.rb<=v)
+  &&['g','rb','gs','p','t'].every(k=>chk(b['t_'+k],v=>idxs.every(x=>x[k]!=null&&x[k]>=v)));return any&&ok}
+const api={stat,dev,segOf,stdBase,analyze,judge,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
