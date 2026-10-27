@@ -133,7 +133,7 @@ function post(m,v,G,checks,Gm){const L=likelihood(m,v,G,Gm),{a,notes}=allowed(m,
  const w=L.map((x,i)=>a.has(S[i])?Math.exp(x-mx):0),z=w.reduce((x,y)=>x+y);return{p:w.map(x=>x/z),notes}}
 function useG(st){const tot=+st.total||0,start=+st.start||0;return Math.max(0,tot-start)}
 function gMine(st){if(st.total===''||st.total==null)return null;const g=(+st.total||0)-(+st.start||0);return g>0?g:null}
-function summary(m,st){const r=post(m,st.v,useG(st),st.checks,gMine(st));if(!r.p)return{p:null,avg:null,hi:null,notes:r.notes};
+function summary(m,st){if(m.free)return{p:null,avg:null,hi:null,notes:[]};const r=post(m,st.v,useG(st),st.checks,gMine(st));if(!r.p)return{p:null,avg:null,hi:null,notes:r.notes};
  const avg=r.p.reduce((a,x,i)=>a+x*S[i],0);return{p:r.p,avg,hi:r.p[3]+r.p[4]+r.p[5],notes:r.notes}}
 
 function exOf(s){return s&&+s.ex>0?+s.ex:(s&&+s.rate>0?Math.round(100/s.rate*1000)/1000:null)}
@@ -176,6 +176,18 @@ const stores=()=>rawStores().filter(x=>!x.deleted);
 const hist=()=>rawHist().filter(x=>!x.deleted);
 const putStores=s=>{LS.set('v2_stores',applyChanges(rawStores(),s,storeKey,new Date().toISOString()));syncSoon()};
 const putHist=h=>{LS.set('v2_hist',applyChanges(rawHist(),dedupeLive(h),entryKey,new Date().toISOString()));syncSoon()};
+// ===== r95：未登録台／機種登録（判別なし・回転/BB/RB/時間/収支だけ使う機種） =====
+const rawMachines=()=>LS.get('v2_machines',[]),machines=()=>rawMachines().filter(x=>!x.deleted);
+const putMachines=l=>{LS.set('v2_machines',applyChanges(rawMachines(),l,machKey,new Date().toISOString()));syncSoon()};
+let FREE_M=null;
+const BR=()=>[{k:'big',l:'BIG',t:'rate',sk:1,d:[]},{k:'reg',l:'REG',t:'rate',sk:1,d:[]}];
+function mkCM(x){const at=!!x.at;return{id:x.id,free:1,reg:!!x.id&&x.id!=='free',at:at?1:0,kind:at?'AT':'ノーマル',name:String(x.name||'').trim(),sub:(at?'AT':'ノーマル')+' / ユーザー登録',intro:'',payout:[],hints:[],notes:[],src:[],els:at?[]:BR()}}
+const FM=fm=>{fm=fm||{};return mkCM({id:'free',name:fm.name,at:fm.type==='AT'})};
+function curM(k){k=k||mid;return k==='free'?FREE_M:M[k]}
+function loadCM(){for(const k of Object.keys(M))if(M[k]&&M[k].reg)delete M[k];for(const x of machines())M[x.id]=mkCM(x)}
+loadCM();
+const newMid=()=>'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
 // id / updatedAt 付与（既存データ移行）
 const DEF_STORES=[['マルハン青森柏',50,5.6],['USA柏',50,5.6],['ジャムフレンド五所川原',50,5.6],['マルハン弘前石渡',46,5.2],['マルハン五所川原',47,5.3]];
 function seedStores(list){const have=new Set((list||[]).map(storeKey));const add=DEF_STORES.filter(([n])=>!have.has('n:'+n)).map(([name,lend,ex],i)=>({id:'def-'+name,name,lend,ex,rate:Math.round(100/ex*10000)/10000,updatedAt:'2000-01-01T00:00:00.000Z'}));return add.length?[...(list||[]),...add]:list}
@@ -217,7 +229,7 @@ window.anAllQ=()=>{const s=new Set(mpSel());for(const [k] of mpItems())s.add(k);
 window.anQs=v=>{anQ=v;const el=$('mpList');if(el)el.innerHTML=mpList()};
 function machPick(S,allL){const sel=mpSel();return`<div class="card" id="machPick"><h2>機種を選択</h2><p class="note">選択中：<b>${sel.length?esc(sel.map(mkName).join('・')):esc(allL)}</b>${sel.length>1?'（'+sel.length+'機種）':''}</p><input type="search" placeholder="機種名で検索（、で区切ると複数）" value="${esc(anQ)}" oninput="anQs(this.value)" style="width:100%;font-size:16px;box-sizing:border-box;margin-bottom:6px"><div class="row" style="gap:4px;margin-bottom:6px;flex-wrap:nowrap">${TYPEB.map(c=>{const on=(anS().cats||[]).includes(c);return`<button class="sub sm" style="flex:1;min-width:0;margin:0;padding:7px 2px;font-size:12px;white-space:nowrap;${on?'background:#2b6fe8;color:#fff':''}" onclick="anCat('${c}')">${c}</button>`}).join('')}</div><div class="row" style="gap:6px;margin-bottom:6px"><button class="sub sm" style="flex:1" onclick="anAllQ()">全部選ぶ</button><button class="sub sm" style="flex:1" onclick="anSetM([])">選択を外す（全機種）</button></div><div id="mpList">${mpList()}</div></div>`}
 const XIMG={"アイムジャグラーEX-TP": "9126", "スマスロ北斗の拳": "9786", "マイジャグラーＩＶ": "8673", "革命機ヴァルヴレイヴ": "9725", "甲鉄城のカバネリ": "9640", "Ｒｅ：ゼロから始める異世界生活": "8867", "北斗の拳転生の章": "10370", "ＳＬＯＴバジリスク～甲賀忍法帖～絆２": "9114", "ゴーゴージャグラー２": "8874", "ジャグラーガールズ": "10009", "天膳BLACK": "9944", "ファンキージャグラー2": "9446", "まどマギ前後編": "9413", "マイジャグラーＩＩＩ": "7753", "ファンキージャグラー": "8053", "マギアレコード": "10211", "ハッピージャグラーⅦ": "9705", "ＳＬＯＴ　バジリスク～甲賀忍法帖～ＩＩＩ": "8212", "花の慶次～武威～": "9284", "スーパーミラクルジャグラー": "8355", "わたしの幸せの結婚": "10270", "バイオハザードRE2": "9691"};
-function thumb(k,w){const m=M[k];if(!m){if(k==null)return'';const xi=XIMG[mkName(k)];return xi?`<img src="img/x/p${xi}.jpg" alt="" width="${w}" loading="lazy" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px">`:ph(mkName(k),w)}return m?`<img src="img/${k}.jpg" alt="" width="${w}" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px" onerror="this.outerHTML='<span style=&quot;display:inline-block;width:${w}px;padding:6px 0;border-radius:6px;background:#2b6fe8;color:#fff;font-size:11px;text-align:center&quot;>${esc(m.name.replace(/[（(].*/,'').slice(0,6))}</span>'">`:''}
+function thumb(k,w){if(k==='free')return ph((FREE_M&&FREE_M.name)||'未登録',w);const m=M[k];if(m&&m.free)return ph(m.name,w);if(!m){if(k==null)return'';const xi=XIMG[mkName(k)];return xi?`<img src="img/x/p${xi}.jpg" alt="" width="${w}" loading="lazy" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px">`:ph(mkName(k),w)}return m?`<img src="img/${k}.jpg" alt="" width="${w}" loading="lazy" decoding="async" style="width:${w}px;height:auto;border-radius:6px;flex:0 0 ${w}px" onerror="this.outerHTML='<span style=&quot;display:inline-block;width:${w}px;padding:6px 0;border-radius:6px;background:#2b6fe8;color:#fff;font-size:11px;text-align:center&quot;>${esc(m.name.replace(/[（(].*/,'').slice(0,6))}</span>'">`:''}
 const BADGE=(t,c,b)=>`<span style="display:inline-block;font-size:.75em;font-weight:bold;padding:1px 7px;border-radius:9px;margin-right:4px;background:${b};color:${c}">${t}</span>`,BS=BADGE('保存済み','#1b7a34','#e3f4e6'),BP=BADGE('保存前','#a35a00','#ffefd6');
 // ===== r77：履歴ページ（検索・集計・累積差グラフ・書き出し）／履歴1件の共通表記 =====
 const ANK0='v2_an',HSK='v2_hs',AK=()=>location.hash==='#hist'?HSK:ANK0,PA=false;let hrN=10,HS_ROWS=[],HR_ROWS=[];
@@ -244,7 +256,7 @@ function histPage(){mid=null;$('mach').classList.add('hidden');const el=$('home'
  const tile=(l,v,w)=>`<div style="background:#f2f5fb;border-radius:10px;padding:7px 4px;text-align:center${w?';grid-column:1/-1':''}"><div style="font-size:.72em;color:#111">${l}</div><div style="font-weight:700;font-size:${w?'1.35em':'1.02em'};white-space:nowrap">${v}</div></div>`;
  const tot=st.diff!=null?st.diff:null,third=PA?['仕事量',st.work!=null?`<span${pc(st.work)}>${sg(Math.round(st.work))}円</span>`:'-']:['機械割',st.pay!=null?`<span${pc(st.pay-1)}>${(st.pay*100).toFixed(1)}%</span>`:'-'];
  const sum=`<div class="card" id="hsSum"><h2 style="margin-bottom:8px">表示範囲内のデータ</h2><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${tile('収支',st.yen!=null?`<span${pc(st.yen)}>${sg(st.yen)}円</span>`:'-',1)}${tile('日数',days+'日')}${tile('台数',D.length+'台')}${tile('時間',st.h>0?(+st.h).toFixed(1)+'時間':'-')}${tile(PA?'回転数':'G数',(st.G||0).toLocaleString()+(PA?'回転':'G'))}${tile(DL,tot!=null?`<span${pc(tot)}>${sg(Math.round(tot))}${U}</span>`:'-')}${tile(third[0],third[1])}</div></div>`;
- const pend=(()=>{let o='';for(const k of Object.keys(M)){const c=LS.get('v2_cur_'+k,null);if(!curPending(k,c))continue;o+=`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;align-items:center;gap:8px">${thumb(k,36)}<label style="cursor:pointer;flex:1" onclick="location.hash='m=${k}'">${BP}<b>${esc(M[k].name)}</b><small>${esc(c.date||'')} ${esc(c.store||'店舗未入力')}${c.memo?' 台番 '+esc(c.memo):''} ・入力中（まだ保存していません）</small></label></div>`}return o})();
+ const pend=(()=>{let o='';for(const k of [...Object.keys(M),'free']){const c=LS.get('v2_cur_'+k,null);if(!curPending(k,c))continue;const nm=k==='free'?((c.fm&&c.fm.name)||'未登録台'):M[k].name;o+=`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;align-items:center;gap:8px">${k==='free'?ph(nm,36):thumb(k,36)}<label style="cursor:pointer;flex:1" onclick="location.hash='${k==='free'?'free':'m='+k}'">${BP}<b>${esc(nm)}</b><small>${esc(c.date||'')} ${esc(c.store||'店舗未入力')}${c.memo?' 台番 '+esc(c.memo):''} ・入力中（まだ保存していません）</small></label></div>`}return o})();
  el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><div class="xpbar" style="display:flex;gap:6px;justify-content:flex-end;margin:8px 0"><button class="sub sm" style="margin:0" onclick="xpRun('a','png')">🖼スクショ</button><button class="sub sm" style="margin:0" onclick="xpRun('a','xlsx')">📊エクセル</button></div>${RH('履歴')}`+perHTML(S)+dtCtl()+aimCtl()+stPick()+machPick(S,'全機種')+sum+`<div class="card" id="hsList"><p class="note">${D.length}件・タップで読み込み（同期データ含む）</p>${pend}${D.length?D.map(e=>hEntry(e,{del:1})).join(''):'<p class="note">この条件の保存データはありません</p>'}</div>`;banner()}
 function hsCond(){const ms=mpSel();return anCondText().split(' ／ 並び順')[0]+' ／ 機種: '+(ms.length?(ms.length>3?ms.slice(0,3).map(mkName).join('・')+' ほか'+(ms.length-3)+'機種':ms.map(mkName).join('・')):'全機種')}
 function hsXp(){const hm=$('home'),img=[...hm.querySelectorAll('#hsSum,#hsList')].map(c=>{const w=c.getBoundingClientRect().width,cl=c.cloneNode(true);cl.querySelectorAll('button').forEach(x=>x.remove());cl.style.width=w+'px';cl.style.boxSizing='border-box';return{title:'',node:cl}});
@@ -253,7 +265,7 @@ function hsXp(){const hm=$('home'),img=[...hm.querySelectorAll('#hsSum,#hsList')
  return{kind:'a',title:XPN+'履歴',cond:hsCond(),secs:[{title:'履歴',node:t}],img,file:xpFn(XPF+'_履歴_'+today())}}
 {const _u=update;update=function(){const r=_u.apply(this,arguments);try{const u=$('unsv');if(u)u.style.display=curPending(mid,st)?'':'none'}catch(e){}return r}}
 
-window.loadAll=id=>{const e=hist().find(x=>x.id===id);if(e&&e.src==='free'){location.hash='free='+id;return}if(e&&e.src==='excel'){alert('エクセルから取り込んだ記録なので、機種画面には読み込めません');return}if(!e||!M[e.mid])return;{const x=lockMig(migrate(JSON.parse(JSON.stringify(e.st))));x.recId=x.recId||e.id;if(e.tE){x.locked=1;x.tSaved=e.tE;x.tE=e.tE;x.tEman=false}LS.set('v2_cur_'+e.mid,x)}location.hash='m='+e.mid};
+window.loadAll=id=>{const e=hist().find(x=>x.id===id);if(e&&e.src==='free'){location.hash='free='+id;return}if(e&&e.src==='excel'){alert('エクセルから取り込んだ記録なので、機種画面には読み込めません');return}if(!e||(!M[e.mid]&&e.mid!=='free'))return;{const x=lockMig(migrate(JSON.parse(JSON.stringify(e.st))));x.recId=x.recId||e.id;if(e.tE){x.locked=1;x.tSaved=e.tE;x.tE=e.tE;x.tEman=false}LS.set('v2_cur_'+e.mid,x)}location.hash=e.mid==='free'?'free':'m='+e.mid};
 window.delAll=id=>{if(!confirm('この保存データを削除しますか？'))return;markGone(hist().filter(x=>x.id===id));putHist(hist().filter(x=>x.id!==id));histPage()};
 // ===== 分析 =====
 const AN_HMET=[['ord','項目順'],['yen','収支(円)'],['diff','差枚'],['n','打った回数'],['G','総回転数'],['win','勝率']];
@@ -409,12 +421,12 @@ function markGone(list){for(const e of list){const c=LS.get('v2_cur_'+e.mid,null
 function todayCard(){// 同じ記録の再保存は最新の1件だけ数える（recId）
  const seen=new Set(),L=[];for(const e of hist().filter(e=>e.date===today())){const k=(e.st&&e.st.recId)||e.id;if(seen.has(k))continue;seen.add(k);L.push(e)}
  // 保存前：未保存（locked以外）で今日の入力がある現在データ。保存済みを編集中のものは保存済みの記録だけを数える
- let play=0;for(const id of Object.keys(M)){const c=LS.get('v2_cur_'+id,null);if(!curPending(id,c)||(c.date||today())!==today())continue;const x=(()=>{try{const s=migrate(Object.assign(blank(),c));const mo=money(s,stores());return{yen:mo.yen,diff:mo.diff,G:useG(s),hours:hrs(s.tS,s.tEman?s.tE:(s.tL||s.tE))}}catch(e){return null}})();if(x){L.push(x);play++}}let yen=0,yn=0,df=0,dn=0,G=0,h=0;for(const e of L){if(e.yen!=null){yen+=e.yen;yn++}const d=e.diff;if(d!=null){df+=d;dn++}G+=+e.G||0;if(e.hours>0)h+=e.hours}
+ let play=0;for(const id of [...Object.keys(M),'free']){const c=LS.get('v2_cur_'+id,null);if(!curPending(id,c)||(c.date||today())!==today())continue;const x=(()=>{try{const s=migrate(Object.assign(blank(),c));const mo=money(s,stores());return{yen:mo.yen,diff:mo.diff,G:useG(s),hours:hrs(s.tS,s.tEman?s.tE:(s.tL||s.tE))}}catch(e){return null}})();if(x){L.push(x);play++}}let yen=0,yn=0,df=0,dn=0,G=0,h=0;for(const e of L){if(e.yen!=null){yen+=e.yen;yn++}const d=e.diff;if(d!=null){df+=d;dn++}G+=+e.G||0;if(e.hours>0)h+=e.hours}
  const rw=(l,v,c)=>`<div class="row"><label>${l}</label><b${c==null?'':pc(c)}>${v}</b></div>`;
  return`<div class="card"><h2>本日の収支 <small class="note">${today()}</small></h2>${L.length?rw('合計収支',yn?sg(yen)+'円':'-',yn?yen:null)+rw('台数',L.length+'台'+(play?`（うち保存前${play}台）`:''))+rw('差枚',dn?sg(df)+'枚':'-',dn?df:null)+rw('合計回転数',G.toLocaleString()+'G')+rw('合計時間',h.toFixed(1)+'時間'):'<p class="note">今日の保存データはまだありません</p>'}</div>`}
 function home(){$('mach').classList.add('hidden');$('home').classList.remove('hidden');
  if(location.hash==='#hist')return histPage();if(location.hash.startsWith('#an'))return anPage();
- $('home').innerHTML=`<h1>スロ設定判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><a href="nerai/" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#111,#2a2418);color:#e9c46a;text-decoration:none;font-weight:600"><img src="nerai/icon.png?v=1" alt="" width="32" height="32" style="border-radius:8px">🎯 設定狙いツール</a><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${(()=>{const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}const o=Object.keys(M);return Object.entries(M).map(x=>[...x,L[x[0]]||'']).sort((a,b)=>a[2]&&b[2]?(a[2]<b[2]?1:a[2]>b[2]?-1:0):a[2]?-1:b[2]?1:o.indexOf(a[0])-o.indexOf(b[0]))})().map(([k,m,lp])=>`<button class="mbtn" data-n="${esc(nz(m.name))}" onclick="location.hash='m='+'${k}'" style="display:flex;gap:10px;align-items:center;text-align:left">${thumb(k,44)}<span>${esc(m.name)}<br><small class="note">${esc(m.sub)}${m.intro?' ・導入日 '+esc(m.intro):''}</small></span></button>`).join('')}</div></div>
+ $('home').innerHTML=`<h1>スロ設定判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><a href="nerai/" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#111,#2a2418);color:#e9c46a;text-decoration:none;font-weight:600"><img src="nerai/icon.png?v=1" alt="" width="32" height="32" style="border-radius:8px">🎯 設定狙いツール</a><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${(()=>{const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}const o=Object.keys(M);return Object.entries(M).map(x=>[...x,L[x[0]]||'']).sort((a,b)=>a[2]&&b[2]?(a[2]<b[2]?1:a[2]>b[2]?-1:0):a[2]?-1:b[2]?1:o.indexOf(a[0])-o.indexOf(b[0]))})().map(([k,m,lp])=>homeItem(k,m)).join('')}</div></div>
  <div class="card"><h2>店舗設定</h2><div id="slist"></div>
  <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
  <div class="row"><label>貸出枚数<small>1000円あたり（例：50）</small></label><input id="s_lend" type="number" step="any" inputmode="decimal"></div>
@@ -434,19 +446,19 @@ window.copyToken=async()=>{const t=LS.get('v2_token','');if(!t){alert('この端
 window.clearToken=()=>{if(!confirm('この端末の同期キーを削除しますか？（データは残ります）'))return;LS.del('v2_token');home()};
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
 async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
- if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
+ if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[],machines:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
  const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64dec(j.content||'')))}}
 async function ghPut(tok,data,sha){const body={message:'sync '+new Date().toISOString(),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
  return fetch(SYNC_URL,{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)})}
 window.syncNow=async manual=>{const tok=LS.get('v2_token','');if(!tok){if(manual)syncStatus();return}
  if(syncing){again=true;return}syncing=true;syncStatus('同期中…');
  try{if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new Error('オフライン（あとで自動で同期します）');
-  for(let i=0;i<4;i++){const rm=await ghGet(tok);const loc={stores:rawStores(),entries:rawHist()};const mg=mergeData(loc,rm.data);mg.entries=dedupeRaw(mg.entries,new Date().toISOString());
-   LS.set('v2_stores',seedStores(mg.stores));LS.set('v2_hist',mg.entries);
+  for(let i=0;i<4;i++){const rm=await ghGet(tok);const pre=(localStorage.getItem('v2_hist')||'')+(localStorage.getItem('v2_stores')||'')+(localStorage.getItem('v2_machines')||'');const loc={stores:rawStores(),entries:rawHist(),machines:rawMachines()};const mg=mergeData(loc,rm.data);mg.entries=dedupeRaw(mg.entries,new Date().toISOString());
+   LS.set('v2_stores',seedStores(mg.stores));LS.set('v2_hist',mg.entries);LS.set('v2_machines',mg.machines||[]);loadCM();const chg=pre!==((localStorage.getItem('v2_hist')||'')+(localStorage.getItem('v2_stores')||'')+(localStorage.getItem('v2_machines')||''));
    if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
-   const d=new Date(),p=n=>String(n).padStart(2,'0');syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);refreshView();break}
+   const d=new Date(),p=n=>String(n).padStart(2,'0');syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);if(manual||chg)refreshView();break}
  }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;if(again){again=false;syncSoon()}}};
-function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('');const ss=$('sel_store');if(ss)ss.innerHTML=storeOpts()}else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
+function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('');const ss=$('sel_store');if(ss)ss.innerHTML=storeOpts()}else if($('home').classList.contains('hidden'))return;else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});
 addEventListener('online',()=>syncNow(false));
 window.$=$;
@@ -463,10 +475,10 @@ function storeOpts(){return '<option value="">▼</option>'+stores().map(x=>`<op
 function inp(id,val,type='number',extra=''){return`<input id="${id}" type="${type}" ${type==='number'?'min="0" inputmode="numeric"':''} value="${esc(val)}" ${extra}>`}
 function step(id,val,w=56){return`<span style="display:inline-flex;gap:4px;align-items:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',-1)">−</button><input id="${id}" type="number" min="0" inputmode="numeric" value="${esc(val)}" style="width:${w}px;text-align:center"><button class="sub sm" style="width:38px;height:38px" onclick="bump('${id}',1)">＋</button></span>`}
 window.bump=(id,d)=>{const x=$(id);if(x.value===''){if(d<0)return;x.value=1}else x.value=Math.max(0,(parseInt(x.value)||0)+d);x.dispatchEvent(new Event('input'))};
-function machine(k){mid=k;const m=M[k];st=lockMig(migrate(Object.assign(blank(),LS.get('v2_cur_'+k,{}))));st.v=st.v||{};
+function machine(k){mid=k;st=lockMig(migrate(Object.assign(blank(),LS.get('v2_cur_'+k,{}))));st.v=st.v||{};if(k==='free')FREE_M=FM(st.fm);const m=curM(k);
  $('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');
- let h=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">${esc(m.name)}</h1>
- <div style="display:flex;justify-content:flex-end;margin:2px 0 8px"><button class="sub sm" style="margin:0" onclick="resetM()">情報をリセットする</button></div><div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:6px">台情報<span id="unsv" style="display:none;color:#d62828;font-weight:700;font-size:.85em;white-space:nowrap">⚠ 未保存</span></h2>
+ let h=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">${esc(m.name||'未登録台')}</h1>
+ <div style="display:flex;justify-content:flex-end;margin:2px 0 8px"><button class="sub sm" style="margin:0" onclick="resetM()">情報をリセットする</button></div>${infoCard(k)}<div class="card"><h2 style="display:flex;align-items:center;justify-content:space-between;gap:6px">台情報<span id="unsv" style="display:none;color:#d62828;font-weight:700;font-size:.85em;white-space:nowrap">⚠ 未保存</span></h2>
  <div class="row"><label>店舗名<small>入力 or ▼で選択</small></label><span style="display:flex;gap:4px;flex:1;min-width:0">${inp('f_store',st.store,'text','list="dl_store" autocomplete="off" style="flex:1;min-width:0"')}<select id="sel_store" aria-label="登録店舗から選択" style="width:46px;flex:0 0 46px;font-size:16px" onchange="if(this.value){$('f_store').value=this.value;read(event)}this.value=''">${storeOpts()}</select></span><datalist id="dl_store">${stores().map(x=>`<option value="${esc(x.name)}">`).join('')}</datalist></div>
  <div class="row"><label>台番号/メモ</label>${inp('f_memo',st.memo,'text')}</div>
  <div class="row"><label>保存日付</label>${inp('f_date',st.date,'date')}</div>
@@ -481,7 +493,7 @@ ${blocks(m)[0]}
  <div class="row"><label>持ちメダル終了</label>${inp('f_hb1',st.hb1??'')}</div>
  <div class="row"><label>回収<small>最後に流したメダル数を入力</small></label>${inp('f_out',st.out??'')}</div>
  </div>
- <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name)}</span></div><div class="row"><label>店舗名</label><b id="o_kstore">-</b></div><div class="row"><label>台番号</label><b id="o_kdai">-</b></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div><div id="money"></div></div>
+ <div class="card"><h2>稼働記録</h2><div class="row" style="justify-content:flex-start;gap:8px;font-weight:bold">${thumb(mid,40)}<span>${esc(m.name||'未登録台')}</span></div><div class="row"><label>店舗名</label><b id="o_kstore">-</b></div><div class="row"><label>台番号</label><b id="o_kdai">-</b></div><div class="row"><label>日付</label><b id="o_kdate">-</b></div><div id="money"></div></div>
  <div class="card"><h2>カウント</h2>${blocks(m)[1]}<div class="row"><label>自分が回したG${m.at?'（通常）':''}</label><b id="mine">-</b></div><hr style="border:0;border-top:1px solid #e3e6ee;margin:10px 0">`;
  const pb=k=>{if(!m.ph)return'';const l=m.ph[k];if(!l)return'<span class="phb phe"></span>';return`<button class="phb" onclick="phShow('${k}')" aria-label="見本画像"><img src="img/${mid}/thumb/${l[0][0]}.jpg" loading="lazy" alt="">${l.length>1?`<i>${l.length}</i>`:''}</button>`};for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
   else if(e.t==='pct')h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
@@ -495,6 +507,7 @@ ${blocks(m)[0]}
  <div class="row" id="aimRow" style="gap:6px"><label>狙い</label>${aimInner()}</div><p class="note" id="o_tL"></p><div style="display:flex;gap:8px"><button style="flex:1" onclick="saveH('last')">最終更新時間で保存</button><button style="flex:1" onclick="saveH('input')">入力時間で保存</button></div><div style="display:flex;gap:8px"><button class="sub" style="flex:1" onclick="xpRun('m','png')">🖼画像で保存</button><button class="sub" style="flex:1" onclick="xpRun('m','xlsx')">📊エクセル</button></div></div>
  <div class="card"><h2>注意・出典</h2><p class="note">※各要素を独立とみなして掛け合わせる簡易計算です（例：初当たりにはCZ・ボーナス経由分が含まれるなど重複があるため、結果はやや強めに出ます）。事前確率は各設定均等。</p>
  ${m.notes.map(n=>`<p class="note">・${esc(n)}</p>`).join('')}<p class="note">出典：<br>${m.src.map(u=>`<a href="${u}" target="_blank">${u}</a>`).join('<br>')}</p></div>`;
+ if(m.free)h=h.replace(/<div class="card"><h2>設定示唆[\s\S]*?(?=<div class="card"><h2>この台を保存)/,'').replace(/<div class="card"><h2>注意・出典[\s\S]*$/,'');
  el.innerHTML=h;
  el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',read);x.addEventListener('change',read)});
  tickE();update();renderH();banner();scrollTo(0,0)}
@@ -503,10 +516,10 @@ function lockMig(s){if(s&&s.locked==null){if(s.tE&&!s.tL){s.locked=1;s.tSaved=s.
 const endT=()=>st.locked?(st.tEman?st.tE:st.tSaved||st.tE):(st.tEman?st.tE:(st.tL||''));
 function tickE(){if(mid&&st&&!st.tEman&&$('f_tE')&&document.activeElement!==$('f_tE')){st.tE=st.locked?(st.tSaved||st.tE):nowHM();$('f_tE').value=st.tE}}
 setInterval(tickE,20000);
-function read(ev){const _snap=()=>{const c={...st};delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','start','total','y0','y1','tS','tE','sv0','sv1','hb0','hb1','out','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
+function read(ev){if(!mid||!curM()||!$('f_store'))return;if(mid==='free')readFM();const _snap=()=>{const c={...st};delete c.fm;delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','date','start','total','y0','y1','tS','tE','sv0','sv1','hb0','hb1','out','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
  const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
  const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
- if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.id!=='f_tS'&&x.id!=='f_tE'&&x.value!=='')){st.tS=nowHM();$('f_tS').value=st.tS}
+ if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.id!=='f_tS'&&x.id!=='f_tE'&&!String(x.id).startsWith('fm_')&&x.value!=='')){st.tS=nowHM();$('f_tS').value=st.tS}
  // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
  const tid=ev&&ev.target&&ev.target.id;if(tid==='f_tE')st.tEman=st.tE!=='';if(ev&&_snap()!==_b)delete st.gone;if(!st.locked&&ev&&tid!=='f_tE'&&tid!=='f_tS'&&_snap()!==_b)st.tL=nowHM();tickE();
  LS.set('v2_cur_'+mid,st);update()}
@@ -539,7 +552,7 @@ function ownG(m,st){if(m.at&&st.ttotal!==''&&st.ttotal!=null)return Math.max(0,+
 function payoutMine(m,st,mo){const g=ownG(m,st);return g>0&&mo.diff!=null?(3*g+mo.diff)/(3*g)*100:null}
 window.setG=g=>{st.gmode=g;LS.set('v2_cur_'+mid,st);update()};
 const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',r1=x=>Math.round(x*10)/10,sg=x=>(x>0?'+':'')+Math.round(x).toLocaleString();
-function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;{const T=(i,v)=>{const e=$(i);if(e)e.textContent=String(v||'').trim()||'-'};T('o_kdate',st.date);T('o_kstore',st.store);T('o_kdai',st.memo)}
+function update(){const m=curM(),G=useG(st),tot=+st.total||0,start=+st.start||0;{const T=(i,v)=>{const e=$(i);if(e)e.textContent=String(v||'').trim()||'-'};T('o_kdate',st.date);T('o_kstore',st.store);T('o_kdai',st.memo)}
  $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
  
  const mo=money(st,stores());$('o_tL').textContent=(st.tL?'最終更新時刻 '+st.tL:'')+(st.locked?'（保存済み：終了 '+(st.tSaved||endT())+' で固定）':'');
@@ -559,10 +572,10 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
   const ks=m.at?['xbig','xreg']:(m.els.some(e=>e.k==='big')?['big','reg']:null);
   if(ks){const c=k=>st.v[k]!=null&&st.v[k]!==''?Math.max(0,(+st.v[k]||0)-(+st.v[k+'_s']||0)):0,b=c(ks[0]),r=c(ks[1]),g=gm||0,pr=n=>n>0&&g>0?'1/'+(g/n).toFixed(1):'-';
    x+=[['BB',b],['RB',r],['合算',b+r]].map(([l,n])=>RW(l,`${n}回　${pr(n)}`)).join('')}
-  {const q=summary(m,st);x+=RW('設定判別',q.p?'推定設定 '+q.avg.toFixed(1):'-')+RW('456確率',q.p?(q.hi*100).toFixed(1)+'%':'-')}
-  if(m.at){const T=terms(m,st.v,G,gm).out;x+='<p style="margin:10px 0 2px;font-weight:bold;font-size:.9em">数えた項目</p>'+(T.length?T.map(([e,k,g])=>RW(esc(e.l),`${k}回　${k>0&&g>0?'1/'+r1(g/k):'-'}`)).join(''):'<p class="note">まだありません</p>')}
+  if(!m.free){const q=summary(m,st);x+=RW('設定判別',q.p?'推定設定 '+q.avg.toFixed(1):'-')+RW('456確率',q.p?(q.hi*100).toFixed(1)+'%':'-')}
+  if(m.at&&!m.free){const T=terms(m,st.v,G,gm).out;x+='<p style="margin:10px 0 2px;font-weight:bold;font-size:.9em">数えた項目</p>'+(T.length?T.map(([e,k,g])=>RW(esc(e.l),`${k}回　${k>0&&g>0?'1/'+r1(g/k):'-'}`)).join(''):'<p class="note">まだありません</p>')}
   $('money').innerHTML=x}
- const sm=summary(m,st);let o='';
+ if(m.free)return;const sm=summary(m,st);let o='';
  if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
  else{o=`<p class="note">計算G数：${G}G（自分の分＝現在−打ち始め）</p>`+(()=>{const mx=Math.max(...sm.p);return sm.p.map((x,i)=>`<div class="row"><label style="flex:0 0 52px">設定${S[i]}</label><div class="bar"><div style="width:${(x*100).toFixed(1)}%${x>=mx-1e-12?';background:#ff9f2e':''}"></div></div><span>${(x*100).toFixed(1)}%</span></div>`).join('')})()+
   `<p><b>期待設定：${sm.avg.toFixed(2)}</b>　設定4以上：${(sm.hi*100).toFixed(1)}%</p>`}
@@ -577,13 +590,13 @@ function update(){const m=M[mid],G=useG(st),tot=+st.total||0,start=+st.start||0;
  $('tbl').innerHTML=`<table><tr><th>項目</th><th>実測</th>${S.map(s=>`<th>設${s}</th>`).join('')}</tr>${rows.map(r=>`<tr><td style="text-align:left">${esc(r[0])}</td><td class="me">${r[2]}</td>${r[1].map((x,i)=>`<td class="${i===r[3]?'hit':''}">${x}</td>`).join('')}</tr>`).join('')}</table>
  <p class="note">機械割の実測は（投入3枚×計算G数＋合算差枚）÷投入の概算（合算差枚が出るときのみ）。${m.at?'AT機は総回転数を入れると（総回転数−打ち始め総回転数）で計算。':''}</p>`}
 function hintText(m,ch){const t=[];m.hints.forEach((g,gi)=>g[1].forEach((x,hi)=>{const n=+ch[gi+'_'+hi]||0;if(n)t.push(x[0]+'('+x[1]+')×'+n)}));return t.join(' / ')}
-window.saveH=mode=>{read();const fv=$('f_tE').value;let end;if(mode==='input')end=st.locked&&!st.tEman?(st.tSaved||st.tE):(fv||nowHM());else end=st.locked?(st.tSaved||st.tE):(st.tL||fv||nowHM());st.tE=end;st.tSaved=end;st.locked=1;st.recId=st.recId||genId();st.tEman=false;$('f_tE').value=end;LS.set('v2_cur_'+mid,st);const m=M[mid],sm=summary(m,st),fp=fingerprint(mid,st);const h=hist();
+window.saveH=mode=>{read();if(mid==='free'&&!(curM().name||'').trim()){alert('先に上の機種名を入力してね');return}const fv=$('f_tE').value;let end;if(mode==='input')end=st.locked&&!st.tEman?(st.tSaved||st.tE):(fv||nowHM());else end=st.locked?(st.tSaved||st.tE):(st.tL||fv||nowHM());st.tE=end;st.tSaved=end;st.locked=1;st.recId=st.recId||genId();st.tEman=false;$('f_tE').value=end;LS.set('v2_cur_'+mid,st);const m=curM(),sm=summary(m,st),fp=fingerprint(mid==='free'?'free:'+m.name:mid,st);const h=hist();
  if(!h.some(e=>e.id===st.recId||(e.st&&e.st.recId===st.recId))&&h.some(e=>e.fp===fp)&&!confirm('同じ内容のデータがあります。保存しますか？'))return;
  const mo=money(st,stores());
  const rec=({id:genId(),mid,machine:m.name,store:st.store,aim:st.aim||'設定狙い',memo:st.memo,date:st.date,saved:new Date().toISOString(),fp,
   st:JSON.parse(JSON.stringify(st)),G:useG(st),lend:mo.lend,rate:mo.rate,ex:mo.ex,lent:mo.lent,diff:mo.diff,yen:mo.yen,p:sm.p,avg:sm.avg,hi:sm.hi,hints:hintText(m,st.checks),tS:st.tS||'',tE:st.tE,hours:hrs(st.tS,st.tE),payout:payoutMine(m,st,mo),exported:false});const ix=h.findIndex(e=>e.id===st.recId||(e.st&&e.st.recId===st.recId));if(ix>=0){rec.id=h[ix].id;h[ix]=rec}else{rec.id=st.recId;h.unshift(rec)}update();putHist(h);renderH();banner();alert('保存しました');LS.del('v2_cur_'+mid);machine(mid)};
 function renderH(){if(!$('hist'))return;return renderH0.apply(this,arguments)}
-function renderH0(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label>${BS}<b>${esc(e.store||'店舗未入力')} ${esc(e.memo||'')}</b> <span class="tag" style="font-size:.75em">${esc(aimOf(e))}</span><small>${esc(e.date)} ${e.G}G ${e.avg!=null?'期待設定'+e.avg.toFixed(2)+' / 4以上'+(e.hi*100).toFixed(1)+'%':'矛盾あり'}${e.diff!=null?` / <span${pc(e.diff)}>${sg(e.diff)}枚</span>`:''}${e.yen!=null?` / <span${pc(e.yen)}>${sg(e.yen)}円</span>`:''}${e.exported?' ・書出済':''}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
+function renderH0(){const h=hist().filter(e=>e.mid===mid);$('hist').innerHTML=h.length?h.map(e=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label>${BS}<b>${esc(e.store||'店舗未入力')} ${esc(e.memo||'')}</b> <span class="tag" style="font-size:.75em">${esc(aimOf(e))}</span><small>${esc(e.date)} ${e.G}G ${e.avg!=null?'期待設定'+e.avg.toFixed(2)+' / 4以上'+(e.hi*100).toFixed(1)+'%':(e.mid==='free'||(M[e.mid]&&M[e.mid].free)?'':'矛盾あり')}${e.diff!=null?` / <span${pc(e.diff)}>${sg(e.diff)}枚</span>`:''}${e.yen!=null?` / <span${pc(e.yen)}>${sg(e.yen)}円</span>`:''}${e.exported?' ・書出済':''}</small></label><button class="sub sm" onclick="loadH('${e.id}')">読込</button><button class="sub sm" onclick="delH('${e.id}')">削除</button></div>`).join(''):'<p class="note">この機種の保存データはありません</p>'}
 window.loadH=id=>{const e=hist().find(x=>x.id===id);if(!e)return;if(e.src==='excel'){alert('エクセルから取り込んだ記録なので、機種画面には読み込めません');return}{const x=lockMig(migrate(JSON.parse(JSON.stringify(e.st))));x.recId=x.recId||e.id;if(e.tE){x.locked=1;x.tSaved=e.tE;x.tE=e.tE;x.tEman=false}LS.set('v2_cur_'+mid,x)}machine(mid)};
 window.delH=id=>{if(!confirm('この保存データを削除しますか？'))return;markGone(hist().filter(x=>x.id===id));putHist(hist().filter(x=>x.id!==id));renderH();banner()};
 window.resetM=()=>{if(!confirm('この機種の入力内容をすべて消去しますか？（保存済みデータは残ります）'))return;LS.del('v2_cur_'+mid);machine(mid)};
@@ -603,15 +616,33 @@ window.xpCtx=k=>{const T=n=>n?n.textContent.replace(/\s+/g,' ').trim():'';
   return{kind:'a',title:XPN+'集計　'+h1,cond:anCondText(),secs,file:xpFn(XPF+'_集計_'+h1+'_'+today())}}
  const c0=[...$('mach').querySelectorAll('.card')],secs=c0.map(c=>{const cl=c.cloneNode(true),oi=[...c.querySelectorAll('input,select,textarea')];[...cl.querySelectorAll('input,select,textarea')].forEach((x,i)=>{const o=oi[i];const v=o.type==='checkbox'||o.type==='radio'?(o.checked?'☑':'☐'):o.tagName==='SELECT'?(o.selectedOptions[0]?o.selectedOptions[0].text:''):o.value;const sp=document.createElement('span');sp.textContent=v;x.replaceWith(sp)});
   cl.querySelectorAll('#hist,button,img,svg,canvas,script,.hidden').forEach(x=>x.remove());const h2=cl.querySelector('h2'),t=T(h2);if(h2)h2.remove();return{title:t||'入力',node:cl}}).filter(s=>s.node.textContent.trim());
- const nm=M[mid]?M[mid].name:mid;return{kind:'m',title:XPN+'判別　'+nm,sheet:nm,cond:'作成 '+today()+' '+new Date().toTimeString().slice(0,5)+' ／ 狙い: '+aimOf(st),secs,file:xpFn(XPF+'_判別_'+nm+'_'+today())}};
+ const nm=curM()?(curM().name||'未登録台'):mid;return{kind:'m',title:XPN+'判別　'+nm,sheet:nm,cond:'作成 '+today()+' '+new Date().toTimeString().slice(0,5)+' ／ 狙い: '+aimOf(st),secs,file:xpFn(XPF+'_判別_'+nm+'_'+today())}};
 window.exportCSV=async all=>{const h=hist(),list=all?h:h.filter(e=>!e.exported);if(!list.length){alert('書き出すデータがありません');return}
  const name=`slot_settei_${today()}.csv`,blob=new Blob([buildCSV(list)],{type:'text/csv'});let ok=false;
  try{const f=new File([blob],name,{type:'text/csv'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});ok=true}}catch(e){if(e&&e.name==='AbortError')return}
  if(!ok){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
  const ids=new Set(list.map(e=>e.id));putHist(h.map(e=>ids.has(e.id)?{...e,exported:true}:e));banner();if(mid&&!$('mach').classList.contains('hidden'))renderH();else home()};
 // ===== r86：未登録台（機種名を手入力・判別情報なし。収支だけ記録） =====
-window.homeQs=v=>{const w=nz(v).trim();document.querySelectorAll('#homeML .mbtn').forEach(b=>b.style.display=!w||(b.dataset.n||'').includes(w)?'':'none')};
-const homeTop=()=>`<input type="search" placeholder="機種名で検索" oninput="homeQs(this.value)" style="width:100%;font-size:16px;box-sizing:border-box;margin-bottom:8px"><button class="mbtn" onclick="location.hash='free'" style="display:flex;gap:10px;align-items:center;text-align:left"><span style="flex:0 0 44px;width:44px;height:56px;border-radius:6px;background:#eef1f6;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2b6fe8">＋</span><span>未登録台<br><small class="note">機種名を手入力して収支だけ記録</small></span></button>`;
+window.homeQs=v=>{const w=nz(v).trim();document.querySelectorAll('#homeML>div').forEach(b=>b.style.display=!w||(b.dataset.n||'').includes(w)?'':'none')};
+function homeItem(k,m){const bt=`<button class="mbtn" onclick="location.hash='m=${k}'" style="display:flex;gap:10px;align-items:center;text-align:left">${thumb(k,44)}<span>${esc(m.name)}<br><small class="note">${esc(m.sub)}${m.intro?' ・導入日 '+esc(m.intro):''}</small></span></button>`;
+ return`<div data-n="${esc(nz(m.name))}">${bt}${m.reg?`<div style="display:flex;gap:6px;margin:4px 0 0"><button class="sub sm" style="flex:1;margin:0" onclick="location.hash='m=${k}'">編集</button><button class="sub sm" style="flex:1;margin:0" onclick="cmDel('${k}')">削除</button></div>`:''}</div>`}
+// 機種情報（未登録台＝その場で入力／登録機種＝編集）
+function infoCard(k){if(k!=='free'&&!(M[k]&&M[k].reg))return'';const reg=k!=='free',m=curM(k),at=m.at;
+ return`<div class="card"><h2>${reg?'登録機種の情報':'未登録台の機種情報'}</h2><div class="row"><label>機種名</label><input id="fm_name" type="text" value="${esc(m.name)}" placeholder="機種名を入力" autocomplete="off"></div>
+ <div class="row"><label>タイプ<small>ノーマル or AT（AT機は通常回転数・総回転数で入力）</small></label><select id="fm_type" style="width:110px;font-size:16px" onchange="fmChange()"><option${at?'':' selected'}>ノーマル</option><option${at?' selected':''}>AT</option></select></div>
+ <button onclick="${reg?'cmSave':'cmReg'}('${k}')">${reg?'変更を保存':'この機種を登録（機種一覧に追加）'}</button><p class="note">${reg?'名前・タイプを変えて保存します。':'判別なし（回転数・BB・RB・時間・収支だけ記録）。登録すると機種選択の一覧に出ます。'}</p></div>`}
+function readFM(){const n=$('fm_name'),t=$('fm_type');if(!n||!t)return;st.fm={name:n.value,type:t.value};FREE_M=FM(st.fm)}
+window.fmChange=()=>{read({target:{id:'fm_type'}});const y=scrollY;machine('free');scrollTo(0,y)};
+window.cmReg=k=>{readFM();const name=(st.fm.name||'').trim();if(!name){alert('機種名を入力してね');return}
+ if(Object.values(M).some(x=>x.name===name)){alert('同じ名前の機種がもうあるよ。名前を変えてね');return}
+ const id=newMid(),l=machines();l.push({id,name,at:st.fm.type==='AT'?1:0});putMachines(l);loadCM();
+ alert('「'+name+'」を機種一覧に登録したよ');read({target:{id:'cmReg'}});const x=JSON.parse(JSON.stringify(st));delete x.fm;LS.set('v2_cur_'+id,x);LS.del('v2_cur_free');mid=null;location.hash='m='+id};
+window.cmSave=k=>{const n=($('fm_name').value||'').trim(),t=$('fm_type').value;if(!n){alert('機種名を入力してね');return}
+ if(Object.entries(M).some(([i,x])=>i!==k&&x.name===n)){alert('同じ名前の機種がもうあるよ');return}
+ putMachines(machines().map(x=>x.id===k?{...x,name:n,at:t==='AT'?1:0}:x));loadCM();alert('保存したよ');machine(k)};
+window.cmDel=k=>{const m=M[k];if(!m||!confirm('「'+m.name+'」を機種一覧から削除しますか？（保存済みの記録は残りますが、機種画面には読み込めなくなります）'))return;putMachines(machines().filter(x=>x.id!==k));loadCM();home()};
+
+const homeTop=()=>`<input type="search" placeholder="機種名で検索" oninput="homeQs(this.value)" style="width:100%;font-size:16px;box-sizing:border-box;margin-bottom:8px"><button class="mbtn" onclick="location.hash='free'" style="display:flex;gap:10px;align-items:center;text-align:left"><span style="flex:0 0 44px;width:44px;height:56px;border-radius:6px;background:#eef1f6;display:flex;align-items:center;justify-content:center;font-size:22px;color:#2b6fe8">＋</span><span>未登録台<br><small class="note">機種名を入力して記録（判別なし）。登録もできます</small></span></button>`;
 function freePage(id){const e=id?hist().find(x=>x.id===id&&x.src==='free'):null,v=e||{date:today(),aim:AIMS[0]};$('home').classList.add('hidden');const el=$('mach');el.classList.remove('hidden');
  const F=(l,i,val,t,x)=>`<div class="row"><label>${l}</label><input id="${i}" type="${t||'text'}" value="${esc(val??'')}" ${x||''}></div>`,NUM='min="0" inputmode="numeric"';
  el.innerHTML=`<button class="sub sm" onclick="location.hash=''">← 機種選択</button><h1 style="margin-top:10px">未登録台</h1><div class="card"><h2>台情報</h2>`
@@ -626,7 +657,7 @@ function freePage(id){const e=id?hist().find(x=>x.id===id&&x.src==='free'):null,
 window.saveFree=id=>{const g=k=>$(k)?$(k).value.trim():'',name=g('u_mach');if(!name){alert('機種名を入力してね');return}const n=k=>g(k)===''||!isFinite(+g(k))?null:+g(k),inv=n('u_inv'),ret=n('u_ret'),tS=g('u_tS'),tE=g('u_tE'),h=hist();
  const rec={id:id||genId(),src:'free',mid:'',machine:name,st:{},store:g('u_store'),aim:g('u_aim')||AIMS[0],memo:g('u_memo'),date:g('u_date')||today(),saved:new Date().toISOString(),G:n('u_G')||0,inv,ret,yen:inv==null&&ret==null?null:(ret||0)-(inv||0),tS,tE,hours:hrs(tS,tE),exported:false};if(!PA)rec.diff=n('u_diff');
  const ix=h.findIndex(x=>x.id===rec.id);if(ix>=0)h[ix]=rec;else h.unshift(rec);putHist(h);alert('保存しました');location.hash=''};
-function route(){if(location.hash.startsWith('#free')){mid=null;return freePage(decodeURIComponent(location.hash.slice(6)))}const m=location.hash.match(/m=(\w+)/);if(m&&M[m[1]])machine(m[1]);else{mid=null;home()}}
+function route(){if(location.hash==='#free')return machine('free');if(location.hash.startsWith('#free')){mid=null;return freePage(decodeURIComponent(location.hash.slice(6)))}const m=location.hash.match(/m=(\w+)/);if(m&&M[m[1]])machine(m[1]);else{mid=null;home()}}
 {const r=rawHist(),d=dedupeRaw(r,new Date().toISOString()),n=d.filter((x,i)=>x.deleted&&!r[i].deleted).length;if(n){LS.set('v2_hist',d);LS.set('v2_hist_dedup',(LS.get('v2_hist_dedup',0)||0)+n)}}addEventListener('hashchange',route);route();syncNow(false)}
 // ===== 同期用の純粋関数（nodeでテスト可） =====
 // 同じ記録（recId、無ければid）の重複は最新(saved)の1件だけ残す。残りは削除扱い(tombstone)にして同期でも復活させない（何度実行しても同じ結果）
@@ -635,6 +666,7 @@ function dedupeLive(list){const best=new Map();for(const e of list){const k=recK
 function dedupeRaw(raw,now){const live=raw.filter(x=>!x.deleted),keep=new Set(dedupeLive(live));return raw.map(x=>x.deleted||keep.has(x)?x:{id:x.id,deleted:true,updatedAt:now})}
 function storeKey(x){return 'n:'+String(x.name||'').trim()}
 function entryKey(x){return x.id}
+function machKey(x){return 'm:'+x.id}
 function strip(x){const{updatedAt,...r}=x;return JSON.stringify(r)}
 // 旧リスト(tombstone含む)と新しい表示リストから、変更分にupdatedAtを付け、消えた物をtombstone化
 function applyChanges(raw,next,key,now){const old=new Map(raw.map(x=>[key(x),x])),out=[],seen=new Set();
@@ -642,8 +674,8 @@ function applyChanges(raw,next,key,now){const old=new Map(raw.map(x=>[key(x),x])
  for(const[k,o]of old)if(!seen.has(k))out.push(o.deleted?o:{id:o.id,name:o.name,deleted:true,updatedAt:now});return out}
 function mergeList(a,b,key){const m=new Map();for(const x of[...(a||[]),...(b||[])]){const k=key(x);const o=m.get(k);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(k,x)}return[...m.values()]}
 function mergeData(l,r){r=r||{};const ent=mergeList(l.entries,r.entries,entryKey).sort((x,y)=>String(y.saved||y.updatedAt||'').localeCompare(String(x.saved||x.updatedAt||'')));
- return{version:1,stores:mergeList(l.stores,r.stores,storeKey),entries:ent,updatedAt:new Date().toISOString()}}
-function sameData(a,b){const n=d=>JSON.stringify({s:[...(d.stores||[])].sort((x,y)=>storeKey(x)<storeKey(y)?-1:1),e:[...(d.entries||[])].sort((x,y)=>x.id<y.id?-1:1)});return n(a)===n(b||{})}
+ return{version:1,stores:mergeList(l.stores,r.stores,storeKey),entries:ent,machines:mergeList(l.machines,r.machines,machKey),updatedAt:new Date().toISOString()}}
+function sameData(a,b){const n=d=>JSON.stringify({s:[...(d.stores||[])].sort((x,y)=>storeKey(x)<storeKey(y)?-1:1),e:[...(d.entries||[])].sort((x,y)=>x.id<y.id?-1:1),m:[...(d.machines||[])].sort((x,y)=>x.id<y.id?-1:1)});return n(a)===n(b||{})}
 function b64enc(str){const b=new TextEncoder().encode(str);let s='';for(let i=0;i<b.length;i+=0x8000)s+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(s)}
 function b64dec(b64){const s=atob(b64.replace(/\s/g,''));const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return new TextDecoder().decode(b)}
 // ===== CSV（UI外：nodeでテスト可） =====
