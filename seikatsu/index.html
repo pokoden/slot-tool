@@ -201,7 +201,7 @@ function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m
  const w=workMonth(calYM);
  return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><b>${y}年${m}月</b><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
  <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">スタンド</div><div class="v">${w.sd}日 ${yen(w.sp)}</div></div><div class="tile"><div class="l">稼働</div><div class="v ${cls(w.ky)}">${w.kd}日 ${yen(w.ky)}</div></div><div class="tile"><div class="l">その他労働</div><div class="v">${w.od}日 ${yen(w.op)}</div></div><div class="tile"><div class="l">休み</div><div class="v">${w.off}日</div></div></div></div>${monthTable()}`}
-function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),w=workMonth(ym);R.push({m,ym,w,gd:w.sd+w.od,gh:w.sh+w.oh,gp:w.sp+w.op,td:w.sd+w.od+w.kd,th:w.sh+w.oh+w.kh,ti:w.sp+w.op+w.ky})}
+function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),w=workMonth(ym);const lg=(D.ledger[ym]||[]).filter(x=>x.imp&&x.i2==='給料収入').reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);if(!(w.sp+w.op)&&lg){w.sp=lg}R.push({m,ym,w,gd:w.sd+w.od,gh:w.sh+w.oh,gp:w.sp+w.op,td:w.sd+w.od+w.kd,th:w.sh+w.oh+w.kh,ti:w.sp+w.op+w.ky})}
  const act=R.filter(r=>r.td||r.w.off);const k=act.length||1;const S=f=>R.reduce((a,r)=>a+f(r),0);
  const mx={gp:Math.max(1,...R.map(r=>r.gp)),ky:Math.max(1,...R.map(r=>Math.abs(r.w.ky))),ti:Math.max(1,...R.map(r=>Math.abs(r.ti)))};
  const bar=(v,m,txt)=>`<td class="bar"><i class="${v<0?'n':''}" style="width:${Math.min(100,Math.abs(v)/m*100)}%"></i><span class="${cls(v)}">${txt}</span></td>`;
