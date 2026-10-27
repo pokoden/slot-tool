@@ -99,7 +99,7 @@ function nextDay(rows,set,store){const R=rows.filter(r=>r.s===store);if(!R.lengt
 // ===== 分析 =====
 function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x of a)s+=x;const m=s/n;let v=0;for(const x of a)v+=(x-m)*(x-m);return{m,sd:Math.sqrt(v/n),n}}
 // 偏差値。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
-const dev=(x,st)=>x==null||!st||!st.n?null:st.sd>0?50+10*(x-st.m)/st.sd:50;
+const dev=(x,st)=>x==null||!st||!st.n?null:Math.round(st.sd>0?50+10*(x-st.m)/st.sd:50);
 const dowC=new Map();const dowF=d=>{let v=dowC.get(d);if(v==null){v=dow(d);dowC.set(d,v)}return v};
 const segOf=(d,type)=>type==='matsu'?+d.slice(8)%10:type==='hi'?+d.slice(8):type==='you'?dowF(d):'all';
 const has=v=>v!==''&&v!=null&&!isNaN(+v);
@@ -112,7 +112,7 @@ function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<
  for(const r of L)rot[typeOf(r.m,set)].push(r.g);const rs={N:stat(rot.N),AT:stat(rot.AT)};
  const pr={};for(const r of L){if(r.g<=0)continue;const t=dev(r.g,rs[typeOf(r.m,set)]);if(t<55)continue;const g=groupOf(r.m,set);const o=pr[g]||(pr[g]={rb:[],gs:[]});o.rb.push(r.rb/r.g);o.gs.push((r.bb+r.rb)/r.g)}
  const ps={};for(const g in pr)ps[g]={rb:stat(pr[g].rb),gs:stat(pr[g].gs)};return{rot:rs,prob:ps}}
-function idx(rT,rbT,gsT){if(rT==null||rbT==null||gsT==null)return{p:null,t:null};const p=rbT*0.4+gsT*0.6;return{p,t:rT*0.6+p*0.4}}
+function idx(rT,rbT,gsT){if(rT==null||rbT==null||gsT==null)return{p:null,t:null};const p=Math.round(rbT*0.4+gsT*0.6);return{p,t:Math.round(rT*0.6+p*0.4)}}
 const SM=new WeakMap();
 function storeRows(rows,s){let m=SM.get(rows);if(!m){m=new Map();for(const r of rows){let a=m.get(r.s);if(!a)m.set(r.s,a=[]);a.push(r)}SM.set(rows,m)}return m.get(s)||[]}
 // 店舗1つぶんの集計。軸の値（日末尾なら0〜9）ごとに、台番別と状態順1位別を出す
@@ -143,17 +143,18 @@ function finalize(G,B,base){
    for(const m in val){sp[m]=topFn(pool.map(val[m]));const bv=new Map();for(const u of pool){let a=bv.get(u.v);if(!a)bv.set(u.v,a=[]);a.push(val[m](u))}dp[m]=new Map([...bv].map(([v,a])=>[v,topFn(a)]))}
    for(const u of L){const a=[dev(u.avg,sg),dev(u.rbR,s1.rb),dev(u.gsR,s1.gs)];const i1=idx(...a);u.tk={g:a[0],rb:a[1],gs:a[2],p:i1.p,t:i1.t};
     const b=[dev(u.avg,sb),dev(u.rbR,pb.rb),dev(u.gsR,pb.gs)];const i2=idx(...b);u.hy={g:b[0],rb:b[1],gs:b[2],p:i2.p,t:i2.t};
-    u.tt=u.tk.t!=null&&u.hy.t!=null?u.tk.t*0.4+u.hy.t*0.6:null;
+    u.tt=u.tk.t!=null&&u.hy.t!=null?Math.round(u.tk.t*0.4+u.hy.t*0.6):null;
     if(inP.has(u)){u.sp={};u.dp={};for(const m in val){u.sp[m]=sp[m](val[m](u));u.dp[m]=dp[m].get(u.v)(val[m](u))}}else{u.sp=null;u.dp=null}
     u.auto=judge(u,B,o.g)}}}
  return G}
 function analysisFor(rows,set,ranks,store,axis,from,to,B,base){return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base)}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
+const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
 function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;any=true;return f(+v)};
  const Bg=B.g||{},Br=B.rb||{},Bs=B.gs||{},by=B.by||'hy';const idxs=by==='tk'?[u.tk]:by==='hy'?[u.hy]:[u.tk,u.hy];const mc=(B.mach||{})[grp]||{};
- const ok=chk(B.ratio,v=>u.ratio*100>=v)&&chk(u.typ==='N'?Bg.nm:Bg.at,v=>u.avg>=v)
-  &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.idx,v=>idxs.every(x=>x[k]!=null&&x[k]>=v))&&chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v))
-  &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v);
+ const ok=chk(B.ratio,v=>u.ratio*100+EPS>=v)&&chk(u.typ==='N'?Bg.nm:Bg.at,v=>u.avg+EPS>=v)
+  &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.idx,v=>idxs.every(x=>x[k]!=null&&x[k]>=v))&&chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
+  &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v+EPS)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v+EPS);
  return any&&ok}
 // ===== 当日の数値表示（窓ごとの合計） =====
 function winIdx(rows,set){const by=new Map();

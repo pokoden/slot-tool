@@ -32,7 +32,7 @@ button.b:disabled{opacity:.45}
 .row label{font-size:13px}
 .st{font-weight:600;font-size:13px;margin-top:6px;white-space:pre-wrap}
 .ok{color:#137a3a}.ng{color:#c62828}
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -12px;padding:0 12px}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -12px;padding:0}
 table{border-collapse:collapse;font-size:12px;white-space:nowrap}
 th,td{padding:5px 6px;border-bottom:1px solid #eee;text-align:right}
 th{background:#f6f7fa;font-weight:600;text-align:center;position:sticky;top:0}
@@ -58,6 +58,8 @@ tr.gh td{background:#20242c;padding:0;text-align:left}
 .bd{position:sticky;left:0;display:flex;gap:6px;width:calc(100vw - 56px);box-sizing:border-box;padding:1px 6px;font-size:11px;line-height:1.35;color:#e9c46a;font-weight:600;cursor:pointer}
 .bd.st{color:#9fd3ff}.bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bd.open .bn{white-space:normal}.bc{white-space:nowrap;color:#fff;font-weight:400}
 th.fix,td.fix{padding-left:4px;padding-right:6px}
+.f1{width:34px;min-width:34px;max-width:34px;text-align:center!important;padding-left:2px!important;padding-right:2px!important}.f2{left:34px!important}
+table td{font-variant-numeric:tabular-nums}td.mkc{text-align:center}
 td.ml{max-width:6em;overflow:hidden;text-overflow:ellipsis}
 th.s{cursor:pointer}th.s.on{color:#1f5fd6}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
@@ -265,7 +267,7 @@ let LAC=null;function lastTai(){if(LAC&&LAC.r===S.rows)return LAC.m;const set=se
  for(const r of S.rows){const k=r.s+'|'+NC.groupOf(r.m,set);if(!best.has(k)||r.d>best.get(k))best.set(k,r.d)}
  const m=new Map();for(const r of S.rows){const k=r.s+'|'+NC.groupOf(r.m,set);if(r.d===best.get(k)){let a=m.get(k);if(!a)m.set(k,a=new Set());a.add(String(r.t))}}
  LAC={r:S.rows,m};return m}
-let ANC=null;
+let ANC=null,anNb=1,anSig='',anKeep=false;const AN_SAFE=3000,AN_STEP=Math.floor(AN_SAFE*0.7);
 function anaCalc(sl,from,to,B){const key=[an.ax,from,to,JSON.stringify(B),S.rows.length,sl.join(',')].join('~');if(ANC&&ANC.key===key&&ANC.r===S.rows)return ANC.v;
  const set=setObj(),ranks=allRanks(),base=NC.stdBase(S.rows,set,to);const v={};for(const s of sl)v[s]=NC.analysisFor(S.rows,set,ranks,s,an.ax,from,to,B,base);ANC={key,r:S.rows,v};return v}
 const stLab=k=>{const[w,m]=k.split('_');return NC.WIN.find(x=>x[0]===w)[1]+NC.MET.find(x=>x[0]===m)[1]};
@@ -292,37 +294,46 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   ...[['tk','店舗機種指数'],['hy','標準指数']].flatMap(([x,gl])=>[['g','回転'],['rb','RB'],['gs','合算'],['t','総合']].map(([m,ml],i)=>({k:x+m,grp:i===0?gl:'',th:ml,get:u=>u[x][m],best:'hi',idx:m==='t'?null:[x,m],c:u=>m==='t'?`<b>${f(u[x][m])}</b>`:f(u[x][m])}))),
   {k:'tg',th:'合計<br>回転',get:u=>u.g,best:'hi',c:u=>u.g.toLocaleString(),vis:'bar'},
   {k:'tbb',th:'BB',get:u=>u.bb,best:'hi',c:u=>u.bb},{k:'trb',th:'RB',get:u=>u.rb,best:'hi',c:u=>u.rb}];
- const col=COLS.find(c=>c.k===an.so&&c.k!=='mk');const NCOL=COLS.length+1;
+ const col=COLS.concat([{k:'v',get:u=>+u.v,best:'lo'}]).find(c=>c.k===an.so&&c.k!=='mk');const NCOL=COLS.length+2;
  const BI={g:B.g.idx,rb:B.rb.idx,gs:B.gs.idx};
  const cmpF=(a,b)=>{if(!col)return 0;let va=col.get(a),vb=col.get(b);const na=va==null,nb=vb==null;if(na||nb)return na&&nb?0:na?1:-1;if(va===vb)return 0;const d=col.best==='lo'?(va<vb?-1:1):(va>vb?-1:1);return an.rev?-d:d};
  const nat=(a,b)=>String(a.k).localeCompare(String(b.k),'ja',{numeric:true})||(+a.v-+b.v);
  const SO=NC.stKeys(an.ax);
- const sortS=L=>L.sort((a,b)=>col?(cmpF(a,b)||SO.indexOf(a.k)-SO.indexOf(b.k)||(+a.v-+b.v)):((SO.indexOf(a.k)-SO.indexOf(b.k)||(+a.v-+b.v))*(an.rev?-1:1)));
- const sortT=L=>L.sort((a,b)=>col?(cmpF(a,b)||nat(a,b)):(an.rev?-nat(a,b):nat(a,b)));
- const LT=lastTai();let body='',nOn=0,nRow=0;
+ // 台番の行と状態順の行は1つにまとめて並べ替える（同順位は台番の行が先）
+ const tie=(a,b)=>(b.isT-a.isT)||(a.isT?nat(a,b):(SO.indexOf(a.k)-SO.indexOf(b.k)||(+a.v-+b.v)));
+ const sortA=L=>L.sort((a,b)=>col?(cmpF(a,b)||tie(a,b)):(an.rev?-1:1)*tie(a,b));
+ const LT=lastTai();let nOn=0,nRow=0;
+ const vShort=v=>an.ax==='matsu'?v+'末':an.ax==='hi'?v+'日':'日月火水木金土'[+v];
  const blue=(c,u)=>{if(!c.idx)return false;const[x,m]=c.idx;const v=u[x][m];const t=BI[m];return NC.has(t)&&v!=null&&v>=+t&&(B.by==='both'||B.by===x)};
  const cellSty=(c,u,st)=>{let y=c.vis==='bar'?barSty(c.get(u),st[c.k]):c.vis==='tint'?tintSty(c.get(u),st[c.k]):blue(c,u)?'background:#cfe8ff':'';return y?` style="${y}"`:''};
- const row=(u,s,g,vall,st,isT)=>{const k=[s,g,an.ax,u.v,u.k].join('|');const man=MK[k];
+ const row=(u,s,g,st)=>{const k=[s,g,an.ax,u.v,u.k].join('|');const man=MK[k];
   const mk=man==null?(u.auto?'<span class="mk a">○</span>':'・'):man?'<span class="mk m">○</span>':'<span class="mk x">×</span>';
-  return`<tr><td class="fix l">${isT?esc(u.k):`<span style="color:#1f5fd6">${stLab(u.k)}</span>`}${vall?`<small> ${vLab(an.ax,u.v)}</small>`:''}</td><td class="mkc" data-k="${esc(k)}" data-a="${u.auto?1:0}" onclick="anMark(this.dataset.k,+this.dataset.a)">${mk}</td>${COLS.slice(1).map(c=>`<td${cellSty(c,u,st)}>${c.c(u)}</td>`).join('')}</tr>`};
+  return`<tr><td class="fix f1">${vShort(u.v)}</td><td class="fix f2 l">${u.isT?esc(u.k):`<span style="color:#1f5fd6">${stLab(u.k)}</span>`}</td><td class="mkc" data-k="${esc(k)}" data-a="${u.auto?1:0}" onclick="anMark(this.dataset.k,+this.dataset.a)">${mk}</td>${COLS.slice(1).map(c=>`<td${cellSty(c,u,st)}>${c.c(u)}</td>`).join('')}</tr>`};
+ // 先に全行を集めて（○のみ・並べ替えはぜんぶの行に対して）、そのあと表示ぶんだけHTMLにする
+ const sig=[an.ax,an.s,an.g,an.val,an.so,an.rev,an.only,from,to,R.length].join('|');if(sig!==anSig){anSig=sig;anNb=1}
+ const LIM=AN_STEP*anNb;const blocks=[];
  for(const s of sl){const vv=an.val==='all'?null:an.val==='next'?nextV(s):String(an.val);
   for(const g of groups){if(an.g&&g!==an.g)continue;const o=AN[s].get(g);if(!o)continue;const lt=LT.get(s+'|'+g)||new Set();
-   let T=o.taiL.filter(u=>lt.has(String(u.k))&&(vv==null||u.v===vv));let X=o.stL.filter(u=>vv==null||u.v===vv);
+   const T=o.taiL.filter(u=>lt.has(String(u.k))&&(vv==null||u.v===vv));const X=o.stL.filter(u=>vv==null||u.v===vv);
    if(!T.length&&!X.length)continue;
-   for(const u of T.concat(X)){const man=MK[[s,g,an.ax,u.v,u.k].join('|')];u.on=man==null?!!u.auto:!!man}
-   const st={},sx={};for(const c of COLS)if(c.vis){st[c.k]=mm(T.map(c.get));sx[c.k]=mm(X.map(c.get))}
-   const nT=T.length;if(an.only){T=T.filter(u=>u.on);X=X.filter(u=>u.on)}if(!T.length&&!X.length)continue;
-   nRow+=T.length+X.length;for(const u of T.concat(X))if(u.on)nOn++;
-   const full=sShort(s)+'｜'+[...new Set(o.taiL.map(u=>u.m))].join('／');
-   body+=band(NCOL,(an.s==='*'?sShort(s)+'｜':'')+mShort(g),full,`${vv!=null?vLab(an.ax,vv)+' ':''}${T.length}${an.only?'/'+nT:''}台`);
-   body+=sortT(T).map(u=>row(u,s,g,vv==null,st,true)).join('')+sortS(X).map(u=>row(u,s,g,vv==null,sx,false)).join('')}}
+   for(const u of T){u.isT=true}for(const u of X){u.isT=false}
+   let A=T.concat(X);for(const u of A){const man=MK[[s,g,an.ax,u.v,u.k].join('|')];u.on=man==null?!!u.auto:!!man}
+   const st={};for(const c of COLS)if(c.vis)st[c.k]=mm(A.map(c.get));
+   const nT=T.length;if(an.only)A=A.filter(u=>u.on);if(!A.length)continue;
+   nRow+=A.length;for(const u of A)if(u.on)nOn++;
+   const nTs=A.filter(u=>u.isT).length;
+   blocks.push({s,g,vv,st,A:sortA(A),full:sShort(s)+'｜'+[...new Set(o.taiL.map(u=>u.m))].join('／'),cnt:`${vv!=null?vLab(an.ax,vv)+' ':''}${nTs}${an.only?'/'+nT:''}台`})}}
+ let body='',shown=0;
+ for(const bk of blocks){if(shown>=LIM)break;const part=bk.A.slice(0,LIM-shown);shown+=part.length;
+  body+=band(NCOL,(an.s==='*'?sShort(bk.s)+'｜':'')+mShort(bk.g),bk.full,bk.cnt)+part.map(u=>row(u,bk.s,bk.g,bk.st)).join('')}
+ const more=nRow-shown;
  const sel=(id,L,v,extra='')=>`<select onchange="an.${id}=this.value;${extra}anaPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const th1=[];const th2=[];
  for(let i=0;i<COLS.length;i++){const c=COLS[i];const cls=`s ${an.so===c.k?'on':''}`;
   if(c.grp){th1.push(`<th colspan="4">${c.grp}</th>`)}
   if(c.k==='mk'){th1.push(`<th rowspan="2" class="s ${an.only?'on':''}" onclick="anOnly()">○${an.only?'<br>のみ':''}</th>`);continue}
   if(c.grp!==undefined&&/^(tk|hy)/.test(c.k))th2.push(`<th class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`);else th1.push(`<th rowspan="2" class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`)}
- const oldScroll=document.querySelector('#main .tw');const sl0=oldScroll?oldScroll.scrollLeft:0;
+ const oldScroll=document.querySelector('#main .tw');const sl0=oldScroll?oldScroll.scrollLeft:0;const sy0=window.scrollY;
  $('main').innerHTML=`<div class="card"><h2>🔍 集計と分析</h2>
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="an.from=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="an.to=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"><button class="b sub" onclick="an.from='';an.to='';NRC={};anaPage()">全期間</button></div>
  <p class="note">指定範囲（選んだ軸のぜんぶの値を集計）</p>
@@ -331,14 +342,15 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['next','次の日に合わせる'],['all','全部']].concat(vals),an.val)}</div>
- <p class="note">${nRow}行　○：${nOn}件　緑の○＝ボーダーで自動、ピンクの○＝自分で付けた、×＝自分で外した。○のマスをタップで切り替え。「○」の見出しをタップで○の台だけ表示（もう一度で全部）。ほかの見出しをタップで並べ替え（もう一度で逆順）。回転のオレンジの棒と確率の色（緑＝良い・赤＝悪い）は、同じ機種の中での比べ。指数が水色＝ボーダーの指数以上。台番は各店舗・機種の最終更新日にある台だけ。青い字の「前日回転」などは、その状態順（悪い順）で1位になった台の合計（回転と合算、前日・2日間・3日間・6日間と選んだ軸の前回）。帯をタップで正式名。</p>
- ${nRow?`<div class="tw"><table><tr><th class="fix s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ <p class="note">${nRow.toLocaleString()}行${more>0?`（${shown.toLocaleString()}行まで表示中）`:''}　○：${nOn}件　緑の○＝ボーダーで自動、ピンクの○＝自分で付けた、×＝自分で外した。○のマスをタップで切り替え。「○」の見出しをタップで○の台だけ表示（もう一度で全部）。「指定日」やほかの見出しをタップで並べ替え（もう一度で逆順。台番の行と状態順の行は一緒に並ぶ）。回転のオレンジの棒と確率の色（緑＝良い・赤＝悪い）は、同じ機種の中での比べ。指数が水色＝ボーダーの指数以上。台番は各店舗・機種の最終更新日にある台だけ。青い字の「前日回転」などは、その状態順（悪い順）で1位になった台の合計（回転と合算、前日・2日間・3日間・6日間と選んだ軸の前回）。帯をタップで正式名。</p>
+ ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="anMore()">もっと見る（残り ${more.toLocaleString()}行）</button></div>`:''}`:'<p class="note">データがないよ</p>'}
  <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">○を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`;
- const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0}
+ const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
+window.anMore=()=>{anNb++;anKeep=true;anaPage()};
 window.anAx=k=>{an.ax=k;an.val='next';an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
-window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anaPage()};
+window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anKeep=true;anaPage()};
 window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
 // ===== ボーダー =====
 const bGet=p=>{let o=bord();for(const k of p.split('.')){if(o==null)return'';o=o[k]}return o==null?'':o};
