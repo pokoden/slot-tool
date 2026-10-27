@@ -58,7 +58,7 @@ tr.sum td{font-weight:800;background:#f0f5ff}
 .cal .d.today{border-color:#1f4fd8}
 .cal .d .n{font-weight:800;font-size:13px}
 .cal .d .t{border-radius:6px;color:#fff;font-weight:800;padding:1px 0;margin-top:2px}
-.t-stand{background:#1f4fd8}.t-kado{background:#f08c00}.t-off{background:#2fb36b}.t-other{background:#7a5af8}.t-standkado{background:linear-gradient(90deg,#1f4fd8 50%,#f08c00 50%)}
+.t-stand{background:#1f4fd8}.t-kado{background:#f08c00}.t-off{background:#2fb36b}.t-other{background:#7a5af8}.t-free{background:#0f9fb5}.t-standkado{background:linear-gradient(90deg,#1f4fd8 50%,#f08c00 50%)}
 .cal .d .y{font-weight:800;font-size:10px}
 .sheet{position:fixed;inset:0;background:rgba(10,20,50,.35);z-index:20;display:none;align-items:flex-end}
 .sheet.on{display:flex}
@@ -75,7 +75,7 @@ textarea{width:100%;min-height:110px;font:12px monospace;border:1px solid #cdd9f
 .tag{display:inline-block;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:800;color:#fff}
 .i1-生活費{background:#1f9bd8}.i1-収入{background:#2fb36b}.i1-ギャンブル{background:#e0283a}
 .hide{display:none}
-.mh .mpick,.mpick{width:auto;height:auto;white-space:nowrap;flex:0 1 auto;background:none;border:0;font:inherit;font-size:18px;font-weight:800;color:#14213d;padding:8px 12px;border-radius:10px;min-height:44px}.mpick:active{background:#eef3ff}</style></head><body>
+.mh .mpick,.mpick{width:auto;height:auto;white-space:nowrap;flex:0 1 auto;background:none;border:0;font:inherit;font-size:18px;font-weight:800;color:#14213d;padding:8px 12px;border-radius:10px;min-height:44px}.mpick:active{background:#eef3ff}.gl{border-left:2px solid #9fb3dc!important}th.gl{border-left:2px solid #fff!important}</style></head><body>
 <header><h1>生活管理ツール</h1><span id="st">読み込み中</span></header>
 <main id="main"></main>
 <nav id="nav"></nav>
@@ -101,7 +101,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const I1=['生活費','収入','ギャンブル'];
 const I2=['生活固定費','生活変動費','税金','給料収入','雑収入','貯金','競馬','カジノ','パチスロ','調整'];
 const I2of1={'生活固定費':'生活費','生活変動費':'生活費','税金':'生活費','貯金':'生活費','調整':'生活費','給料収入':'収入','雑収入':'収入','競馬':'ギャンブル','カジノ':'ギャンブル','パチスロ':'ギャンブル'};
-const TYPES={stand:'スタンド',kado:'稼働',standkado:'スタンド+稼働',off:'休み',other:'その他労働'};const isS=t=>t==='stand'||t==='standkado',isK=t=>t==='kado'||t==='standkado';
+const TYPES={stand:'スタンド',kado:'稼働',standkado:'スタンド+稼働',off:'休み',other:'その他労働'};const TL={...TYPES,free:'予定'};const isS=t=>t==='stand'||t==='standkado',isK=t=>t==='kado'||t==='standkado';
 function defData(){return{v:2,wallet:{cash:0,pachi:0,bank:0,small:0,big:0,save:0,car:0},sched:{},ledger:{},fixedDone:{},plans:[],
  fixed:[['BIGLOBE',6505],['アクサ',13971],['スマホ',14230],['損保',3690],['タバコ',25000],['楽天ネット',1045],['自宅',20000]].map(([n,a])=>({id:uid(),i1:'生活費',i2:'生活固定費',i3:n,exp:a})),
  set:{rate:1100,stdH:9,step:100000,prevEnd:null,fuyo:1290000,fixedFrom:CUR,loan:{items:[['車本体',700000],['タイヤホイール',148000]],n:24,monthly:37100,start:'2026-10'}},updatedAt:''}}
@@ -145,18 +145,18 @@ function allMonths(){const s=new Set([...Object.keys(D.ledger),CUR]);for(const d
 function summary(){let cum=0;return allMonths().map(ym=>{const L=rows(ym);const o={ym,inc:0,exp:0,c:{}};for(const x of L){o.inc+=+x.inc||0;o.exp+=+x.exp||0;o.c[x.i2]=(o.c[x.i2]||0)+(+x.inc||0)-(+x.exp||0)}o.net=o.inc-o.exp;cum+=o.net;o.cum=cum;o.save40=o.net>0?Math.round(o.net*.4):0;return o})}
 function loanInfo(){const L=D.set.loan,total=L.monthly*L.n;let paid=0;if(L.start<=CUR){let m=L.start;while(m<=CUR){paid++;m=addM(m,1)}}paid=Math.min(paid,L.n);return{total,paid,left:L.n-paid,rem:total-paid*L.monthly}}
 // 描画
-const ICON={home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',money:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/>',set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'};
-const NAV=[['home','ホーム'],['cal','予定'],['money','お金'],['set','設定']];
+const ICON={list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',money:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/>',set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'};
+const NAV=[['home','ホーム'],['cal','予定'],['money','お金'],['list','一覧'],['set','設定']];
 function render(){$('nav').innerHTML=NAV.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>${l}</button>`).join('');
- $('main').innerHTML=({home:vHome,cal:vCal,money:vMoney,set:vSet})[tab]()}
+ $('main').innerHTML=({home:vHome,cal:vCal,money:vMoney,list:vList,set:vSet}[tab]||vHome)()}
 function go(k){tab=k;LS.set('sk2_tab',k);render();scrollTo(0,0)}
 function spark(vals,w=90,h=28){if(vals.length<2)return'';const mn=Math.min(...vals),mx=Math.max(...vals),r=mx-mn||1;const p=vals.map((v,i)=>(i*w/(vals.length-1)).toFixed(1)+','+(h-2-(v-mn)/r*(h-4)).toFixed(1)).join(' ');const up=vals[vals.length-1]>=vals[0];return`<svg width="${w}" height="${h}"><polyline points="${p}" fill="none" stroke="${up?'#1f4fd8':'#e0283a'}" stroke-width="2"/></svg>`}
-function lineChart(pts){const W=440,H=200,P=46;if(pts.length<2)return'<div style="height:60px"></div>';const vs=pts.map(p=>p[1]);let mn=Math.min(...vs),mx=Math.max(...vs);if(mn===mx){mn-=1;mx+=1}const x=i=>P+i*(W-P-8)/(pts.length-1),y=v=>H-22-(v-mn)/(mx-mn)*(H-36);
- let g='';for(let k=0;k<=3;k++){const v=mn+(mx-mn)*k/3;g+=`<line x1="${P}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="#eef2f9"/><text x="${P-4}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#14213d">${Math.round(v).toLocaleString()}</text>`}
+function lineChart(pts){const W=440,H=210,P=78;if(pts.length<2)return'<div style="height:60px"></div>';const vs=pts.map(p=>p[1]);let mn=Math.min(...vs),mx=Math.max(...vs);if(mn===mx){mn-=1;mx+=1}const x=i=>P+i*(W-P-8)/(pts.length-1),y=v=>H-22-(v-mn)/(mx-mn)*(H-36);
+ let g='';{const raw=(mx-mn)/4,e=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(f=>f*e).find(f=>f>=raw);const lo=Math.floor(mn/st)*st,hi=Math.ceil(mx/st)*st;mn=lo;mx=hi;for(let v=lo;v<=hi+st/2;v+=st){const c=v<0?'#e0283a':'#1f4fd8';g+=`<line x1="${P}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?'#9fb3dc':'#eef2f9'}"/><text x="${P-6}" y="${y(v)+4}" font-size="12" font-weight="700" text-anchor="end" fill="${c}">${Math.round(v).toLocaleString()}</text>`}}
  const step=Math.max(1,Math.ceil(pts.length/5));pts.forEach((p,i)=>{if(i%step===0||i===pts.length-1)g+=`<text x="${x(i)}" y="${H-6}" font-size="10" text-anchor="middle" fill="#14213d">${p[0]}</text>`});
- {const L=pts.length-1,lv=pts[L][1];g+=`<text x="${x(L)-6}" y="${Math.max(12,y(lv)-8)}" font-size="12" font-weight="800" text-anchor="end" fill="#1f4fd8">${Math.round(lv).toLocaleString()}</text>`}
+ {const L=pts.length-1,lv=pts[L][1];g+=`<text x="${x(L)-6}" y="${Math.max(12,y(lv)-8)}" font-size="12" font-weight="800" text-anchor="end" fill="${lv<0?'#e0283a':'#1f4fd8'}">${Math.round(lv).toLocaleString()}</text>`}
  const d=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join('');
- return`<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="gf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4fd8" stop-opacity=".25"/><stop offset="1" stop-color="#1f4fd8" stop-opacity="0"/></linearGradient></defs>${g}<path d="${d}L${x(pts.length-1)},${H-22}L${x(0)},${H-22}Z" fill="url(#gf)"/><path d="${d}" fill="none" stroke="#1f4fd8" stroke-width="2.5"/><circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1][1])}" r="4" fill="#1f4fd8"/></svg>`}
+ return`<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="gf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4fd8" stop-opacity=".25"/><stop offset="1" stop-color="#1f4fd8" stop-opacity="0"/></linearGradient></defs>${g}<path d="${d}L${x(pts.length-1)},${H-22}L${x(0)},${H-22}Z" fill="url(#gf)"/><linearGradient id="gs" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${H}"><stop offset="${Math.min(1,Math.max(0,y(0)/H))}" stop-color="#1f4fd8"/><stop offset="${Math.min(1,Math.max(0,y(0)/H))}" stop-color="#e0283a"/></linearGradient><path d="${d}" fill="none" stroke="url(#gs)" stroke-width="2.5"/><circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1][1])}" r="4" fill="${pts[pts.length-1][1]<0?'#e0283a':'#1f4fd8'}"/></svg>`}
 function setRange(r){range=r;LS.set('sk2_range',r);render()}
 function curBalances(){const S=summary();const byYm={};S.forEach(o=>byYm[o.ym]=o);return{S,byYm}}
 function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w.bank+cho+w.small+w.big;
@@ -168,7 +168,7 @@ function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w
  const n=new Date(y,mo,0).getDate();let sL=0,oL=0,rest=0,kL=0;for(let i=TODAY.getDate()+1;i<=n;i++){const t=(D.sched[CUR+'-'+pad(i)]||{}).t;if(t==='stand')sL++;else if(t==='off')oL++;else if(isK(t))kL++;rest++}
  const kadoDays=Math.max(1,rest-sL-oL);const perDay=Math.round(diff/kadoDays);
  const pct=prev.net?Math.round((cur.net-prev.net)/Math.abs(prev.net)*100):null;
- const li=loanInfo();const wm=workMonth(CUR);let yIncome=0;for(let m=1;m<=12;m++){const r=workMonth(y+'-'+pad(m));yIncome+=r.sp+r.op}
+ const wm=workMonth(CUR);let yIncome=0;for(let m=1;m<=12;m++){const r=workMonth(y+'-'+pad(m));yIncome+=r.sp+r.op}
  const last=S.slice(-6).map(o=>o.cum);const nets=S.slice(-6).map(o=>o.net);
  const rng={'1m':1,'3m':3,'1y':12,'all':9999}[range];let pts;
  if(range==='1m'){pts=[];let c=prev.cum;const[yy,mm]=CUR.split('-').map(Number);const L=rows(CUR);const fixedSum=L.filter(x=>!x.auto&&!/^\d{4}/.test(x.d||'')).reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);c+=fixedSum;for(let i=1;i<=TODAY.getDate();i++){const dd=CUR+'-'+pad(i),o=dayInfo(dd);c+=(isS(o.t)||o.t==='other'?(+o.pay||0):0)+(o.ky||0);pts.push([i+'日',c])}}
@@ -186,9 +186,9 @@ function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w
  <div class="row"><span>今月収支</span><b>${Y(cur.net)}</b><span>${spark(nets)}</span></div>
  <div class="row"><span>目標額</span><b>${yen(target)}</b></div>
  <div class="row"><span>目標差額</span><b>${Y(diff)}</b><span>${spark(last)}</span></div>
- <div class="row"><span>稼働日給目安</span><b>${Y(perDay)}</b></div></div>
+ </div>
  <div class="tiles" style="margin-bottom:12px"><div class="tile card" style="margin:0"><div class="l">スタンド残り日数</div><div class="v">${sL}日</div></div><div class="tile card" style="margin:0"><div class="l">休み予定日数</div><div class="v">${oL}日</div></div><div class="tile card" style="margin:0"><div class="l">今月残り予定</div><div class="v">${rest}日</div></div><div class="tile card" style="margin:0"><div class="l">今月出勤</div><div class="v">${wm.sd+wm.od}日</div></div>
- <div class="tile card" style="margin:0"><div class="l">扶養まで</div><div class="v ${D.set.fuyo-yIncome<0?'neg':''}">${yen(D.set.fuyo-yIncome)}</div></div><div class="tile card" style="margin:0"><div class="l">車ローン 残り${li.left}回</div><div class="v">${yen(li.rem)}</div></div></div>
+ <div class="tile card" style="margin:0"><div class="l">扶養まで</div><div class="v ${fuyoInfo().left<0?'neg':''}">${yen(fuyoInfo().left)}</div></div></div>
  <div class="card"><h2>今月の予定<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="addPlan()">＋</button></h2>
  <table><tr><th>済</th><th>項目</th><th>収入予定</th><th>支払い予定</th><th></th></tr>${D.plans.map((p,i)=>`<tr><td><input type="checkbox" style="width:auto" ${p.done?'checked':''} onchange="D.plans[${i}].done=this.checked;save();render()"></td><td class="l"><input value="${esc(p.name)}" onchange="D.plans[${i}].name=this.value;save()" style="width:96px"></td><td><input class="num" inputmode="numeric" value="${p.inc||''}" onchange="D.plans[${i}].inc=+this.value||0;save();render()" style="width:80px"></td><td><input class="num" inputmode="numeric" value="${p.exp||''}" onchange="D.plans[${i}].exp=+this.value||0;save();render()" style="width:80px"></td><td><button class="btn del" style="padding:4px 8px" onclick="D.plans.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
  <tr class="sum"><td></td><td class="l">残り</td><td>${yen(pInc)}</td><td>${yen(pExp)}</td><td></td></tr></table></div>
@@ -197,7 +197,7 @@ function setW(k,v){D.wallet[k]=+String(v).replace(/[^\d-]/g,'')||0;save();render
 function addPlan(){D.plans.push({name:'',inc:0,exp:0,done:false,ym:CUR});save();render()}
 // 予定
 function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();let h=['日','月','火','水','木','金','土'].map((d,i)=>`<div class="h" style="${i===0?'color:#e0283a':''}">${d}</div>`).join('');for(let i=0;i<first;i++)h+='<div></div>';
- for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${(o.t==='standkado'?'ス稼':TYPES[o.t].slice(0,2))}</div>`;if(isS(o.t)||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(isK(o.t)&&o.ky!=null)v+=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
+ for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${o.t==='free'?esc(String(o.note||'').slice(0,3)):(o.t==='standkado'?'ス稼':(TL[o.t]||'').slice(0,2))}</div>`;if(isS(o.t)||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(isK(o.t)&&o.ky!=null)v+=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
  const w=workMonth(calYM);
  return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><button class="mpick" onclick="openMP('cal')">${y}年${m}月 ▾</button><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
  <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">スタンド</div><div class="v">${w.sd}日 ${yen(w.sp)}</div></div><div class="tile"><div class="l">稼働</div><div class="v ${cls(w.ky)}">${w.kd}日 ${yen(w.ky)}</div></div><div class="tile"><div class="l">その他労働</div><div class="v">${w.od}日 ${yen(w.op)}</div></div><div class="tile"><div class="l">休み</div><div class="v">${w.off}日</div></div></div></div>${monthTable()}`}
@@ -206,22 +206,23 @@ function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++
  const mx={gp:Math.max(1,...R.map(r=>r.gp)),ky:Math.max(1,...R.map(r=>Math.abs(r.w.ky))),ti:Math.max(1,...R.map(r=>Math.abs(r.ti)))};
  const bar=(v,m,txt)=>`<td class="bar"><i class="${v<0?'n':''}" style="width:${Math.min(100,Math.abs(v)/m*100)}%"></i><span class="${cls(v)}">${txt}</span></td>`;
  const tr=(lab,f)=>`<tr class="sum"><td>${lab}</td>${f}</tr>`;
- const body=R.map(r=>`<tr><td>${r.ym<CUR?'○':''}${r.m}</td><td>${r.gd}</td><td>${Math.round(r.gh)}</td>${bar(r.gp,mx.gp,r.gp.toLocaleString())}<td>${r.w.kd}</td><td>${Math.round(r.w.kh)}</td>${bar(r.w.ky,mx.ky,Math.round(r.w.ky).toLocaleString())}<td>${r.td}</td><td>${Math.round(r.th)}</td>${bar(r.ti,mx.ti,Math.round(r.ti).toLocaleString())}<td>${r.w.off}</td></tr>`).join('');
+ const body=R.map(r=>`<tr><td>${r.ym<CUR?'○':''}${r.m}</td><td class="gl">${r.gd}</td><td>${Math.round(r.gh)}</td>${bar(r.gp,mx.gp,r.gp.toLocaleString())}<td class="gl">${r.w.kd}</td><td>${Math.round(r.w.kh)}</td>${bar(r.w.ky,mx.ky,Math.round(r.w.ky).toLocaleString())}<td class="gl">${r.td}</td><td>${Math.round(r.th)}</td>${bar(r.ti,mx.ti,Math.round(r.ti).toLocaleString())}<td class="gl">${r.w.off}</td></tr>`).join('');
  const cols=[r=>r.gd,r=>r.gh,r=>r.gp,r=>r.w.kd,r=>r.w.kh,r=>r.w.ky,r=>r.td,r=>r.th,r=>r.ti,r=>r.w.off];
- const sumR=tr('合計',cols.map(f=>`<td class="${cls(S(f))}">${Math.round(S(f)).toLocaleString()}</td>`).join(''));
- const avgR=tr('平均',cols.map(f=>`<td class="${cls(S(f))}">${Math.round(S(f)/k).toLocaleString()}</td>`).join(''));
+ const sumR=tr('合計',cols.map((f,ci)=>`<td class="${cls(S(f))} ${[0,3,6,9].includes(ci)?'gl':''}">${Math.round(S(f)).toLocaleString()}</td>`).join(''));
+ const avgR=tr('平均',cols.map((f,ci)=>`<td class="${cls(S(f))} ${[0,3,6,9].includes(ci)?'gl':''}">${Math.round(S(f)/k).toLocaleString()}</td>`).join(''));
  const sd=S(r=>r.w.sd),sh=S(r=>r.w.sh),sp=S(r=>r.w.sp),kd=S(r=>r.w.kd),kh=S(r=>r.w.kh),ky=S(r=>r.w.ky);
  const cmp=(l,a,b)=>`<tr><td class="l">${l}</td><td>${a}</td><td>${b}</td></tr>`;const dv=(a,b)=>b?a/b:0;const fx=(v,d=0)=>`<span class="${cls(v)}">${(+v).toLocaleString(undefined,{maximumFractionDigits:d})}</span>`;
- return`<div class="card"><h2>${y}年 月まとめ</h2><div class="scroll"><table><tr><th rowspan="2">月</th><th colspan="3">ガソスタ+その他</th><th colspan="3">パチスロ</th><th colspan="3">総合</th><th rowspan="2">休日</th></tr><tr><th>日数</th><th>時間</th><th>給料</th><th>日数</th><th>時間</th><th>収支</th><th>日数</th><th>時間</th><th>収入</th></tr>${body}${sumR}${avgR}</table></div></div>`}
+ return`<div class="card"><h2>${y}年 月まとめ</h2><div class="scroll"><table><tr><th rowspan="2">月</th><th colspan="3" class="gl">ガソスタ+その他</th><th colspan="3" class="gl">パチスロ</th><th colspan="3" class="gl">総合</th><th rowspan="2" class="gl">休日</th></tr><tr><th class="gl">日数</th><th>時間</th><th>給料</th><th class="gl">日数</th><th>時間</th><th>収支</th><th class="gl">日数</th><th>時間</th><th>収入</th></tr>${body}${sumR}${avgR}</table></div></div>`}
 let cur=null;
 function openDay(d){const o=dayInfo(d);cur={d,t:(D.sched[d]||{}).t||(o.t==='kado'?'kado':''),note:(D.sched[d]||{}).note,h:o.h??'',pay:o.pay??'',kh:o.kh??'',ky:o.ky??'',auto:!!slot.byDate[d]};drawSheet();$('sheet').classList.add('on')}
-function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={stand:'#1f4fd8',standkado:'#1f4fd8',kado:'#f08c00',off:'#2fb36b',other:'#7a5af8'};
+function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={free:'#0f9fb5',stand:'#1f4fd8',standkado:'#1f4fd8',kado:'#f08c00',off:'#2fb36b',other:'#7a5af8'};
  let f='';if(isS(c.t)||c.t==='other')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.h}" oninput="cur.h=this.value;if(isS(cur.t)){cur.pay=Math.round((+this.value||0)*D.set.rate);$('pay').value=cur.pay}"></div><div><label>給料</label><input id="pay" class="num" inputmode="numeric" value="${c.pay}" oninput="cur.pay=this.value"></div></div>`;
  if(isK(c.t))f+=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.kh===''?'':Math.round(c.kh)}" ${c.auto?'disabled':''} oninput="cur.kh=this.value"></div><div><label>収支</label><input class="num ${cls(c.ky)}" inputmode="numeric" value="${c.ky}" ${c.auto?'disabled':''} oninput="cur.ky=this.value"></div></div>`;
- $('sheetIn').innerHTML=`<div class="mh"><b>${+m}月${+dd}日</b><button onclick="closeSheet()">×</button></div><div class="chips">${Object.entries(TYPES).map(([k,l])=>`<button class="chip ${c.t===k?'on':''}" style="${c.t===k?'background:'+col[k]:''}" onclick="pick('${k}')">${l}</button>`).join('')}</div>${f}
- <div style="display:flex;gap:8px;margin-top:12px"><button class="btn del" style="flex:1" onclick="pick('');saveDay()">消す</button><button class="btn" style="flex:2" onclick="saveDay()">保存</button></div>`}
+ $('sheetIn').innerHTML=`<div class="mh"><b>${+m}月${+dd}日</b><button onclick="closeSheet()">×</button></div><div class="chips">${Object.entries(TYPES).map(([k,l])=>`<button class="chip ${c.t===k?'on':''}" style="${c.t===k?'background:'+col[k]:''}" onclick="pick('${k}')">${l}</button>`).join('')}</div><input id="memo" placeholder="予定を入力" value="${esc(c.note||'')}" style="width:100%;font-size:17px;padding:12px;margin-bottom:8px" oninput="cur.note=this.value">${f}
+ <div style="display:flex;gap:8px;margin-top:12px"><button class="btn del" style="flex:1" onclick="clearDay()">消す</button><button class="btn" style="flex:2" onclick="saveDay()">保存</button></div>`}
 function pick(t){cur.t=t;if(isS(t)&&!cur.h){cur.h=D.set.stdH;cur.pay=D.set.stdH*D.set.rate}if(t==='other'&&cur.pay==='')cur.pay=0;drawSheet()}
-function saveDay(){const c=cur;if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.note)r.note=c.note;if(isS(c.t)||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(isK(c.t)&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
+function clearDay(){delete D.sched[cur.d];save();closeSheet();render()}
+function saveDay(){const c=cur;c.note=(c.note||'').trim();if(!c.t&&c.note)c.t='free';if(c.t==='free'&&!c.note)c.t='';if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.note)r.note=c.note;if(isS(c.t)||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(isK(c.t)&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
 
 function openMP(w){const v=w==='cal'?calYM:monYM;const end=addM(CUR,24);let o='';for(let m=end;m>='2020-06';m=addM(m,-1))o+=`<option value="${m}" ${m===v?'selected':''}>${m.replace('-','/')}</option>`;
  $('sheetIn').innerHTML=`<div class="mh"><b>月をえらぶ</b><button onclick="closeSheet()">×</button></div>
@@ -230,6 +231,34 @@ function openMP(w){const v=w==='cal'?calYM:monYM;const end=addM(CUR,24);let o=''
  <button class="btn" style="width:100%;margin-top:14px;padding:14px;font-size:17px" onclick="const y=+$('mpY').value,m=+$('mpM').value;if(y>=2000&&y<=2100&&m>=1&&m<=12)goMP('${w}',y+'-'+pad(m));else $('mpY').focus()">この月を見る</button>`;
  $('sheet').classList.add('on')}
 function goMP(w,ym){if(w==='cal')calYM=ym;else monYM=ym;closeSheet();render()}
+
+// 扶養
+function fuyoInfo(){const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;let earned=0,plan=0;for(const[d,r]of Object.entries(D.sched)){if(!d.startsWith(y+'-')||!isS(r.t))continue;const p=+r.pay||0;if(d<=TD)earned+=p;else plan+=p}
+ const lim=+D.set.fuyo||0,left=lim-earned,months=12-mo+1,per=Math.max(0,Math.floor(left/months)),hours=D.set.rate?Math.floor(per/D.set.rate):0,proj=earned+plan;return{y,lim,earned,plan,left,months,per,hours,proj}}
+function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
+ <div class="row"><span>上限</span><input class="num" inputmode="numeric" style="width:130px" value="${D.set.fuyo??''}" onchange="D.set.fuyo=+this.value||0;save();render()"></div>
+ <div class="row"><span>今年のスタンド給料</span><b>${yen(F.earned)}</b></div>
+ <div class="row"><span>上限まで残り</span><b class="${F.left<0?'neg':''}">${yen(F.left)}</b></div>
+ <div class="row"><span>残り月数</span><b>${F.months}ヶ月</b></div>
+ <div class="row"><span>1ヶ月あたり</span><b>${yen(F.per)}</b></div>
+ <div class="row"><span>1ヶ月あたり時間</span><b>${F.hours}時間</b></div>
+ <div class="row"><span>予定込みの見込み</span><b class="${F.proj>F.lim?'neg':''}">${yen(F.proj)}</b></div>`}
+// 一覧表
+let LF=LS.get('sk2_lf',{from:'',to:'',i1:'',i2:'',i3:''});
+function setLF(k,v){LF[k]=v;LS.set('sk2_lf',LF);render()}
+function vList(){const ms=allMonths();const all=[];for(const ym of ms)for(const x of rows(ym))all.push({ym,...x});
+ const u=k=>[...new Set(all.map(x=>x[k]).filter(Boolean))].sort();
+ const f=all.filter(x=>(!LF.from||x.ym>=LF.from)&&(!LF.to||x.ym<=LF.to)&&(!LF.i1||x.i1===LF.i1)&&(!LF.i2||x.i2===LF.i2)&&(!LF.i3||x.i3===LF.i3));
+ const tot=a=>a.reduce((o,x)=>(o.i+=+x.inc||0,o.e+=+x.exp||0,o),{i:0,e:0});const T=tot(f),A=tot(all);
+ const ss='style="width:100%;font-size:16px;padding:10px;border-radius:10px;border:1px solid #cfd9ee"';
+ const mopt=v=>`<option value="">すべて</option>`+ms.map(m=>`<option value="${m}" ${m===v?'selected':''}>${m.replace('-','/')}</option>`).join('');
+ const opt=(k)=>`<select ${ss} onchange="setLF('${k}',this.value)"><option value="">すべて</option>${u(k).map(v=>`<option ${v===LF[k]?'selected':''}>${esc(v)}</option>`).join('')}</select>`;
+ const lab=t=>`<div style="font-weight:700;margin:8px 0 4px">${t}</div>`;
+ return`<div class="card"><h2>一覧表</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div>${lab('いつから')}<select ${ss} onchange="setLF('from',this.value)">${mopt(LF.from)}</select></div><div>${lab('いつまで')}<select ${ss} onchange="setLF('to',this.value)">${mopt(LF.to)}</select></div>
+ <div>${lab('項目1')}${opt('i1')}</div><div>${lab('項目2')}${opt('i2')}</div><div style="grid-column:1/3">${lab('項目3')}${opt('i3')}</div></div>
+ <button class="btn sub" style="width:100%;margin-top:10px" onclick="LF={from:'',to:'',i1:'',i2:'',i3:''};LS.set('sk2_lf',LF);render()">条件をリセット</button></div>
+ <div class="card"><h2>合計</h2><table><tr><th></th><th>件数</th><th>収入</th><th>支出</th><th>収支</th></tr><tr><td class="l">絞り込み</td><td>${f.length}</td><td>${yen(T.i)}</td><td>${yen(T.e)}</td><td>${Y(T.i-T.e)}</td></tr><tr><td class="l">全部</td><td>${all.length}</td><td>${yen(A.i)}</td><td>${yen(A.e)}</td><td>${Y(A.i-A.e)}</td></tr></table></div>
+ <div class="card"><div class="scroll"><table><tr><th>年月</th><th>項目1</th><th>項目2</th><th>項目3</th><th>収入</th><th>支出</th><th>収支</th></tr>${f.slice().reverse().map(x=>`<tr><td>${x.ym.replace('-','/')}</td><td class="l">${esc(x.i1)}</td><td class="l">${esc(x.i2)}</td><td class="l">${esc(x.i3)}</td><td>${x.inc?yen(x.inc):''}</td><td>${x.exp?yen(x.exp):''}</td><td>${Y((+x.inc||0)-(+x.exp||0))}</td></tr>`).join('')}</table></div></div>`}
 function closeSheet(){$('sheet').classList.remove('on')}
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 // お金
@@ -243,7 +272,7 @@ function vMoney(){const L=rows(monYM);const ri=(D.ledger[monYM]||[]);let inc=0,e
  const st=S.map(o=>`<tr><td>${ymLabel(o.ym)}</td><td>${yen(o.inc)}</td><td>${yen(o.exp)}</td><td>${Y(o.net)}</td><td>${Y(o.cum)}</td>${cats.map(c=>`<td>${o.c[c]?Y(o.c[c]):''}</td>`).join('')}<td>${o.save40?yen(o.save40):''}</td></tr>`).reverse().join('');
  return`<div class="card"><div class="mh"><button onclick="monYM=addM(monYM,-1);render()">‹</button><button class="mpick" onclick="openMP('mon')">${ymLabel(monYM)} ▾</button><button onclick="monYM=addM(monYM,1);render()">›</button></div>
  <div class="tiles"><div class="tile"><div class="l">収入</div><div class="v">${yen(inc)}</div></div><div class="tile"><div class="l">出費</div><div class="v">${yen(exp)}</div></div><div class="tile"><div class="l">収支</div><div class="v ${cls(inc-exp)}">${yen(inc-exp)}</div></div><div class="tile"><div class="l">累計収支</div><div class="v ${cls((S.find(o=>o.ym===monYM)||{}).cum)}">${yen((S.find(o=>o.ym===monYM)||{}).cum||0)}</div></div></div></div>
- <div class="card"><h2>明細</h2><div class="pills" style="margin-bottom:8px">${I2.map(c=>`<button class="pill" onclick="addRow('${c}')">${c}</button>`).join('')}</div><div class="scroll"><table><tr><th>項目1</th><th>項目2</th><th>項目3</th><th>収入</th><th>支出</th><th></th></tr>${lines}</table></div></div>
+ <div class="card"><h2>明細</h2><div class="pills" style="margin-bottom:8px">${I2.filter(c=>c!=='パチスロ').map(c=>`<button class="pill" onclick="addRow('${c}')">${c}</button>`).join('')}</div><div class="scroll"><table><tr><th>項目1</th><th>項目2</th><th>項目3</th><th>収入</th><th>支出</th><th></th></tr>${lines}</table></div></div>
  <div class="card"><h2>分類</h2>${Object.entries(cm).sort((a,b)=>a[1]-b[1]).map(([k,v])=>`<div class="row bar" style="display:block"><i class="${v<0?'n':''}" style="width:${Math.abs(v)/cmx*100}%"></i><span style="display:flex;justify-content:space-between"><span>${k}</span><b class="${cls(v)}">${yen(v)}</b></span></div>`).join('')}</div>
  <div class="card"><h2>月の集計</h2><div class="scroll"><table><tr><th>年月</th><th>収入</th><th>出費</th><th>収支</th><th>累計収支</th>${cats.map(c=>`<th>${c.replace('収入','')}</th>`).join('')}<th>40%貯金</th></tr>${st}</table></div></div>
  <div class="card"><h2>明細の取り込み</h2><textarea id="imp" placeholder="年月	項目1	項目2	項目3	収入	支出"></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1" onclick="doImport()">取り込む</button></div><div id="impRes" style="margin-top:6px;font-weight:700"></div></div>`}
@@ -260,21 +289,19 @@ function doImport(){const txt=$('imp').value;const lines=txt.split(/\r?\n/).filt
  const ms=Object.keys(out).sort();if(ms.length&&ms[0]<(D.set.fixedFrom||CUR)){}
  save();$('impRes').textContent=ok+'件 取り込み'+(bad?' / '+bad+'行 読めず':'')+(ms.length?'（'+ymLabel(ms[0])+'〜'+ymLabel(ms[ms.length-1])+'）':'');setTimeout(render,1200)}
 // 設定
-function vSet(){const s=D.set,li=loanInfo();
+function vSet(){const s=D.set,F=fuyoInfo();
  const inp=(v,on,w)=>`<input class="num" inputmode="numeric" style="width:${w||130}px" value="${v??''}" onchange="${on}">`;
  return`<div class="card"><h2>トークン</h2><input type="password" value="${tok()?'********':''}" placeholder="github_pat_..." onchange="if(this.value&&!/^\\*+$/.test(this.value)){LS.set('v2_token',this.value.trim());boot()}"><div style="margin-top:6px;font-weight:700">${tok()?'設定済み':'未設定'}</div></div>
  <div class="card"><h2>固定費<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="D.fixed.push({id:uid(),i1:'生活費',i2:'生活固定費',i3:'',exp:0});save();render()">＋</button></h2>
  <table>${D.fixed.map((f,i)=>`<tr><td class="l"><input value="${esc(f.i3)}" onchange="D.fixed[${i}].i3=this.value;save()"></td><td>${inp(f.exp,`D.fixed[${i}].exp=+this.value||0;save()`,100)}</td><td><button class="btn del" style="padding:4px 8px" onclick="D.fixed.splice(${i},1);save();render()">×</button></td></tr>`).join('')}</table></div>
- <div class="card"><h2>給料・目標</h2>
+ <div class="card"><h2>給料</h2>
  <div class="row"><span>スタンド時給</span>${inp(s.rate,"D.set.rate=+this.value||0;save()")}</div>
  <div class="row"><span>スタンド標準時間</span>${inp(s.stdH,"D.set.stdH=+this.value||0;save()")}</div>
+ ${fuyoBlock(F)}</div>
+ <div class="card"><h2>目標</h2>
  <div class="row"><span>前年最終残高</span>${inp(s.prevEnd,"D.set.prevEnd=this.value===''?null:+this.value;save()")}</div>
  <div class="row"><span>毎月の目標増額</span>${inp(s.step,"D.set.step=+this.value||0;save()")}</div>
- <div class="row"><span>扶養上限</span>${inp(s.fuyo,"D.set.fuyo=+this.value||0;save()")}</div></div>
- <div class="card"><h2>車ローン</h2>${s.loan.items.map((it,i)=>`<div class="row"><span>${esc(it[0])}</span>${inp(it[1],`D.set.loan.items[${i}][1]=+this.value||0;save();render()`)}</div>`).join('')}
- <div class="row"><span>回数</span>${inp(s.loan.n,"D.set.loan.n=+this.value||0;save();render()")}</div>
- <div class="row"><span>月額</span>${inp(s.loan.monthly,"D.set.loan.monthly=+this.value||0;save();render()")}</div>
- <div class="row"><span>開始月</span><input type="month" style="width:150px" value="${s.loan.start}" onchange="D.set.loan.start=this.value;save();render()"></div>
- <div class="row"><span>合計</span><b>${yen(li.total)}</b></div><div class="row"><span>残り回数</span><b>${li.left}回</b></div><div class="row"><span>残高</span><b>${yen(li.rem)}</b></div></div>`}
+</div>
+`}
 boot();
 </script></body></html>
