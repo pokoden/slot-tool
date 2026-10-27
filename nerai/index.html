@@ -62,7 +62,8 @@ th.fix,td.fix{padding-left:4px;padding-right:6px}
 table td{font-variant-numeric:tabular-nums}td.mkc{text-align:center}
 td.ml{max-width:6em;overflow:hidden;text-overflow:ellipsis}
 th.s{cursor:pointer}th.s.on{color:#1f5fd6}
-.fs{min-width:5.2em;max-width:7.5em;text-align:left!important;white-space:normal!important;line-height:1.25}td.fs b{display:block}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.fs{min-width:5.2em;max-width:7.5em;text-align:left!important;white-space:normal!important;line-height:1.25}input.mi{font-size:16px;padding:2px 4px;text-align:right;border:1px solid #888;border-radius:4px;background:#fff;color:#111;width:68px}input.mi.s{width:50px}td.ib{color:#0b57d0;font-weight:700}.gv{font-size:.8em;margin-left:2px;font-weight:700;color:#111}.zv{display:block;font-size:10px;font-weight:700}
+td.fs b{display:block}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
 .mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:2px solid #555!important}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:normal!important;max-width:8.5em;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
@@ -72,7 +73,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=12"></script>
+<script src="core.js?v=13"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -156,6 +157,23 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新）`;$('paste').value='';$('f').value=''}
  catch(e){sv.className='st ng';sv.textContent=e.message}};
 
+// ===== 手入力の回転・BB・RB（店舗・日付・台番ごと。表示だけで、どの計算にも使わない）=====
+const manKey=(s,d,t)=>s+'|'+d+'|'+t;
+const manAll=()=>S.an.manual||(S.an.manual={});
+// 表示用の値：手入力が優先、なければその日の実データ（実データがない日は空欄）
+function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null?m.g:real?real.g:null,bb:m.bb!=null?m.bb:real?real.bb:null,rb:m.rb!=null?m.rb:real?real.rb:null}}
+const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
+function idxOfV(m,v){if(!(v.g>0)||v.bb==null||v.rb==null||!TOUB)return null;return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base)}
+let TOUB=null;
+const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs'],['it','t']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}"${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`}).join('')};
+function touPaint(tr){const v={};tr.querySelectorAll('input.mi').forEach(i=>{v[i.dataset.f]=i.value.trim()===''?null:+i.value});
+ const put=(c,t,blue)=>{const td=tr.querySelector(`[data-c="${c}"]`);if(!td)return;td.textContent=t;td.removeAttribute('style');td.classList.toggle('ib',!!blue)};
+ put('pbb',probT(v.g,v.bb));put('prb',probT(v.g,v.rb));put('pgs',v.bb!=null&&v.rb!=null?probT(v.g,v.bb+v.rb):'');
+ const x=idxOfV(tr.dataset.m,v);for(const[c,k]of[['ig','g'],['irb','rb'],['igs','gs'],['it','t']]){const n=x?x[k]:null;put(c,n==null?'':n,n!=null&&n>=55)}}
+window.touIn=el=>{const k=el.dataset.k,f=el.dataset.f,M=manAll(),raw=el.value.trim();let o=M[k];
+ if(raw===''||!isFinite(+raw)){if(o){delete o[f];if(!Object.keys(o).length)delete M[k]}}else{if(!o)o=M[k]={};o[f]=Math.max(0,Math.round(+raw))}
+ anDirty=true;autoSave();touPaint(el.closest('tr'))};
+window.touCh=el=>{if(el.value.trim()===''){el.value=el.dataset.r||'';touPaint(el.closest('tr'))}};
 // ===== 当日 =====
 let tu=LS.get('nr_tu',{});
 if(!tu.w)tu.w=NC.WIN.map(w=>w[0]);if(!tu.m)tu.m=['g','gs'];if(!tu.r)tu.r=['w'];if(!tu.so)tu.so='t';if(!tu.vm)tu.vm='r';if(!tu.rev)tu.rev=0;
@@ -195,15 +213,15 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0])){
   if(nmode)cols.push({k:'n_'+w[0]+'_'+m[0],w:w[0],m:m[0],lab:w[1]+'<br>'+m[1]});
   else for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(tu.r.length>1?(r==='y'?'良':'悪'):'')})}
- const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=10+cols.length;
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=14+cols.length;const TDset=setObj();TOUB={set:TDset,base:NC.stdBaseAt(R,TDset,TD||'0000-00-00')};
  const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
  const soC=cols.find(c=>c.k===tu.so);
  const rkCell=(v,c,n)=>{const y=rankSty(v,c.k.slice(-1),n);return`<td class="${v===1?'r1':v===2?'r2':''}"${y?` style="${y}"`:''}>${v||''}</td>`};
- const e='<td></td>'.repeat(cols.length);
- const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
+ const e='<td></td>'.repeat(cols.length),e4='<td></td>'.repeat(4);
+ const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr>`;
  const flat=tu.so==='rank';const flatRows=[];const onlyF=nm=>!tu.only||(nm&&isRk(nm));
- const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th>回転<br>指数</th><th>RB<br>指数</th><th>合算<br>指数</th><th>総合<br>指数</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  let body='';
  for(const u of units){const NM=new Map(u.L.map(x=>[String(x.t),x]));const pk=nmode?NC.winPicks(W,u.s,u.date):null;
   const wsum=(r,c)=>NC.winSum(W,u.s,pk,NC.groupOf(r.m,set),r.t,c.w);
@@ -223,7 +241,11 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const gst=u.virt?null:{g:{max:Math.max(0,...L.map(r=>r.g))},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))};
    cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null))}:mm(vs)}
    const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
-   const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));return`<tr><td class="fix">${esc(r.t)}</td>${ex}<td>${nm?.rank||''}</td><td class="mkc">${mkH(nm?.mark)}</td><td>${nm?nm.score.toFixed(1):''}</td>${u.virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td${sy('g',r.g)}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${sy('bb',NC.den(r.g,r.bb))}>${P(r.g,r.bb)}</td><td${sy('rb',NC.den(r.g,r.rb))}>${P(r.g,r.rb)}</td><td${sy('gs',NC.den(r.g,r.bb+r.rb))}>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>nmode?ncell(r,c):rkCell(x[c.i],c,L.length)).join('')}</tr>`};
+   const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
+    const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
+    const inp=(f,w)=>`<td${f==='g'&&sty?sy('g',r.g):''}><input class="mi${w}" type="number" inputmode="numeric" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
+    const pc=(c,k,n)=>`<td data-c="${c}"${sty?sy(k,NC.den(r.g,n)):''}>${probT(V.g,n==null?null:n)}</td>`;
+    return`<tr data-m="${esc(r.m)}"><td class="fix">${esc(r.t)}</td>${ex}<td>${nm?.rank||''}</td><td class="mkc">${mkH(nm?.mark)}</td><td>${nm?nm.score.toFixed(1):''}</td>${inp('g','')}${inp('bb',' s')}${inp('rb',' s')}${pc('pbb','bb',V.bb)}${pc('prb','rb',V.rb)}${pc('pgs','gs',V.bb!=null&&V.rb!=null?V.bb+V.rb:null)}${idxTds(r.m,V)}${cols.map(c=>nmode?ncell(r,c):rkCell(x[c.i],c,L.length)).join('')}</tr>`};
    if(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t)))))continue;
    if(flat){for(const r of L){const nm=NM.get(String(r.t));if(onlyF(nm))flatRows.push({nm,s:u.s,t:r.t,html:mkRow(r,`${stTd(u.s)}<td class="l ml" title="${esc(r.m)}">${esc(mShort(g))}</td>`)})}}
    else body+=L.filter(r=>onlyF(NM.get(String(r.t)))).map(r=>mkRow(r,'')).join('');
@@ -231,7 +253,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   if(all&&!u.virt&&!tu.g&&ng>1&&!flat&&!tu.only)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${st.n}台`,'st')+sums('店計','店平均',st)}
  // 狙い順の見出しをタップ：帯をやめて、全店舗・全機種を1列に（順位の小さい順。順位なしは最後に点数順）
  if(flat){const d=tu.rev?-1:1;flatRows.sort((a,b)=>{const ra=a.nm&&a.nm.rank!==''?a.nm.rank:null,rb=b.nm&&b.nm.rank!==''?b.nm.rank:null;if(ra==null&&rb!=null)return 1;if(rb==null&&ra!=null)return-1;if(ra!=null)return(ra-rb)*d;return(b.nm?b.nm.score:0)-(a.nm?a.nm.score:0)||a.s.localeCompare(b.s,'ja')||String(a.t).localeCompare(String(b.t),'ja',{numeric:true})});body=flatRows.map(o=>o.html).join('')}
- $('main').innerHTML=`<div class="card"><h2>🎯 当日データ</h2>
+ $('main').innerHTML=`${asBar()}<div class="card"><h2>🎯 当日データ</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(s=>[s,s])),tu.s)}<b style="font-size:15px">${TD}${TD?'（'+'日月火水木金土'[new Date(TD+'T00:00:00Z').getUTCDay()]+'）':''}</b></div>
  <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),tu.g||'')}</div>
  <div class="chips" style="margin:6px 0">${[['r','順位表示'],['n','数値表示']].map(([k,t])=>`<button class="${tu.vm===k?'on':''}" onclick="tuVm('${k}')">${t}</button>`).join('')}</div>
@@ -447,7 +469,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const mx=NC.addDay(last,60);
  const num=(path,v,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
- const stat=asCls.includes('ng')?`<div class="card" style="padding:8px 12px"><div id="as" class="${asCls}">${esc(asMsg)}</div><button class="b" onclick="asNow()">もう一度保存</button></div>`:`<div id="as" class="${asCls}" style="margin:0 4px 6px;font-size:12px">${esc(asMsg)}</div>`;
+ const stat=asBar();
  const comboTbl=`<table><tr><th class="l">組み合わせ</th><th>印</th></tr>${combos.map(c=>{const cur=NC.comboMark(c,cfg);return`<tr><td class="l">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>COMBO_L[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)" style="padding:4px 2px">${cur?'':'<option value="" disabled selected hidden></option>'}${NC.MARKS.map(k=>`<option value="${k}" ${cur===k?'selected':''}>${k}</option>`).join('')}</select></td></tr>`}).join('')}</table>`;
  const markTbl=`<table><tr><th>印</th><th>点数</th></tr>${NC.MARKS.map(k=>`<tr><td style="text-align:center">${mkH(k)}</td><td>${num('marks.'+k,cfg.marks[k],56)}</td></tr>`).join('')}</table>`;
  $('main').innerHTML=`${stat}<div class="card"><h2>🎖 評価印</h2>
@@ -467,7 +489,8 @@ window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let
  if(p[0]==='combo'){if(!NC.MARKS.includes(v))return;o[last]=v}else if(last==='metric')o[last]=v;else o[last]=v===''?0:+v;anDirty=true;NRC={};autoSave();nerPage()};
 // 設定の自動保存（変えて少し待ってから保存。保存中にまた変えたら、終わってからもう一度）
 let asT=null,asBusy=false,asMsg='',asCls='st';
-function paintAs(){const e=$('as');if(e){e.className=asCls;e.textContent=asMsg}if(tab==='ner'&&asCls.includes('ng')!==!!document.querySelector('#main .card .b'))nerPage()}
+const asBar=()=>asCls.includes('ng')?`<div class="card" style="padding:8px 12px"><div id="as" class="${asCls}">${esc(asMsg)}</div><button class="b" id="asRetry" onclick="asNow()">もう一度保存</button></div>`:`<div id="as" class="${asCls}" style="margin:0 4px 6px;font-size:12px">${esc(asMsg)}</div>`;
+function paintAs(){const e=$('as');if(e){e.className=asCls;e.textContent=asMsg}const R={ner:nerPage,tou:touPage,zu:zuPage}[tab];if(R&&asCls.includes('ng')!==!!$('asRetry'))R()}
 function autoSave(){clearTimeout(asT);asMsg='保存待ち…';asCls='st';asT=setTimeout(asRun,1200)}
 window.asNow=()=>{clearTimeout(asT);asRun()};
 async function asRun(){if(asBusy){asT=setTimeout(asRun,500);return}if(!anDirty){return}asBusy=true;asMsg='保存中…';asCls='st';paintAs();let ok=false;
@@ -485,26 +508,31 @@ function zColor(i){return`hsl(${(i*67)%360},65%,45%)`}
 function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!zu.s||!stores.includes(zu.s))zu.s=stores[0]||'';
  if(!zu.s){$('main').innerHTML='<div class="card">データがないよ</div>';return}
  const Z=zStore(zu.s);const SR=R.filter(r=>r.s===zu.s);
- const dates=[...new Set(SR.map(r=>r.d))].sort().reverse();const nx=NC.nextDay(R,set,zu.s);
- if(!zu.d||(zu.d!=='next'&&!dates.includes(zu.d)))zu.d='next';
- let date,mem,rk,dataDay;if(zu.d==='next'&&nx){date=nx.date;mem=nx.rows;rk=nx.ranks;dataDay=nx.base}else{date=zu.d;dataDay=date;mem=SR.filter(r=>r.d===date);rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+ // 図面は狙いの日付に合わせる。その日にデータがあればその日の数字、なければ数字なし（ほかの日の数字は出さない）
+ const date=curDate();const U=unitsAll(date,stores,R,set).find(u=>u.s===zu.s);
+ const dataDay=U&&!U.virt?date:null,mem=U?U.day:[],rk=U?U.rk:{};
+ const editDay=dataDay||SR.reduce((a,r)=>r.d>a?r.d:a,'');
  LS.set('nr_zu',zu);
- const L=mem.length?(((unitsAll(zu.d,stores,R,set).find(u=>u.s===zu.s)||{}).L||[]).map(x=>Object.assign({},x,{rank:x.srank}))):[];const NM=new Map(L.map(x=>[String(x.t),x]));
+ const L=U?U.L.map(x=>Object.assign({},x,{rank:x.srank})):[];const NM=new Map(L.map(x=>[String(x.t),x]));
+ const dayR=new Map(dataDay?SR.filter(r=>r.d===dataDay).map(r=>[String(r.t),r]):[]);
+ const zshow=S.an.zuShow||'';
+ const zval=t=>{if(!zshow)return'';const v=effV(zu.s,date,t,dayR.get(String(t)));if(zshow==='g')return v.g!=null?String(v.g):'';if(v.g>0){const n=zshow==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null);return n>0?NC.fmtP(v.g/n):''}return''};
  const last=new Map();for(const r of SR){const o=last.get(r.t);if(!o||r.d>=o.d)last.set(r.t,r)}
  const groups=[...new Set([...last.values()].map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));const gi=g=>Math.max(0,groups.indexOf(g));
- window._z={Z,NM,last,rk,date,dataDay,SR,groups,gi,set};
+ window._z={Z,NM,last,rk,date,dataDay,editDay,SR,groups,gi,set,zval};
  let imgSrc=Z.img?(S.zimgNew[Z.img]||S.zimg[Z.img]):null;
  if(Z.img&&!imgSrc&&S.files['nerai/'+Z.img]&&zuLoading!==Z.img){zuLoading=Z.img;const nm=Z.img;(async()=>{try{const b=await gh('git/blobs/'+S.files['nerai/'+nm].sha);if(b.ok)S.zimg[nm]=b64dec((await b.json()).content)}catch(e){}zuLoading=null;if(tab==='zu')zuPage()})()}
  const old=$('zw');const sl=old?old.scrollLeft:0,stp=old?old.scrollTop:0;
  const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
  const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
-  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span></div>`}).join('');
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv">${zval(c.t)}</span>`:''}</div>`}).join('');
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
- $('main').innerHTML=`<div class="card"><h2>🗺 図面</h2>
- <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}${sel('d',(nx?[['next',nx.date+'（次の日）']]:[]).concat(dates.map(d=>[d,d])),zu.d)}</div>
+ $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
+ <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
+<div class="chips" style="margin:6px 0">${[['g','回転'],['rb','RB'],['gs','合算'],['','なし']].map(([k,t])=>`<button class="${zshow===k?'on':''}" onclick="zuVal('${k}')">${t}</button>`).join('')}</div>
  <div class="row"><button class="b ${edit?'sub':''}" onclick="zu.mode='view';zuPage()">見る</button><button class="b ${edit?'':'sub'}" onclick="zu.mode='edit';zuPage()">編集</button><span style="flex:1"></span><button class="b sub" onclick="zuZoom(-.5)">－</button><span>${G?zu.zg:zu.z}倍</span><button class="b sub" onclick="zuZoom(.5)">＋</button></div>
- ${G?zGridHtml(G,{NM,last,set,gi}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
+ ${G?zGridHtml(G,{NM,last,set,gi,zval,zshow}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
  ${Z.img&&!imgSrc?'<p class="note">図の画像を読み込み中…</p>':''}
  <div class="zleg">${G?'':legend}</div>
  <div id="zd"></div>
@@ -518,6 +546,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  <div id="ze"></div></div>`:''}
  <div class="row"><button class="b" id="zsv" ${zuDirty?'':'disabled'} onclick="zuSave()">図面を保存${zuDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`;
  const w=$('zw');w.scrollLeft=sl;w.scrollTop=stp;zuBind();zuSelPanels()}
+window.zuVal=k=>{S.an.zuShow=k;anDirty=true;autoSave();zuPage()};
 window.zuZoom=d=>{if(zGridOf(_z.Z,zu.s))zu.zg=Math.min(3,Math.max(.5,zu.zg+d/2));else zu.z=Math.min(4,Math.max(1,zu.z+d));zuPage()};
 function zuBind(){const b=$('zb');if(!b)return;b.querySelectorAll('.zc').forEach(el=>{
  el.addEventListener('pointerdown',ev=>{const c=_z.Z.cards[+el.dataset.i];zu.sel=String(c.t);document.querySelectorAll('.zc.sel').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');zuSelPanels();
@@ -525,16 +554,16 @@ function zuBind(){const b=$('zb');if(!b)return;b.querySelectorAll('.zc').forEach
   const mv=e=>{moved=true;c.x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));c.y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));el.style.left=c.x*100+'%';el.style.top=c.y*100+'%'};
   const up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);if(moved){zuDirty=true;const bt=$('zsv');if(bt){bt.disabled=false;bt.textContent='図面を保存（未保存あり）'}}};
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)})})}
-function zuSelPanels(){const d=$('zd');if(!d||!window._z)return;const{NM,last,rk,dataDay,SR}=_z;const t=zu.sel;
+function zuSelPanels(){const d=$('zd');if(!d||!window._z)return;const{NM,last,rk,dataDay,SR,date}=_z;const t=zu.sel;
  const e=$('ze');const GG=zGridOf(_z.Z,zu.s);if(e&&GG)zuEditSel(t);else if(e)e.innerHTML=t==null?'':`<div class="row"><label>台番 <input id="zr" value="${esc(t)}" style="width:90px"></label><button class="b" onclick="zuRen()">直す</button><button class="b sub" onclick="zuDel()">この札を削除</button></div>`;
  if(t==null){d.innerHTML='';return}
- const x=NM.get(String(t));const l=last.get(String(t));const row=SR.find(r=>r.d===dataDay&&r.t===String(t));const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const x=NM.get(String(t));const l=last.get(String(t));const row=effV(zu.s,date,String(t),dataDay?SR.find(r=>r.d===dataDay&&r.t===String(t)):null);const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const ks=NC.RANK_KEYS;const rr=rk[zu.s+'|'+t]||[];
  const cell=(w,m)=>{const iy=ks.indexOf(w+'_'+m+'_y');return`${rr[iy]||'-'}／${rr[iy+1]||'-'}`};
  d.innerHTML=`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>${esc(t)}番台　<small>${l?esc(l.m):'データなし'}</small></h2>
  ${x?`<div class="kv"><span>狙い順</span><b>${x.rank?x.rank+'位':'-'}</b><span>狙い印</span><b>${x.mark||'なし'}</b><span>点数</span><b>${x.score.toFixed(1)}（印の点数 ${x.pts}＋サブ ${x.sub}）</b></div>`:'<p class="note">この台番は、この日のデータにないよ。</p>'}
- <p class="note" style="margin-top:8px">当日データ（${esc(dataDay)}）</p>
- ${row?`<div class="kv"><span>回転</span><b>${row.g.toLocaleString()}</b><span>BB / RB</span><b>${row.bb} / ${row.rb}</b><span>BB確率</span><b>${P(row.g,row.bb)}</b><span>RB確率</span><b>${P(row.g,row.rb)}</b><span>合算</span><b>${P(row.g,row.bb+row.rb)}</b></div>`:'<p class="note">この日のデータはないよ。</p>'}
+ <p class="note" style="margin-top:8px">当日データ（${esc(date)}）</p>
+ ${row.g!=null||row.bb!=null||row.rb!=null?`<div class="kv"><span>回転</span><b>${row.g!=null?row.g.toLocaleString():'-'}</b><span>BB / RB</span><b>${row.bb!=null?row.bb:'-'} / ${row.rb!=null?row.rb:'-'}</b><span>BB確率</span><b>${row.g>0&&row.bb!=null?P(row.g,row.bb):'-'}</b><span>RB確率</span><b>${row.g>0&&row.rb!=null?P(row.g,row.rb):'-'}</b><span>合算</span><b>${row.g>0&&row.bb!=null&&row.rb!=null?P(row.g,row.bb+row.rb):'-'}</b></div>`:'<p class="note">データなし</p>'}
  ${x?`<p class="note" style="margin-top:8px">状態順（良い順／悪い順）</p><div class="tw"><table><tr><th class="l">期間</th>${NC.MET.map(m=>`<th>${m[1]}</th>`).join('')}</tr>${NC.WIN.map(w=>`<tr><td class="l">${w[1]}</td>${NC.MET.map(m=>`<td>${cell(w[0],m[0])}</td>`).join('')}</tr>`).join('')}</table></div>`:''}</div>`}
 function zuMark(){zuDirty=true;NRC={};zuPage()}
 window.zuRen=()=>{const v=NC.nz($('zr').value);const Z=_z.Z;if(!v)return;if(Z.cards.some(c=>String(c.t)===v&&String(c.t)!==String(zu.sel))){alert('その台番はもうあるよ');return}const c=Z.cards.find(c=>String(c.t)===String(zu.sel));if(!c)return;c.t=v;zu.sel=v;zuMark()};
@@ -542,18 +571,19 @@ window.zuDel=()=>{const Z=_z.Z;const i=Z.cards.findIndex(c=>String(c.t)===String
 function zuPlace(Z,list){let n=Z.cards.length;let added=0;for(const t of list){if(Z.cards.some(c=>String(c.t)===t))continue;Z.cards.push({t,x:.07+(n%8)*.12,y:.06+Math.floor(n/8)*.09});n++;added++}return added}
 window.zuAdd=()=>{const txt=NC.nz($('zt').value.replace(/[\n,、]/g,' '));const out=[];for(const w of txt.split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&+m[2]>=+m[1]&&+m[2]-+m[1]<=300){for(let i=+m[1];i<=+m[2];i++)out.push(String(i))}else out.push(w)}
  const a=zuPlace(_z.Z,out);$('zt').value='';if(a)zuMark();else zuPage()};
-window.zuAddAll=()=>{const{SR,dataDay,Z}=_z;const day=SR.filter(r=>r.d===dataDay).map(r=>r.t).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));if(zuPlace(Z,day))zuMark()};
+window.zuAddAll=()=>{const{SR,editDay,Z}=_z;const day=SR.filter(r=>r.d===editDay).map(r=>r.t).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));if(zuPlace(Z,day))zuMark()};
 // ----- マス目の図 -----
 function zGridOf(Z,store){if(Z.grid)return Z.grid;if(!Z.noGrid&&typeof DEFAULT_LAYOUT!=='undefined'&&DEFAULT_LAYOUT[store])return DEFAULT_LAYOUT[store];return null}
 function zGE(){const Z=_z.Z;if(!Z.grid)Z.grid=JSON.parse(JSON.stringify(zGridOf(Z,zu.s)));return Z.grid}
 function zAbbr(g){const o=(S.zu.abbr||{})[g];if(o!=null)return o;if(g.includes('カバネリ'))return'カ';return mShort(g).charAt(0)}
 function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=+zu.top||0;let html='';const set=x.set;
  const cell=(r,cc,cls,txt,ex='')=>`<div class="g ${cls}" style="grid-row:${r+1};grid-column:${cc+1}" ${ex}>${txt}</div>`;
+ const acs=new Set(x.zshow?G.cards.map(k=>k[3]==='R'?k[2]-1:k[2]+1):[]);
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
   const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
-  html+=cell(r,ac,'ga'+sel,esc(ab))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
- return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:repeat(${G.cols},${c}px);grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>
+  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
+ return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*2.4:c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>
  <div class="row"><label style="font-size:13px">狙い順を上位 <input type="number" inputmode="numeric" min="0" value="${top}" style="width:60px" onchange="zu.top=+this.value||0;zuPage()"> 位まで表示</label></div>
  <div class="zleg">${zLegendGrid(x)}</div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
@@ -576,7 +606,7 @@ window.zgAddBlock=()=>{const G=zGE();const r=(+$('gbr').value||1)-1,c=(+$('gbc')
  let n=0,dup=[];for(const t of out){if(G.cards.some(k=>String(k[0])===t)){dup.push(t);continue}const k=[t,0,0,d];if(zgFit(G,k,r+n,c,d)){G.cards.push(k);n++}}
  if(dup.length)alert('もうある台番は飛ばしたよ：'+dup.slice(0,10).join('・'));if(n)zuMark();else zuPage()};
 window.zgAbbr=(g,v)=>{S.zu.abbr=S.zu.abbr||{};v=NC.nz(v);if(v)S.zu.abbr[g]=v.charAt(0);else delete S.zu.abbr[g];zuMark()};
-function zGridEdit(G,groups){const inG=new Set(G.cards.map(k=>String(k[0])));const miss=[...new Set(_z.SR.filter(r=>r.d===_z.dataDay).map(r=>r.t))].filter(t=>!inG.has(t)).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));
+function zGridEdit(G,groups){const inG=new Set(G.cards.map(k=>String(k[0])));const miss=[...new Set(_z.SR.filter(r=>r.d===_z.editDay).map(r=>r.t))].filter(t=>!inG.has(t)).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));
  const rngs=[];for(const t of miss){const n=+t,l=rngs[rngs.length-1];if(l&&/^\d+$/.test(t)&&l.e+1===n){l.e=n}else rngs.push({s:n,e:n,t})}
  const gs=[...new Set([..._z.last.values()].map(r=>NC.groupOf(r.m,_z.set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  return`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ マス目の編集</h2><div id="ze"></div>
