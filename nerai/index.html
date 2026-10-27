@@ -75,7 +75,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=15"></script>
+<script src="core.js?v=16"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -422,12 +422,13 @@ const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'')&&NC.normDate(v)===v;
 function curDate(){if(!isDate(nr.d)){let hi='0';for(const r of S.rows)if(r.d>hi)hi=r.d;nr.d=hi==='0'?'':NC.addDay(hi,1);LS.set('nr_nr',nr)}return nr.d}
 window.nrDate=v=>{if(!isDate(v)){nerPage();return}let lo='9',hi='0';for(const r of S.rows){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}
  const mx=NC.addDay(hi,60);if(v<lo)v=lo;if(v>mx)v=mx;nr.d=v;nerPage()};
+window.nrDef=()=>{nr.so='def';nr.rev=0;nerPage()};
 window.nrSo=k=>{if(nr.so===k)nr.rev=nr.rev?0:1;else{nr.so=k;nr.rev=0}nerPage()};
 window.nrOnly=()=>{nr.only=nr.only?0:1;nerPage()};
 const COMBO_L={matsu:'末尾',hi:'日',you:'曜日'};
 function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);const ss=stSel(nr,stores);
  const all=(ss.length||stores.length)!==1;
- curDate();if(!nr.so)nr.so='rank';
+ curDate();if(nr.v!==109){nr.v=109;nr.so='def';nr.rev=0}if(!nr.so)nr.so='def';
  LS.set('nr_nr',nr);const cfg=nerCfg();
  let first='9',last='0';for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d}
  const units=unitsFor({ss,d:nr.d},stores,R,set);const dset=[...new Set(units.map(u=>u.date))].sort();const date=dset.length?dset[dset.length-1]:(isDate(nr.d)?nr.d:'');const oneDate=dset.length<=1;
@@ -447,10 +448,13 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const seen=new Set();let nn=0;
  for(const x of T){x.rank='';if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}x.rank=++nn}
  T.forEach((x,i)=>x.pos=i);
+ // 標準の並び（表示だけ）：店舗（固定順）→機種（プルダウン順）→台番の行（台番順）→その機種の状態の行（状態の並び順）
+ {const go=gOrd();T.slice().sort((a,b)=>storeCmp(a.s,b.s)||go(a.g,b.g)||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1)).forEach((x,i)=>x.dpos=i)}
  // ---- 表示（見出しタップの並べ替え・印のみ。順位は変えない）----
  const MO=NC.MARKS;const nat=(a,b)=>String(a).localeCompare(String(b),'ja',{numeric:true});
  const SV=k=>{const m=k.match(/^c_(matsu|hi|you)_(\d)$/);
   if(m){const sg=m[1],i=+m[2];return x=>{const u=x.seg[sg].u;if(!u)return null;return i===0?-u.cnt:i===1?-u.avg:i===2?NC.den(u.g,u.rb):i===3?NC.den(u.g,u.bb+u.rb):(x.seg[sg].mv!=null?-x.seg[sg].mv:null)}}
+  if(k==='def')return x=>x.dpos;
   if(k==='rank')return x=>x.pos;
   if(k==='sm')return x=>stShort(x.s)+' '+x.g;
   if(k==='prev')return x=>x.prev?0:1;
@@ -492,7 +496,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○を×にする</label></div></div>
 <div class="card"><h2>🏆 狙いリスト</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
- <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"></div>
+ <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button></div>
  ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
 </div>`}
 window.nrPrevX=v=>{nerCfg().prevX=!!v;anDirty=true;NRC={};autoSave();nerPage()};
@@ -644,7 +648,7 @@ const KCOL=new Intl.Collator('ja',{numeric:true}).compare;
 let KIX=null;
 function kenIx(){if(KIX&&KIX.r===S.rows&&KIX.st===S.set)return KIX;const R=S.rows,set=setObj(),n=R.length;
  const gs=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());const gm=new Map(gs.map((g,i)=>[g,i]));
- const stl=[...new Set(R.map(r=>r.s))].sort();const sm=new Map(stl.map((s,i)=>[s,i]));
+ const stl=[...new Set(R.map(r=>r.s))].sort(storeCmp);const sm=new Map(stl.map((s,i)=>[s,i]));
  const sI=new Int32Array(n),gI=new Int32Array(n),tN=new Float64Array(n);const gc=new Map();
  for(let i=0;i<n;i++){const r=R[i];sI[i]=sm.get(r.s);let g=gc.get(r.m);if(g==null){g=gm.get(NC.groupOf(r.m,set));gc.set(r.m,g)}gI[i]=g;tN[i]=/^\d+$/.test(r.t)?+r.t:NaN}
  const ix=new Int32Array(n);for(let i=0;i<n;i++)ix[i]=i;
@@ -688,7 +692,7 @@ function kenCal(){const X=kenIx();let hi='0';for(const d of X.days)if(d>hi)hi=d;
  for(let i=0;i<w0;i++)h+='<span></span>';
  for(let d=1;d<=dim;d++){const ds=kn.cm+'-'+String(d).padStart(2,'0');const wd=(w0+d-1)%7;h+=`<button class="${kn.from===ds&&kn.to===ds?'on':X.days.has(ds)?'dd':''} ${wd===0?'su':wd===6?'sa':''}" onclick="knDay('${ds}')">${d}</button>`}
  return h+'</div>'}
-function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();
+function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  const sel=(id,L,v)=>`<select onchange="kn.${id}=this.value;kenPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${kn[id].includes(k)?'on':''}" onclick="knTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
@@ -710,7 +714,7 @@ ${kenCal()}
 <p class="note">台番</p><div class="row"><label>${txt('tai','例 401 405-410',150)}</label></div>
 <p class="note">状態の期間</p>${chip('sw',NC.WIN.map(w=>[w[0],w[1]]))}
 <p class="note">状態の指標</p>${chip('sm',[['g','回転'],['gs','合算']])}
-<div class="row"><label>並び ${sel('so',[['def','店舗・機種・台番順'],['d-','日付が新しい順'],['d+','日付が古い順'],['t','台番順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']],kn.so)}</label></div></div>
+<div class="row"><label>並び ${sel('so',[['def','店舗・機種・台番順'],['d-','日付が新しい順'],['d+','日付が古い順'],['t','台番順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']],kn.so)}</label><button class="b sub" onclick="knSo('def')">標準の並びに戻す</button></div></div>
 <div id="kres"></div>`;kenRes()}
 // 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える
 const KRH=30,KBUF=40;let KV=null;
