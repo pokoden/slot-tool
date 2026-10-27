@@ -64,14 +64,14 @@ td.ml{max-width:6em;overflow:hidden;text-overflow:ellipsis}
 th.s{cursor:pointer}th.s.on{color:#1f5fd6}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
-.mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#777}td.mkc{cursor:pointer}
+.mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#777}.mk.t{background:#f5ff00;color:#5a5200}.gl{border-left:2px solid #555!important}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#888}.seat{font-weight:600}.seat.un{color:#888;font-weight:400}.tn{line-height:1.2;max-width:9.5em}.tn b{display:block;font-size:13px}.tn small{display:block;font-size:10px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
 </style>
 </head>
 <body>
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -187,8 +187,8 @@ let NRG={nrc:null,m:{}};
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
-  else{date=d;day=R.filter(r=>r.s===s&&r.d===date);if(!day.length)continue;rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
-  out.push({s,day,rk,virt,date,L:nerFor(s,date,day,rk)})}
+  else{date=d;day=R.filter(r=>r.s===s&&r.d===date);if(!day.length){const nx=NC.nextDay(R,set,s,date);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true}else rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+  const L=nerFor(s,date,day,rk);out.push({s,day,rk,virt,date,L,T:L.targets||[]})}
  const all=[];for(const u of out)for(const x of u.L)all.push([u,x]);
  all.sort((a,b)=>b[1].score-a[1].score||a[0].s.localeCompare(b[0].s,'ja')||String(a[1].t).localeCompare(String(b[1].t),'ja',{numeric:true}));
  const g=new Map();all.forEach(([u,x],i)=>g.set(x,i+1));
@@ -387,45 +387,61 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
  let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
  const from=an.from||first;let to=an.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
  const base=NC.stdBase(S.rows,set,to);
- const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:bord(),marks:S.an.marks||{},cfg:nerCfg()});L.from=from;L.to=to;return NRC[k]=L}
+ const hasPrev=NC.storeHas(S.rows,store,pv);const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:bord(),marks:S.an.marks||{},cfg:nerCfg(),hasPrev});L.from=from;L.to=to;return NRC[k]=L}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
 const SEGN={all:'全期間',matsu:'日末尾',hi:'日',you:'曜日'};
+const NER_STEP=1500;let nerLim=NER_STEP,nerSig='';
+const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'')&&NC.normDate(v)===v;
+window.nrDate=v=>{if(!isDate(v)){nerPage();return}let lo='9',hi='0';for(const r of S.rows){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}
+ const mx=NC.addDay(hi,60);if(v<lo)v=lo;if(v>mx)v=mx;nr.d=v;nerPage()};
 function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!nr.s||(nr.s!=='*'&&!stores.includes(nr.s)))nr.s=stores[0]||'';
  const all=nr.s==='*';const dates=[...new Set(R.filter(r=>all||r.s===nr.s).map(r=>r.d))].sort().reverse();
- if(!nr.d||(nr.d!=='next'&&!dates.includes(nr.d)))nr.d='next';
+ if(!nr.d||(nr.d!=='next'&&!isDate(nr.d)))nr.d='next';
  LS.set('nr_nr',nr);const cfg=nerCfg();
- const units=unitsFor(nr,stores,R,set);const date=units[0]?units[0].date:'';
+ let first='9',last='0';for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d}
+ const units=unitsFor(nr,stores,R,set);const dset=[...new Set(units.map(u=>u.date))].sort();const date=dset.length?dset[dset.length-1]:(isDate(nr.d)?nr.d:'');const oneDate=dset.length<=1;
  const groups=[...new Set(units.flatMap(u=>u.L.map(x=>x.g)))].sort((a,b)=>a.localeCompare(b,'ja'));if(nr.g&&!groups.includes(nr.g))nr.g='';
  const P=(g,n)=>NC.fmtP(NC.den(g,n));const f=fmtI;
- const segv=sg=>sg==='all'?'':sg==='matsu'?NC.segOf(date,'matsu')+'の日':sg==='hi'?NC.segOf(date,'hi')+'日':'日月火水木金土'[NC.segOf(date,'you')]+'曜';
+ const segv=(sg,dt)=>sg==='matsu'?NC.segOf(dt,'matsu')+'の日':sg==='hi'?NC.segOf(dt,'hi')+'日':'日月火水木金土'[NC.segOf(dt,'you')]+'曜';
  const sel=(id,Lx,v)=>`<select onchange="nr.${id}=this.value;nerPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
- const chip=(id,Lx)=>`<div class="chips">${Lx.map(([k,t])=>`<button class="${nr[id].includes(k)?'on':''}" onclick="nrTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
- const head=`<tr><th class="fix" rowspan="2">狙い<br>順</th><th rowspan="2">台番</th><th class="l" rowspan="2">機種</th><th rowspan="2">狙い<br>印</th><th rowspan="2">○<br>点数</th><th rowspan="2">サブ</th>${NC.SEGS.map(sg=>`<th colspan="5">${SEGN[sg]} ${segv(sg)}</th>`).join('')}</tr><tr>${NC.SEGS.map(()=>'<th>台○</th><th>状態○</th><th>平均回転</th><th>合算</th><th>総合</th>').join('')}</tr>`;
- const NCOL=21;let body='',nV=0;
- for(const u of units){const V=u.L.filter(x=>!nr.g||x.g===nr.g);if(!V.length)continue;nV+=V.length;
-  if(all)body+=band(NCOL,sShort(u.s),sShort(u.s)+'｜'+date,`${V.length}台`);
-  body+=V.map(x=>`<tr><td class="fix"><b>${x.rank}</b></td><td>${esc(x.t)}</td><td class="l ml" title="${esc(x.m)}">${esc(mShort(x.m))}</td><td style="font-size:16px">${x.mark}</td><td>${x.pts}</td><td>${x.sub.toFixed(1)}</td>${NC.SEGS.map(sg=>{const q=x.seg[sg];return`<td>${q.o?'○':''}</td><td>${q.ost.length||''}</td><td>${q.u?Math.round(q.u.avg).toLocaleString():'-'}</td><td>${q.u?P(q.u.g,q.u.bb+q.u.rb):'-'}</td><td>${q.ix?f(q.ix.t):'-'}</td>`}).join('')}</tr>`).join('')}
- // 状態順1位の台番
- const keys=NC.RANK_KEYS.filter(k=>{const[,m,r]=k.split('_');return nr.m.includes(m)&&nr.r.includes(r)});
- const one=units.map(u=>groups.filter(g=>!nr.g||g===nr.g).map(g=>{const M=u.day.filter(r=>NC.groupOf(r.m,set)===g);if(!M.length)return'';return band(2,(all?sShort(u.s)+'｜':'')+mShort(g),(all?sShort(u.s)+'｜':'')+[...new Set(M.map(r=>r.m))].join('／'),'')+keys.map(k=>{const i=NC.RANK_KEYS.indexOf(k);const t=M.filter(r=>((u.rk[r.s+'|'+r.t]||[])[i])===1).map(r=>r.t);return`<tr><td class="fix l">${NC.RANK_LABEL(k)}1位</td><td class="l">${t.length?esc(t.join('・'))+'番台':'-'}</td></tr>`}).join('')}).join('')).join('');
+ // いま選んでいる範囲（店舗・機種）の中だけで順位を付け直す。同じ点数は順位を空白に
+ const T=[];for(const u of units)for(const x of u.T)if(!nr.g||x.g===nr.g)T.push(Object.assign({date:u.date,virt:u.virt},x));
+ const SK=NC.RANK_KEYS;
+ T.sort((a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):a.g.localeCompare(b.g,'ja')||SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1));
+ T.forEach((x,i)=>{const tie=(i>0&&T[i-1].score===x.score)||(i<T.length-1&&T[i+1].score===x.score);x.rank=tie?'':i+1});
+ const sig=[nr.s,nr.g,nr.d].join('|');if(sig!==nerSig){nerSig=sig;nerLim=NER_STEP}
+ const mkH=m=>m==='○'?'<span class="mk a">○</span>':m==='△'?'<span class="mk t">△</span>':m==='×'?'<span class="mk x">×</span>':esc(m||'');
+ const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
+  if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
+  return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
+ const NCOL=8+15;const shown=T.slice(0,nerLim);
+ const body=shown.map(x=>{const sub=(all?sShort(x.s)+'｜':'')+mShort(x.g)+(oneDate?'':'｜'+x.date.slice(5));
+  const lab=x.kind==='t'?`<b>${esc(x.label)}</b>`:`<b class="sl">${esc(x.label)}</b>`;
+  const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
+  return`<tr><td class="fix f1"><b>${x.rank}</b></td><td class="fix f2 l tn" title="${esc(x.m)}">${lab}<small>${esc(sub)}</small></td>${seat}<td class="mkc">${mkH(x.mark)}</td>${NC.SEGS.map(sg=>`<td class="${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td>${x.score.toFixed(4)}</td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}</tr>`}).join('');
+ const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
+ const head=`<tr><th class="fix f1" rowspan="2">狙い<br>順</th><th class="fix f2" rowspan="2">狙い</th><th rowspan="2">着席<br>台番</th><th rowspan="2">狙い<br>印</th>${NC.SEGS.map(sg=>`<th rowspan="2">${SEGN[sg]}<br>○×</th>`).join('')}<th rowspan="2">点数</th>${NC.SEGS.map(gh).join('')}</tr><tr>${NC.SEGS.map(()=>'<th class="gl">件数</th><th>回転</th><th>RB<br>確率</th><th>合算</th><th class="gr">指数</th>').join('')}</tr>`;
+ const metricN={g:'回転偏差値',p:'確率指数',t:'総合指数',tt:'総合トータル指数'}[cfg.sub.metric]||'';
+ const nT=T.filter(x=>x.kind==='t').length,nS=T.length-nT;const more=T.length-shown.length;
+ const mx=NC.addDay(last,60);
+ const dopts=[['next',all?'次の日（各店の最終日の翌日）':(units[0]&&units[0].virt&&nr.d==='next'?units[0].date+'（次の日）':'次の日')]].concat(isDate(nr.d)&&!dates.includes(nr.d)?[[nr.d,nr.d+'（データなし）']]:[]).concat(dates.map(d=>[d,d]));
  const num=(path,v)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:64px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='0000');
  $('main').innerHTML=`<div class="card"><h2>🏆 狙いリスト</h2>
- <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('d',[['next',all?'次の日（各店の最終日の翌日）':(date?date+'（次の日）':'次の日')]].concat(dates.map(d=>[d,d])),nr.d)}</div>
- <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
- <p class="note">分析の期間：分析タブの期間（終わりは狙う日の前日まで）。狙い順は全店舗・全機種の通し順位。帯をタップで正式名。</p>
- ${nV?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
+ <div class="row">${sel('d',dopts,nr.d)}<input type="date" value="${esc(isDate(nr.d)?nr.d:date)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"></div>
+ <p class="note">${date?esc(date)+'（'+'日月火水木金土'[NC.dow(date)]+'）':''}　台番○ ${nT}件・状態順○ ${nS}件。狙い順は、いま選んでいる範囲（店舗・機種）の中だけの順位。同じ点数は順位を空白にしてるよ。</p>
+ <p class="note">1行＝1つの狙い。青い字は状態順（その日の朝の時点で1位になる台が着席台番。前日のデータがないときは「未定」）。件数は、その台（状態順）が同じ日末尾・日・曜日に出てきた日数。指数＝${esc(metricN)}。データがない日を選ぶと、最後のデータ日の台番で予想するよ。</p>
+ ${T.length?`<div class="tw"><table>${head}${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="nerLim+=NER_STEP;nerPage()">もっと見る（残り${more.toLocaleString()}行）</button></div>`:''}`:`<p class="note">${units.length?'○の付いた狙いがないよ（ボーダーと分析の○を確認してね）':'その日のデータがないよ（最後のデータ日より前で、データがない日）'}</p>`}
  <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">設定を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
- <div class="card"><h2>🥇 状態順1位の台番（${esc(date)}）</h2>${chip('m',NC.MET)}<div style="height:4px"></div>${chip('r',[['y','良い順'],['w','悪い順']])}
- <div class="tw"><table>${one}</table></div></div>
- <div class="card"><h2>🧮 点数とサブ評価</h2><p class="note">○点数＝台番の○の点数＋状態順の○の点数（その日に1位になる状態順のうち、分析で○が付いてるもの1つごと）。</p>
+ <div class="card"><h2>🧮 点数とサブ評価</h2><p class="note">○点数＝その行の○の点数を区分ごとに足したもの（台番の行は「台番の○」、状態順の行は「状態順の○」の点数）。</p>
  <div class="tw"><table><tr><th class="l fix"></th>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr>
  <tr><td class="l fix">台番の○</td>${NC.SEGS.map(sg=>`<td>${num('pts.tai.'+sg,cfg.pts.tai[sg])}</td>`).join('')}</tr>
  <tr><td class="l fix">状態順の○</td>${NC.SEGS.map(sg=>`<td>${num('pts.st.'+sg,cfg.pts.st[sg])}</td>`).join('')}</tr>
  <tr><td class="l fix">サブ評価 %</td>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg])}</td>`).join('')}</tr></table></div>
  <div class="row"><label>サブ評価で使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転偏差値'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
- <p class="note">サブ評価＝各区分の台番の数字×割合の合計。これを÷1,000,000して○点数に足して並べる。指数はボーダータブの「使う指数」と同じもの（両方のときは標準指数。総合トータル指数は店舗機種と標準の両方を使う）。</p></div>
- <div class="card"><h2>🎖 評価印</h2><p class="note">どの区分（日末尾・日・曜日）に○（台番か状態順）があるかの組み合わせで印を決める。「おまかせ」は○が3個で○、2個で△、1個で×。</p>
+ <p class="note">サブ評価＝各区分の数字（四捨五入した整数）×割合の合計（整数に四捨五入）。これを÷10,000して○点数に足したのが「点数」（小数4桁）。点数が高い順に並ぶ。指数はボーダータブの「使う指数」と同じもの（両方のときは標準指数。総合トータル指数は店舗機種と標準の両方を使う）。</p></div>
+ <div class="card"><h2>🎖 評価印</h2><p class="note">その行の○が、どの区分（日末尾・日・曜日）にあるかの組み合わせで印を決める。「おまかせ」は○が3個で○、2個で△、1個で×。</p>
  <div class="tw"><table><tr><th class="l fix">組み合わせ</th><th>印</th></tr>${combos.map(c=>`<tr><td class="l fix">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>SEGN[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)">${[['auto','おまかせ（'+NC.comboMark(c,{combo:{}})+'）'],['○','○'],['△','△'],['×','×'],['','なし']].map(([k,t])=>`<option value="${k}" ${(cfg.combo[c]==null?'auto':cfg.combo[c])===k?'selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')}</table></div></div>`}
 window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);nerPage()};
 window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let i=0;i<p.length-1;i++)o=o[p[i]];const last=p[p.length-1];

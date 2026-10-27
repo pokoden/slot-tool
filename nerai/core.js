@@ -94,8 +94,8 @@ function rowsFromFile(j){if(!j||!Array.isArray(j.rows))throw new Error('形式�
 const fmtP=v=>v===Infinity||!Number.isFinite(v)?'-':'1/'+v.toFixed(1);
 // 次の日（まだデータがない日）の状態順。台の並びは最後の日と同じとみなす
 function addDay(d,n){const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)}
-function nextDay(rows,set,store){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let L='0';for(const r of R)if(r.d>L)L=r.d;
- const d=addDay(L,1);const v=R.filter(r=>r.d===L).map(r=>Object.assign({},r,{d,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(v),set);return{date:d,base:L,rows:v,ranks:b.ranks[d]||{}}}
+function nextDay(rows,set,store,date){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let L='0';for(const r of R)if(r.d>L)L=r.d;
+ if(date&&date<=L)return null;const d=date||addDay(L,1);const v=R.filter(r=>r.d===L).map(r=>Object.assign({},r,{d,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(v),set);return{date:d,base:L,rows:v,ranks:b.ranks[d]||{}}}
 // ===== 分析 =====
 function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x of a)s+=x;const m=s/n;let v=0;for(const x of a)v+=(x-m)*(x-m);return{m,sd:Math.sqrt(v/n),n}}
 // 偏差値。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
@@ -168,10 +168,17 @@ const SEGS=AXES;
 const DEF_CFG={pts:{tai:{matsu:3,hi:1,you:1},st:{matsu:1,hi:0,you:0}},combo:{},sub:{metric:'t',w:{matsu:50,hi:25,you:25}}};
 // 組み合わせ（日末尾・日・曜日の○有無を3桁の0/1）→ 評価印。未設定は○の数で（3個○、2個△、1個×）
 function comboMark(code,cfg){const c=cfg.combo||{};if(c[code]!=null)return c[code];const n=[...code].filter(x=>x==='1').length;return n>=3?'○':n===2?'△':n===1?'×':''}
-// o:{store,date,members,tRanks,from,to,border,marks,cfg}
-function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.marks||{};const out=[];
+// 状態順の名前（例：前日回転 悪い順）
+const stName=k=>{const[w,m,d]=k.split('_');return WIN.find(x=>x[0]===w)[1]+MET.find(x=>x[0]===m)[1]+(d==='y'?' 良い順':' 悪い順')};
+const round4=v=>Math.round(v*1e4)/1e4;
+const NEAR=['zen','d2','d3','d6'];// 前日を含む期間
+// o:{store,date,members,tRanks,from,to,border,marks,cfg,hasPrev}
+// 戻り値：台番ごとの行（図面・当日用。台番の○＋その日1位になる状態順の○を合わせた点数）
+//   と、.targets＝狙いタブ用の「1狙い1行」（台番の○だけの行／状態順の○だけの行）
+function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.marks||{};const out=[],tg=[];
  const A={};for(const sg of SEGS)A[sg]=analysisFor(rows,set,ranks,o.store,sg,o.from,o.to,B,base);
  const groups=[...new Set(o.members.map(r=>groupOf(r.m,set)))];const by=B.by||'hy';
+ const metricOf=u=>{if(!u)return null;const ix=by==='tk'?u.tk:u.hy;return cfg.sub.metric==='tt'?u.tt:ix[cfg.sub.metric]};
  for(const g of groups){const mem=o.members.filter(r=>groupOf(r.m,set)===g);const seg={};
   for(const sg of SEGS){const val=String(segOf(o.date,sg));const og=A[sg].get(g);
    const mk=u=>{const k=[o.store,g,sg,val,u.k].join('|');return M[k]==null?!!u.auto:!!M[k]};
@@ -179,13 +186,26 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    if(og){for(const u of og.taiL)if(u.v===val)tai.set(String(u.k),{u,o:mk(u)});for(const u of og.stL)if(u.v===val)st.set(u.k,{u,o:mk(u)})}
    seg[sg]={tai,st}}
   for(const r of mem){const x=(o.tRanks||{})[r.s+'|'+r.t]||[];const one=RANK_KEYS.filter((k,i)=>x[i]===1);
-   const res={};let pts=0,sub=0,code='';
+   const res={};let pts=0,sub=0,code='',ptsT=0,codeT='';const segT={};
    for(const sg of SEGS){const T=seg[sg].tai.get(String(r.t));const ost=one.filter(k=>{const s=seg[sg].st.get(k);return s&&s.o});
-    const to=!!(T&&T.o);pts+=(to?+cfg.pts.tai[sg]||0:0)+ost.length*(+cfg.pts.st[sg]||0);code+=(to||ost.length)?'1':'0';
-    const ix=T?(by==='tk'?T.u.tk:T.u.hy):null;const mv=T?(cfg.sub.metric==='tt'?T.u.tt:ix[cfg.sub.metric]):null;if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;
-    res[sg]={o:to,ost,u:T&&T.u,ix}}
-   out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/1000000,code,mark:comboMark(code,cfg),seg:res,one})}}
- out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);return out}
-const api={calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+    const to=!!(T&&T.o);const pt=to?+cfg.pts.tai[sg]||0:0;pts+=pt+ost.length*(+cfg.pts.st[sg]||0);ptsT+=pt;code+=(to||ost.length)?'1':'0';codeT+=to?'1':'0';
+    const ix=T?(by==='tk'?T.u.tk:T.u.hy):null;const mv=metricOf(T&&T.u);if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;
+    res[sg]={o:to,ost,u:T&&T.u,ix};segT[sg]={o:to,u:T&&T.u,mv:T?mv:null}}
+   sub=Math.round(sub);
+   out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:round4(pts+sub/10000),code,mark:comboMark(code,cfg),seg:res,one});
+   if(codeT.includes('1'))tg.push({kind:'t',s:r.s,g,m:r.m,t:String(r.t),label:String(r.t),seat:String(r.t),pts:ptsT,sub,score:round4(ptsT+sub/10000),code:codeT,mark:comboMark(codeT,cfg),seg:segT})}
+  // 状態順の行：その機種で、どれかの区分に○がある状態順ごとに1行
+  const keys=new Set();for(const sg of SEGS)for(const k of seg[sg].st.keys())keys.add(k);
+  const ordK=[...keys].sort((a,b)=>RANK_KEYS.indexOf(a)-RANK_KEYS.indexOf(b));
+  for(const k of ordK){let pts=0,sub=0,code='';const segS={};
+   for(const sg of SEGS){const S=seg[sg].st.get(k);const so=!!(S&&S.o);pts+=so?+cfg.pts.st[sg]||0:0;code+=so?'1':'0';const mv=S?metricOf(S.u):null;if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;segS[sg]={o:so,u:S&&S.u,mv}}
+   if(!code.includes('1'))continue;sub=Math.round(sub);
+   // 着席台番：その日の朝の時点でこの状態順1位になる台番。前日のデータがない（前日を含む期間）・1位が決まらない（同じ値）なら未定
+   const i=RANK_KEYS.indexOf(k);let seat=null;
+   if(!(NEAR.includes(k.split('_')[0])&&o.hasPrev===false)){const w=mem.find(r=>((o.tRanks||{})[r.s+'|'+r.t]||[])[i]===1);if(w)seat=String(w.t)}
+   tg.push({kind:'s',s:o.store,g,m:[...new Set(mem.map(r=>r.m))].join('／'),k,label:stName(k),seat,pts,sub,score:round4(pts+sub/10000),code,mark:comboMark(code,cfg),seg:segS})}}
+ out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
+function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
+const api={storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
