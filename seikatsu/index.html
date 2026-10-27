@@ -58,7 +58,7 @@ tr.sum td{font-weight:800;background:#f0f5ff}
 .cal .d.today{border-color:#1f4fd8}
 .cal .d .n{font-weight:800;font-size:13px}
 .cal .d .t{border-radius:6px;color:#fff;font-weight:800;padding:1px 0;margin-top:2px}
-.t-stand{background:#1f4fd8}.t-kado{background:#f08c00}.t-off{background:#2fb36b}.t-other{background:#7a5af8}
+.t-stand{background:#1f4fd8}.t-kado{background:#f08c00}.t-off{background:#2fb36b}.t-other{background:#7a5af8}.t-standkado{background:linear-gradient(90deg,#1f4fd8 50%,#f08c00 50%)}
 .cal .d .y{font-weight:800;font-size:10px}
 .sheet{position:fixed;inset:0;background:rgba(10,20,50,.35);z-index:20;display:none;align-items:flex-end}
 .sheet.on{display:flex}
@@ -101,7 +101,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const I1=['生活費','収入','ギャンブル'];
 const I2=['生活固定費','生活変動費','税金','給料収入','雑収入','貯金','競馬','カジノ','パチスロ','調整'];
 const I2of1={'生活固定費':'生活費','生活変動費':'生活費','税金':'生活費','貯金':'生活費','調整':'生活費','給料収入':'収入','雑収入':'収入','競馬':'ギャンブル','カジノ':'ギャンブル','パチスロ':'ギャンブル'};
-const TYPES={stand:'スタンド',kado:'稼働',off:'休み',other:'その他労働'};
+const TYPES={stand:'スタンド',kado:'稼働',standkado:'スタンド+稼働',off:'休み',other:'その他労働'};const isS=t=>t==='stand'||t==='standkado',isK=t=>t==='kado'||t==='standkado';
 function defData(){return{v:2,wallet:{cash:0,pachi:0,bank:0,small:0,big:0,save:0,car:0},sched:{},ledger:{},fixedDone:{},plans:[],
  fixed:[['BIGLOBE',6505],['アクサ',13971],['スマホ',14230],['損保',3690],['タバコ',25000],['楽天ネット',1045],['自宅',20000]].map(([n,a])=>({id:uid(),i1:'生活費',i2:'生活固定費',i3:n,exp:a})),
  set:{rate:1100,stdH:9,step:100000,prevEnd:null,fuyo:1290000,fixedFrom:CUR,loan:{items:[['車本体',700000],['タイヤホイール',148000]],n:24,monthly:37100,start:'2026-10'}},updatedAt:''}}
@@ -135,9 +135,9 @@ async function boot(){applyFixed();render();if(!tok()){st('トークン未設定
  }catch(e){}render()}
 // 集計
 function slotMonth(ym){let y=0,h=0,n=0;for(const[d,o]of Object.entries(slot.byDate))if(d.startsWith(ym)){y+=o.yen;h+=o.h;n++}return{y,h,n}}
-function dayInfo(d){const r=D.sched[d]||{};const s=slot.byDate[d];const o={...r};if(r.t==='kado'||(!r.t&&s)){o.t=o.t||'kado';if(s){o.kh=s.h;o.ky=s.yen}else{o.kh=+r.kh||0;o.ky=+r.ky||0}}return o}
-function workMonth(ym){const R={sd:0,sh:0,sp:0,od:0,oh:0,op:0,kd:0,kh:0,ky:0,off:0};const[y,m]=ym.split('-').map(Number);const n=new Date(y,m,0).getDate();for(let i=1;i<=n;i++){const d=ym+'-'+pad(i),o=dayInfo(d);if(o.t==='stand'){R.sd++;R.sh+=+o.h||0;R.sp+=+o.pay||0}if(o.t==='other'){R.od++;R.oh+=+o.h||0;R.op+=+o.pay||0}if(o.t==='kado'){R.kd++;R.kh+=+o.kh||0;R.ky+=+o.ky||0}if(o.t==='off')R.off++}return R}
-function rows(ym){const L=(D.ledger[ym]||[]).slice();const w=workMonth(ym);
+function dayInfo(d){const r=D.sched[d]||{};const s=slot.byDate[d];const o={...r};if(isK(r.t)||(!r.t&&s)){o.t=o.t||'kado';if(s){o.kh=s.h;o.ky=s.yen}else{o.kh=+r.kh||0;o.ky=+r.ky||0}}return o}
+function workMonth(ym){const R={sd:0,sh:0,sp:0,od:0,oh:0,op:0,kd:0,kh:0,ky:0,off:0};const[y,m]=ym.split('-').map(Number);const n=new Date(y,m,0).getDate();for(let i=1;i<=n;i++){const d=ym+'-'+pad(i),o=dayInfo(d);if(isS(o.t)){R.sd++;R.sh+=+o.h||0;R.sp+=+o.pay||0}if(o.t==='other'){R.od++;R.oh+=+o.h||0;R.op+=+o.pay||0}if(isK(o.t)){R.kd++;R.kh+=+o.kh||0;R.ky+=+o.ky||0}if(o.t==='off')R.off++}return R}
+function rows(ym){const L=(D.ledger[ym]||[]).slice();const w=workMonth(ym);if(L.some(x=>x.imp))return L;
  if(!L.some(x=>x.i2==='給料収入')&&(w.sp+w.op))L.push({auto:1,i1:'収入',i2:'給料収入',i3:'給料',inc:w.sp+w.op,exp:0});
  if(!L.some(x=>x.i2==='パチスロ')){const s=slotMonth(ym);if(s.n)L.push({auto:1,i1:'ギャンブル',i2:'パチスロ',i3:'パチスロ',inc:s.y>0?s.y:0,exp:s.y<0?-s.y:0})}return L}
 function allMonths(){const s=new Set([...Object.keys(D.ledger),CUR]);for(const d of Object.keys(slot.byDate))s.add(d.slice(0,7));for(const d of Object.keys(D.sched))s.add(d.slice(0,7));const a=[...s].filter(x=>/^\d{4}-\d\d$/.test(x)&&x<=CUR).sort();if(!a.length)return[CUR];const out=[];for(let m=a[0];m<=CUR;m=addM(m,1))out.push(m);return out}
@@ -163,13 +163,13 @@ function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w
  const proj=cur.cum+pInc-pExp;const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;
  const pe=D.set.prevEnd!=null&&D.set.prevEnd!==''?+D.set.prevEnd:((byYm[(y-1)+'-12']||{}).cum||0);
  const target=pe+D.set.step*mo;const diff=proj-target;
- const n=new Date(y,mo,0).getDate();let sL=0,oL=0,rest=0,kL=0;for(let i=TODAY.getDate()+1;i<=n;i++){const t=(D.sched[CUR+'-'+pad(i)]||{}).t;if(t==='stand')sL++;else if(t==='off')oL++;else if(t==='kado')kL++;rest++}
+ const n=new Date(y,mo,0).getDate();let sL=0,oL=0,rest=0,kL=0;for(let i=TODAY.getDate()+1;i<=n;i++){const t=(D.sched[CUR+'-'+pad(i)]||{}).t;if(t==='stand')sL++;else if(t==='off')oL++;else if(isK(t))kL++;rest++}
  const kadoDays=Math.max(1,rest-sL-oL);const perDay=Math.round(diff/kadoDays);
  const pct=prev.net?Math.round((cur.net-prev.net)/Math.abs(prev.net)*100):null;
  const li=loanInfo();const wm=workMonth(CUR);let yIncome=0;for(let m=1;m<=12;m++){const r=workMonth(y+'-'+pad(m));yIncome+=r.sp+r.op}
  const last=S.slice(-6).map(o=>o.cum);const nets=S.slice(-6).map(o=>o.net);
  const rng={'1m':1,'3m':3,'1y':12,'all':9999}[range];let pts;
- if(range==='1m'){pts=[];let c=prev.cum;const[yy,mm]=CUR.split('-').map(Number);const L=rows(CUR);const fixedSum=L.filter(x=>!x.auto&&!/^\d{4}/.test(x.d||'')).reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);c+=fixedSum;for(let i=1;i<=TODAY.getDate();i++){const dd=CUR+'-'+pad(i),o=dayInfo(dd);c+=(o.t==='stand'||o.t==='other'?(+o.pay||0):0)+(o.ky||0);pts.push([i+'日',c])}}
+ if(range==='1m'){pts=[];let c=prev.cum;const[yy,mm]=CUR.split('-').map(Number);const L=rows(CUR);const fixedSum=L.filter(x=>!x.auto&&!/^\d{4}/.test(x.d||'')).reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);c+=fixedSum;for(let i=1;i<=TODAY.getDate();i++){const dd=CUR+'-'+pad(i),o=dayInfo(dd);c+=(isS(o.t)||o.t==='other'?(+o.pay||0):0)+(o.ky||0);pts.push([i+'日',c])}}
  else pts=S.slice(-rng).map(o=>[ymLabel(o.ym).slice(2),o.cum]);
  // 年間目標
  let yt='';let avgBase=pe;for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),o=byYm[ym];const tg=pe+D.set.step*m;yt+=`<tr><td>${m}</td><td>${yen(tg)}</td><td>${o?Y(o.cum):''}</td><td>${o?Y(o.net):''}</td><td>${o?Y(o.cum-tg):''}</td><td>${o?Y(Math.round((o.cum-pe)/m)):''}</td></tr>`}
@@ -195,7 +195,7 @@ function setW(k,v){D.wallet[k]=+String(v).replace(/[^\d-]/g,'')||0;save();render
 function addPlan(){D.plans.push({name:'',inc:0,exp:0,done:false,ym:CUR});save();render()}
 // 予定
 function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();let h=['日','月','火','水','木','金','土'].map((d,i)=>`<div class="h" style="${i===0?'color:#e0283a':''}">${d}</div>`).join('');for(let i=0;i<first;i++)h+='<div></div>';
- for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${TYPES[o.t].slice(0,2)}</div>`;if(o.t==='stand'||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(o.t==='kado'&&o.ky!=null)v=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
+ for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${(o.t==='standkado'?'ス稼':TYPES[o.t].slice(0,2))}</div>`;if(isS(o.t)||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(isK(o.t)&&o.ky!=null)v+=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
  const w=workMonth(calYM);
  return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><b>${y}年${m}月</b><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
  <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">スタンド</div><div class="v">${w.sd}日 ${yen(w.sp)}</div></div><div class="tile"><div class="l">稼働</div><div class="v ${cls(w.ky)}">${w.kd}日 ${yen(w.ky)}</div></div><div class="tile"><div class="l">その他労働</div><div class="v">${w.od}日 ${yen(w.op)}</div></div><div class="tile"><div class="l">休み</div><div class="v">${w.off}日</div></div></div></div>${monthTable()}`}
@@ -214,14 +214,14 @@ function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++
  <div class="card"><h2>スタンド vs パチスロ</h2><table><tr><th></th><th>スタンド</th><th>パチスロ</th></tr>
  ${cmp('出勤日数',sd,kd)}${cmp('労働時間',fx(sh,1),fx(kh,1))}${cmp('給料',yen(sp),Y(ky))}${cmp('1日時間',fx(dv(sh,sd),1),fx(dv(kh,kd),1))}${cmp('時給',Y(dv(sp,sh)),Y(dv(ky,kh)))}${cmp('日給',Y(dv(sp,sd)),Y(dv(ky,kd)))}${cmp('月平均',Y(sp/k),Y(ky/k))}${cmp('月平均日数',fx(sd/k,1),fx(kd/k,1))}${cmp('時間比率',Math.round(dv(sh,sh+kh)*100)+'%',Math.round(dv(kh,sh+kh)*100)+'%')}</table></div>`}
 let cur=null;
-function openDay(d){const o=dayInfo(d);cur={d,t:(D.sched[d]||{}).t||(o.t==='kado'?'kado':''),h:o.h??'',pay:o.pay??'',kh:o.kh??'',ky:o.ky??'',auto:!!slot.byDate[d]};drawSheet();$('sheet').classList.add('on')}
-function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={stand:'#1f4fd8',kado:'#f08c00',off:'#2fb36b',other:'#7a5af8'};
- let f='';if(c.t==='stand'||c.t==='other')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.h}" oninput="cur.h=this.value;if(cur.t==='stand'){cur.pay=Math.round((+this.value||0)*D.set.rate);$('pay').value=cur.pay}"></div><div><label>給料</label><input id="pay" class="num" inputmode="numeric" value="${c.pay}" oninput="cur.pay=this.value"></div></div>`;
- if(c.t==='kado')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.kh}" ${c.auto?'disabled':''} oninput="cur.kh=this.value"></div><div><label>収支</label><input class="num ${cls(c.ky)}" inputmode="numeric" value="${c.ky}" ${c.auto?'disabled':''} oninput="cur.ky=this.value"></div></div>`;
+function openDay(d){const o=dayInfo(d);cur={d,t:(D.sched[d]||{}).t||(o.t==='kado'?'kado':''),note:(D.sched[d]||{}).note,h:o.h??'',pay:o.pay??'',kh:o.kh??'',ky:o.ky??'',auto:!!slot.byDate[d]};drawSheet();$('sheet').classList.add('on')}
+function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={stand:'#1f4fd8',standkado:'#1f4fd8',kado:'#f08c00',off:'#2fb36b',other:'#7a5af8'};
+ let f='';if(isS(c.t)||c.t==='other')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.h}" oninput="cur.h=this.value;if(isS(cur.t)){cur.pay=Math.round((+this.value||0)*D.set.rate);$('pay').value=cur.pay}"></div><div><label>給料</label><input id="pay" class="num" inputmode="numeric" value="${c.pay}" oninput="cur.pay=this.value"></div></div>`;
+ if(isK(c.t))f+=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.kh}" ${c.auto?'disabled':''} oninput="cur.kh=this.value"></div><div><label>収支</label><input class="num ${cls(c.ky)}" inputmode="numeric" value="${c.ky}" ${c.auto?'disabled':''} oninput="cur.ky=this.value"></div></div>`;
  $('sheetIn').innerHTML=`<div class="mh"><b>${+m}月${+dd}日</b><button onclick="closeSheet()">×</button></div><div class="chips">${Object.entries(TYPES).map(([k,l])=>`<button class="chip ${c.t===k?'on':''}" style="${c.t===k?'background:'+col[k]:''}" onclick="pick('${k}')">${l}</button>`).join('')}</div>${f}
  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn del" style="flex:1" onclick="pick('');saveDay()">消す</button><button class="btn" style="flex:2" onclick="saveDay()">保存</button></div>`}
-function pick(t){cur.t=t;if(t==='stand'&&!cur.h){cur.h=D.set.stdH;cur.pay=D.set.stdH*D.set.rate}if(t==='other'&&cur.pay==='')cur.pay=0;drawSheet()}
-function saveDay(){const c=cur;if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.t==='stand'||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(c.t==='kado'&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
+function pick(t){cur.t=t;if(isS(t)&&!cur.h){cur.h=D.set.stdH;cur.pay=D.set.stdH*D.set.rate}if(t==='other'&&cur.pay==='')cur.pay=0;drawSheet()}
+function saveDay(){const c=cur;if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.note)r.note=c.note;if(isS(c.t)||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(isK(c.t)&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
 function closeSheet(){$('sheet').classList.remove('on')}
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 // お金
