@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="設定狙い">
+<title>設定狙いツール</title>
+<link rel="apple-touch-icon" href="icon.png?v=1">
+<link rel="icon" href="icon.png?v=1">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
+header{background:linear-gradient(135deg,#111,#2a2418);color:#e9c46a;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+header img{width:32px;height:32px;border-radius:8px}
+header h1{font-size:18px;margin:0;flex:1;letter-spacing:.05em}
+header a{color:#e9c46a;font-size:12px;text-decoration:none}
+nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;background:#fff;border-bottom:1px solid #e3e3e8;position:sticky;top:52px;z-index:4}
+nav button{flex:0 0 auto;border:1px solid #d5d7de;background:#fff;border-radius:16px;padding:6px 12px;font-size:14px;color:#111}
+nav button.on{background:#1f5fd6;border-color:#1f5fd6;color:#fff}
+nav button:disabled{color:#aaa;border-style:dashed}
+main{padding:10px;max-width:640px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+h2{font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+.note{font-size:12px;color:#333;margin:4px 0}
+textarea{width:100%;height:110px;font-size:13px;font-family:ui-monospace,monospace;border:1px solid #ccc;border-radius:8px;padding:8px}
+input,select{font-size:16px;padding:7px 8px;border:1px solid #ccc;border-radius:8px;background:#fff;max-width:100%}
+button.b{font-size:15px;padding:9px 14px;border-radius:8px;border:none;background:#1f5fd6;color:#fff;font-weight:600;margin:4px 4px 4px 0}
+button.b.sub{background:#e9ecf2;color:#111}
+button.b:disabled{opacity:.45}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
+.row label{font-size:13px}
+.st{font-weight:600;font-size:13px;margin-top:6px;white-space:pre-wrap}
+.ok{color:#137a3a}.ng{color:#c62828}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -12px;padding:0 12px}
+table{border-collapse:collapse;font-size:12px;white-space:nowrap}
+th,td{padding:5px 6px;border-bottom:1px solid #eee;text-align:right}
+th{background:#f6f7fa;font-weight:600;text-align:center;position:sticky;top:0}
+td.l,th.l{text-align:left}
+th.fix,td.fix{position:sticky;left:0;background:#fff;z-index:1}
+th.fix{background:#f6f7fa;z-index:2}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
+.kv b{text-align:right}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<nav id="nav"></nav>
+<main id="main"><div class="card">読み込み中…</div></main>
+<script src="core.js?v=1"></script>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const API='https://api.github.com/repos/pokoden/slot-data/';
+const tok=()=>LS.get('v2_token','');
+const TABS=[['imp','取込'],['chk','状態順'],['set','設定'],['tou','当日',1],['ana','分析',1],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
+let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
+// 状態
+const S={loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
+const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});
+
+async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
+function b64dec(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
+function b64enc(s){const u=new TextEncoder().encode(s);let bin='';for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(bin)}
+async function loadAll(){S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg={};
+ if(!tok()){S.loadErr='GitHubトークンが入ってないよ。スロ判別ツールの「同期設定」で入れてね（同じ端末なら共通で使える）';return}
+ const r=await gh('contents/nerai');if(r.status===404){S.loaded=true;return}
+ if(!r.ok)throw new Error('一覧の読み込みに失敗（'+r.status+'）');
+ const list=(await r.json()).filter(f=>f.type==='file'&&/\.json$/.test(f.name));
+ await Promise.all(list.map(async f=>{const b=await gh('git/blobs/'+f.sha);if(!b.ok)throw new Error(f.name+' の読み込みに失敗（'+b.status+'）');
+  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt}}));
+ const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
+ for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
+  else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
+ S.loaded=true}
+// 変わったファイルだけ保存。読み込みに失敗していたら絶対に保存しない
+async function saveFiles(out,msg,prog){if(!S.loaded)throw new Error('読み込みに失敗してるので保存しないよ（データを守るため）');
+ const keys=Object.keys(out).filter(k=>!S.files[k]||S.files[k].txt!==out[k]).sort((a,b)=>(/agg-|settings/.test(a)?1:0)-(/agg-|settings/.test(b)?1:0)||a.localeCompare(b));
+ let n=0;for(const k of keys){prog&&prog(`保存中 ${++n}/${keys.length}（${k.slice(6)}）`);
+  const body={message:msg+' '+k,content:b64enc(out[k])};if(S.files[k])body.sha=S.files[k].sha;
+  const r=await gh('contents/'+k,{method:'PUT',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}});
+  if(!r.ok){const e=r.status===409||r.status===422?'他の端末で先に更新されたみたい。読み直してからもう一度やってね':'保存失敗（'+r.status+'）';throw new Error(k.slice(6)+'：'+e+(n>1?`\n※${n-1}件は保存済み。読み直すと続きから直せるよ`:''))}
+  const j=await r.json();S.files[k]={sha:j.content.sha,txt:out[k]}}
+ return keys.length}
+function allFiles(rows){const out=NC.monthFiles(rows,setObj());out['nerai/settings.json']=JSON.stringify({v:1,groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});return out}
+function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(out[k])}
+
+function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
+window.go=t=>{tab=t;LS.set('nr_tab',t);render()};
+function render(){nav();const m=$('main');
+ if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>`;return}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage()}
+window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
+
+// ===== 取込 =====
+function dataInfo(){const R=S.rows;if(!R.length)return'<p class="note">まだデータがないよ</p>';
+ let a='9',b='0';const st={};for(const r of R){if(r.d<a)a=r.d;if(r.d>b)b=r.d;st[r.s]=(st[r.s]||0)+1}
+ return`<div class="kv"><span>件数</span><b>${R.length.toLocaleString()}件</b><span>期間</span><b>${a} 〜 ${b}</b>${Object.entries(st).sort((x,y)=>y[1]-x[1]).map(([s,n])=>`<span>${esc(s)}</span><b>${n.toLocaleString()}件</b>`).join('')}</div>`}
+function impPage(){$('main').innerHTML=`
+<div class="card"><h2>📥 データ取込</h2><p class="note">列は「日付・店舗・機種・台番・回転・BB・RB」。TSVでもCSVでもOK（1行目の見出しは飛ばすよ）。</p>
+<div class="row"><input type="file" id="f" accept=".tsv,.csv,.txt,text/csv,text/tab-separated-values,text/plain" multiple></div>
+<textarea id="paste" placeholder="2026/10/26	マルハン青森柏	マイジャグラーV	321	3776	15	8"></textarea>
+<div class="row"><button class="b" onclick="readIn()">読み込んで確認</button></div><div id="pv"></div></div>
+<div class="card"><h2>🗂 保存済みデータ</h2>${dataInfo()}<div class="row"><button class="b sub" onclick="reload()">読み直す</button></div></div>`}
+window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const f of fs)txt+='\n'+await f.text();
+ if(!txt.trim()){$('pv').innerHTML='<p class="st ng">データが空だよ</p>';return}
+ const set=setObj();const p=NC.parseText(txt,set);const m=NC.merge(S.rows,p.rows,set);S.pending=m;
+ const days={};for(const r of p.rows){const k=r.d+'｜'+r.s;days[k]=(days[k]||0)+1}
+ $('pv').innerHTML=`<div class="st">読めた行：${p.rows.length.toLocaleString()}件\n新しく追加：${m.add.toLocaleString()}件\n重複で削除：${m.dup.toLocaleString()}件\n数字が違うので置き換え：${m.rep.toLocaleString()}件${p.errs.length?`\n<span class="ng">読めなかった行：${p.errs.length}件</span>`:''}</div>
+ ${p.errs.length?`<div class="tw"><table><tr><th>行</th><th class="l">理由</th><th class="l">内容</th></tr>${p.errs.slice(0,30).map(e=>`<tr><td>${e.line}</td><td class="l">${e.why}</td><td class="l">${esc(e.text)}</td></tr>`).join('')}</table></div>`:''}
+ ${m.repl.length?`<p class="note">置き換える台（最初の${m.repl.length}件）</p><div class="tw"><table><tr><th class="l">日付</th><th class="l">店舗</th><th>台番</th><th>前</th><th>後</th></tr>${m.repl.map(x=>`<tr><td class="l">${x.neu.d}</td><td class="l">${esc(x.neu.s)}</td><td>${esc(x.neu.t)}</td><td>${x.old.g}G ${x.old.bb}/${x.old.rb}</td><td>${x.neu.g}G ${x.neu.bb}/${x.neu.rb}</td></tr>`).join('')}</table></div>`:''}
+ <div class="tw"><table><tr><th class="l">日付｜店舗</th><th>行数</th></tr>${Object.entries(days).sort().map(([k,n])=>`<tr><td class="l">${esc(k)}</td><td>${n}</td></tr>`).join('')}</table></div>
+ <div class="row"><button class="b" ${m.add+m.rep?'':'disabled'} onclick="doSave()">保存する</button><button class="b sub" onclick="S.pending=null;$('pv').innerHTML=''">やめる</button></div><div id="sv" class="st"></div>`};
+window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document.querySelectorAll('#pv button').forEach(b=>b.disabled=true);
+ try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));const out=allFiles(m.rows);
+  const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;
+  sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新）`;$('paste').value='';$('f').value=''}
+ catch(e){sv.className='st ng';sv.textContent=e.message}};
+
+// ===== 状態順の確認 =====
+let ck=LS.get('nr_ck',{});
+function chkPage(){const R=S.rows;const stores=[...new Set(R.map(r=>r.s))].sort();if(!ck.s||!stores.includes(ck.s))ck.s=stores[0]||'';
+ const dates=[...new Set(R.filter(r=>r.s===ck.s).map(r=>r.d))].sort().reverse();if(!ck.d||!dates.includes(ck.d))ck.d=dates[0]||'';
+ const set=setObj();const day=R.filter(r=>r.s===ck.s&&r.d===ck.d);const groups=[...new Set(day.map(r=>NC.groupOf(r.m,set)))].sort();if(!ck.g||!groups.includes(ck.g))ck.g=groups[0]||'';
+ if(!ck.w)ck.w='zen';if(!ck.m)ck.m='gs';LS.set('nr_ck',ck);
+ const sel=(id,L,v,lab)=>`<select onchange="ck.${id}=this.value;chkPage()">${L.map(x=>{const[k,t]=Array.isArray(x)?x:[x,x];return`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(lab?lab(t):t)}</option>`}).join('')}</select>`;
+ const L=day.filter(r=>NC.groupOf(r.m,set)===ck.g).sort((a,b)=>a.t.localeCompare(b.t,'ja',{numeric:true}));
+ const A=S.agg[ck.d.slice(0,7)]||{};const rk=(A.ranks||{})[ck.d]||{};const keys=A.rankKeys||NC.RANK_KEYS;
+ const iy=keys.indexOf(ck.w+'_'+ck.m+'_y'),iw=iy+1;
+ const sum=(A.sums||{})[ck.d+'|'+ck.s+'|'+(L.some(r=>r.m!==ck.g)&&new Set(L.map(r=>r.m)).size>1?'G:'+ck.g:L[0]?.m)];
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ $('main').innerHTML=`<div class="card"><h2>📊 状態順の確認</h2>
+ <div class="row">${sel('s',stores,ck.s)}${sel('d',dates,ck.d)}</div><div class="row">${sel('g',groups,ck.g)}</div>
+ <div class="row">${sel('w',NC.WIN,ck.w)}${sel('m',NC.MET,ck.m)}</div>
+ <p class="note">その日の朝の時点の順位（${esc(NC.WIN.find(w=>w[0]===ck.w)[1])}のデータで比べる）。同じ値が並んだ台・データがない台は空白。</p>
+ ${sum?`<p class="note">合計 ${sum.n}台・${sum.g.toLocaleString()}G・BB ${sum.bb}・RB ${sum.rb}・合算 ${P(sum.g,sum.bb+sum.rb)}　平均 ${Math.round(sum.g/sum.n).toLocaleString()}G</p>`:''}
+ <div class="tw"><table><tr><th class="fix">台番</th><th class="l">機種</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th>良い順</th><th>悪い順</th></tr>
+ ${L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.m)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td><td>${x[iy]||''}</td><td>${x[iw]||''}</td></tr>`}).join('')}</table></div></div>`}
+
+// ===== 設定 =====
+function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
+ const al=Object.entries(set.alias).map(([a,b])=>a+'='+b).join('\n');
+ $('main').innerHTML=`<div class="card"><h2>⚙️ 機種のタイプとまとめ</h2><p class="note">「まとめ名」が同じ機種は、状態順を一緒に付けるよ（ジャグラーの同じ確率の別名など）。タイプはノーマルと分かる機種だけノーマル、それ以外はAT。</p>
+ <div class="tw"><table><tr><th class="l fix">機種</th><th>タイプ</th><th class="l">まとめ名</th></tr>${ms.map((m,i)=>`<tr><td class="l fix" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(m)}</td><td><select data-m="${i}" class="ty"><option value="N" ${NC.typeOf(m,set)==='N'?'selected':''}>ノーマル</option><option value="AT" ${NC.typeOf(m,set)==='AT'?'selected':''}>AT</option></select></td><td><input data-m="${i}" class="gr" value="${esc(NC.groupOf(m,set))}" style="width:150px;font-size:14px"></td></tr>`).join('')}</table></div>
+ <h2 style="margin-top:12px">機種名の言いかえ</h2><p class="note">1行に「旧名=正式名」。取込のときに正式名に直すよ。「旧名=」だけにすると、同じ台の重複が出たとき相手側の名前を残す。</p>
+ <textarea id="al">${esc(al)}</textarea>
+ <div class="row"><button class="b" onclick="saveSet()">保存して計算し直す</button></div><div id="sv" class="st"></div></div>`;
+ window._ms=ms}
+window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups={};
+ document.querySelectorAll('.ty').forEach(e=>{const m=ms[e.dataset.m];types[m]=e.value});
+ document.querySelectorAll('.gr').forEach(e=>{const m=ms[e.dataset.m];const v=NC.nz(e.value)||m;groups[m]=v});
+ const alias={};for(const line of $('al').value.split('\n')){const i=line.indexOf('=');if(i<1)continue;alias[NC.nz(line.slice(0,i))]=NC.nz(line.slice(i+1))}
+ const old=S.set;S.set={groups,types,alias};const sv=$('sv');
+ try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));
+  // 言いかえを今のデータにも反映（重複は削除）
+  const ren=S.rows.map(r=>Object.assign({},r,{m:NC.normMachine(r.m,{alias})}));const m=NC.merge([],ren,{alias});
+  const out=allFiles(m.rows);const n=await saveFiles(out,'設定狙い設定',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);
+  sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新${m.dup?`・重複${m.dup}件削除`:''}）`}
+ catch(e){S.set=old;sv.className='st ng';sv.textContent=e.message}};
+
+reload();
+</script>
+</body>
+</html>
