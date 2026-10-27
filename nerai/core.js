@@ -92,6 +92,10 @@ function monthFiles(rows,set){rows=[...rows].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.
  return out}
 function rowsFromFile(j){if(!j||!Array.isArray(j.rows))throw new Error('形式が違う');return j.rows.map(a=>({d:a[0],s:a[1],m:a[2],t:String(a[3]),g:a[4],bb:a[5],rb:a[6]}))}
 const fmtP=v=>v===Infinity||!Number.isFinite(v)?'-':'1/'+v.toFixed(1);
-const api={WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+// 次の日（まだデータがない日）の状態順。台の並びは最後の日と同じとみなす
+function addDay(d,n){const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)}
+function nextDay(rows,set,store){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let L='0';for(const r of R)if(r.d>L)L=r.d;
+ const d=addDay(L,1);const v=R.filter(r=>r.d===L).map(r=>Object.assign({},r,{d,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(v),set);return{date:d,base:L,rows:v,ranks:b.ranks[d]||{}}}
+const api={addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);

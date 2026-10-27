@@ -42,13 +42,19 @@ th.fix{background:#f6f7fa;z-index:2}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
 .kv b{text-align:right}
 .hidden{display:none}
+.r1{color:#c62828;font-weight:700}.r2{color:#d4561c;font-weight:600}
+tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
+tr.gh td{background:#20242c;color:#e9c46a;font-weight:600;text-align:left}
+th.s{cursor:pointer}th.s.on{color:#1f5fd6}
+.chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
+details summary{font-size:14px;font-weight:600;padding:4px 0}
 </style>
 </head>
 <body>
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=1"></script>
+<script src="core.js?v=2"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -56,7 +62,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取込'],['chk','状態順'],['set','設定'],['tou','当日',1],['ana','分析',1],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
+const TABS=[['imp','取込'],['tou','当日'],['chk','状態順'],['set','設定'],['ana','分析',1],['ner','狙い',1],['zu','図面',1],['ken','検索',1]];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
 const S={loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
@@ -92,7 +98,7 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{tab=t;LS.set('nr_tab',t);render()};
 function render(){nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>`;return}
- if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage()}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== 取込 =====
@@ -139,6 +145,46 @@ function chkPage(){const R=S.rows;const stores=[...new Set(R.map(r=>r.s))].sort(
  ${sum?`<p class="note">合計 ${sum.n}台・${sum.g.toLocaleString()}G・BB ${sum.bb}・RB ${sum.rb}・合算 ${P(sum.g,sum.bb+sum.rb)}　平均 ${Math.round(sum.g/sum.n).toLocaleString()}G</p>`:''}
  <div class="tw"><table><tr><th class="fix">台番</th><th class="l">機種</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th>良い順</th><th>悪い順</th></tr>
  ${L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.m)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td><td>${x[iy]||''}</td><td>${x[iw]||''}</td></tr>`}).join('')}</table></div></div>`}
+
+// ===== 当日 =====
+let tu=LS.get('nr_tu',{});
+if(!tu.w)tu.w=NC.WIN.map(w=>w[0]);if(!tu.m)tu.m=['g','gs'];if(!tu.r)tu.r=['w'];if(!tu.so)tu.so='t';
+function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!tu.s||!stores.includes(tu.s))tu.s=stores[0]||'';
+ const dates=[...new Set(R.filter(r=>r.s===tu.s).map(r=>r.d))].sort().reverse();
+ const nx=tu.s?NC.nextDay(R,set,tu.s):null;const NX='next';
+ if(!tu.d||(tu.d!==NX&&!dates.includes(tu.d)))tu.d=NX;
+ let day,rk,keys=NC.RANK_KEYS,virt=false;
+ if(tu.d===NX&&nx){day=nx.rows;rk=nx.ranks;virt=true}else{day=R.filter(r=>r.s===tu.s&&r.d===tu.d);const A=S.agg[tu.d.slice(0,7)]||{};rk=(A.ranks||{})[tu.d]||{};keys=A.rankKeys||keys}
+ const groups=[...new Set(day.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));if(tu.g&&!groups.includes(tu.g))tu.g='';
+ LS.set('nr_tu',tu);
+ const cols=[];for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0]))for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(r==='y'?'良':'悪')+'順'});
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+ const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
+ // 並び
+ const val=(r,c)=>{const x=rk[r.s+'|'+r.t]||[];return x[c.i]||0};
+ const soC=cols.find(c=>c.k===tu.so);
+ const sorter=(a,b)=>{if(soC){const va=val(a,soC)||1e9,vb=val(b,soC)||1e9;if(va!==vb)return va-vb}return a.t.localeCompare(b.t,'ja',{numeric:true})};
+ const rkCell=v=>`<td class="${v===1?'r1':v===2?'r2':''}">${v||''}</td>`;
+ let body='';const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th class="l">店舗</th><th class="l">機種</th><th>狙い順</th><th>狙い印</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=day.filter(r=>NC.groupOf(r.m,set)===g).sort(sorter);
+  const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}
+  body+=`<tr class="gh"><td class="fix" style="background:#20242c">${esc(g)}</td><td colspan="${10+cols.length}">${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}</td></tr>`;
+  body+=L.map(r=>{const x=rk[r.s+'|'+r.t]||[];return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td></td><td></td>${virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>rkCell(x[c.i])).join('')}</tr>`}).join('');
+  if(!virt&&L.length){const e='<td></td>'.repeat(cols.length);
+   body+=`<tr class="sum"><td class="fix">合計</td><td></td><td class="l">${L.length}台</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
+   body+=`<tr class="sum"><td class="fix">平均</td><td></td><td class="l">1台あたり</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`}}
+ $('main').innerHTML=`<div class="card"><h2>🎯 当日データ</h2>
+ <div class="row">${sel('s',stores.map(s=>[s,s]),tu.s)}${sel('d',(nx?[[NX,nx.date+'（次の日・データなし）']]:[]).concat(dates.map(d=>[d,d+'（'+'日月火水木金土'[new Date(d+'T00:00:00Z').getUTCDay()]+'）'])),tu.d)}</div>
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),tu.g||'')}</div>
+ <details><summary>表示する状態順を選ぶ（今 ${cols.length}列）</summary>
+ <p class="note">期間</p>${chip('w',NC.WIN)}<p class="note">指標</p>${chip('m',NC.MET)}<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}
+ <div class="row"><button class="b sub" onclick="tuAll(1)">全部（56列）</button><button class="b sub" onclick="tuAll(0)">おすすめに戻す</button></div></details>
+ <p class="note">順位はその日の朝の時点（前の日までのデータで比較）。同じ値の台・データがない台は空白。見出しをタップでその順に並べ替え。${virt?`<br>次の日の台の並びは ${nx.base} と同じとみなしてる。`:''}</p>
+ ${day.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
+window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
+window.tuSo=k=>{tu.so=k;touPage()};
+window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['y','w']}else{tu.w=NC.WIN.map(w=>w[0]);tu.m=['g','gs'];tu.r=['w']}touPage()};
 
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
