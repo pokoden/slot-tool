@@ -75,7 +75,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=21"></script>
+<script src="core.js?v=22"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -419,7 +419,7 @@ function borPage(){const B=bord();const set=setObj();
  <div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">ボーダーを保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`}
 
 // ===== 狙いリスト =====
-function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.marks=Object.assign({},NC.DEF_CFG.marks,c.marks);c.combo=c.combo||{};c.prevX=c.prevX==null?true:!!c.prevX;c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);return c}
+function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.marks=Object.assign({},NC.DEF_CFG.marks,c.marks);c.combo=c.combo||{};c.prevX=c.prevX==null?true:!!c.prevX;c.seatMerge=!!c.seatMerge;c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);return c}
 // 分析タブの期間を使う。終わりは狙う日の前日まで
 function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
  let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
@@ -490,7 +490,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
  const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
-  const lab=x.kind==='t'?'台番':esc(x.label);const bg=stBg(x.s);
+  const lab=x.mlabel?esc(x.mlabel):x.kind==='t'?'台番':esc(x.label);const bg=stBg(x.s);
   return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" ${x.kind==='s'?'style="color:#1f5fd6;font-weight:600"':''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
@@ -509,12 +509,16 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="card"><h2>🧮 サブ評価</h2>
  <div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg])} %</td>`).join('')}</tr></table></div>
  <div class="row"><label>使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転指数'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
- <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○を×にする</label></div></div>
+ </div>
+ <div class="card"><h2>🧩 その他考慮</h2>
+ <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○を×にする</label></div>
+ <div class="row"><label><input type="checkbox" ${cfg.seatMerge?'checked':''} onchange="nrSeatM(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 着席台番被りを考慮する</label></div></div>
 <div class="card"><h2>🏆 狙いリスト</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button></div>
  ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
 </div>`}
+window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nerPage()};
 window.nrPrevX=v=>{nerCfg().prevX=!!v;anDirty=true;NRC={};autoSave();nerPage()};
 window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);nerPage()};
 window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let i=0;i<p.length-1;i++)o=o[p[i]];const last=p[p.length-1];
