@@ -28,13 +28,19 @@ const num=s=>{s=nz(s).replace(/[,円G回]/g,'');if(s===''||s==='-')return 0;cons
 function splitLine(line,sep){if(sep==='\t')return line.split('\t');const out=[];let cur='',q=false;
  for(let i=0;i<line.length;i++){const c=line[i];if(q){if(c==='"'){if(line[i+1]==='"'){cur+='"';i++}else q=false}else cur+=c}
   else if(c==='"')q=true;else if(c===','){out.push(cur);cur=''}else cur+=c}out.push(cur);return out}
+const isNumT=x=>/^\d[\d,]*$/.test(nz(x));
+function dateLast(line,sep){const C=[];if(sep==='\t')C.push(line.split('\t'));else C.push(splitLine(line,','));C.push(nz(line).split(' '));
+ for(const c of C){const r=dateLast1(c.map(x=>nz(x).replace(/^"(.*)"$/,'$1')));if(r)return r}return null}
+function dateLast1(q){q=q.slice();while(q.length&&q[q.length-1]==='')q.pop();const L=q.length;if(L<7)return null;let d=normDate(q[L-1]);
+ if(!d){const m=q[L-1].match(/^(\d{1,2})[\/\-.月](\d{1,2})日?$/);if(m)d=normDate(new Date().getFullYear()+'/'+m[1]+'/'+m[2])}
+ if(!d)return null;const st=q[L-2];
+ for(let i=1;i+3<L-2;i++)if(isNumT(q[i])&&isNumT(q[i+1])&&isNumT(q[i+2])&&isNumT(q[i+3]))return[d,st,q.slice(0,i).join(' '),q[i],q[i+1],q[i+2],q[i+3]];
+ return null}
 // TSV/CSV → 行。列：日付・店舗・機種・台番・回転・BB・RB
 function parseText(text,set){const rows=[],errs=[];text=String(text||'').replace(/^\uFEFF/,'');
  text.split(/\r?\n/).forEach((line,i)=>{if(!line.trim())return;const sep=line.includes('\t')?'\t':',';let p=splitLine(line,sep).map(nz);
-  // 機種名・台番号・G数・BB・RB・合成・BB確率・RB確率・店舗名・年月日 の並びも読む（日付が最後の列）
-  if(!normDate(p[0])){while(p.length&&p[p.length-1]==='')p.pop();const L=p.length;
-   if(L>=10&&normDate(p[L-1])){p=[p[L-1],p[L-2],p[0],p[1],p[2],p[3],p[4]]}
-   else if(/機種|年月日/.test(p[0]+'|'+(p[L-1]||'')))return}
+  // 機種名・台番号・G数・BB・RB・(確率)・店舗名・年月日 の並びも読む（日付が最後の列。確率の列は空・なしでもよい）
+  if(!normDate(p[0])){const dl=dateLast(line,sep);if(dl)p=dl;else if(/機種|年月日|日付/.test(line))return}
   const date=normDate(p[0]);if(!date){if(i>0||!/日付|date/i.test(p[0]))errs.push({line:i+1,text:line.slice(0,80),why:'日付が読めない'});return}
   if(p.length<7){errs.push({line:i+1,text:line.slice(0,80),why:'列が足りない（7列必要）'});return}
   const r={d:date,s:normStore(p[1]),m:normMachine(p[2],set),t:nz(p[3]),g:num(p[4]),bb:num(p[5]),rb:num(p[6])};
