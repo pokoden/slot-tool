@@ -1,613 +1,272 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>生活収支管理</title>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>生活管理ツール</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="生活管理ツール">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1f4fd8">
+<link rel="apple-touch-icon" href="icon.png?v=1">
+<link rel="icon" href="icon.png?v=1">
+<link rel="manifest" href="manifest.json?v=1">
 <style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f5f5; color: #333; }
-  header { background: #1a1a1a; color: #fff; padding: 12px 16px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-  header button { background: #333; color: #fff; border: none; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
-  .tabs { display: flex; background: #fff; border-bottom: 1px solid #ddd; overflow-x: auto; }
-  .tabs button { flex: 1; min-width: 80px; padding: 10px 8px; border: none; background: none; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
-  .tabs button.active { border-bottom-color: #c45c26; color: #c45c26; font-weight: bold; }
-  .container { max-width: 520px; margin: 0 auto; padding: 12px; }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-  .card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  .card h3 { margin: 0 0 8px; font-size: 15px; color: #c45c26; }
-  .row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; font-size: 14px; }
-  .row:last-child { border-bottom: none; font-weight: bold; }
-  .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .nav button { background: none; border: 1px solid #ddd; border-radius: 4px; padding: 6px 12px; cursor: pointer; }
-  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 13px; }
-  .cal .dow { font-weight: bold; color: #666; padding: 4px 0; }
-  .cal .day { padding: 8px 2px; border-radius: 4px; cursor: pointer; min-height: 36px; }
-  .cal .day.other { color: #ccc; }
-  .cal .day.today { outline: 2px solid #c45c26; }
-  .cal .day.stand { background: #e8f5e9; }
-  .cal .day.kado { background: #fff3e0; }
-  .cal .day.rest { background: #f5f5f5; }
-  .legend { display: flex; gap: 12px; font-size: 12px; margin-top: 8px; }
-  .legend span { display: flex; align-items: center; gap: 4px; }
-  .legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-  input[type="number"], input[type="text"], input[type="password"], select { padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-  input.wide { width: 100%; }
-  input.num { width: 90px; text-align: right; }
-  .btn { background: #c45c26; color: #fff; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
-  .btn:hover { background: #a34a1e; }
-  .btn.secondary { background: #666; }
-  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 10; }
-  .modal.show { display: flex; }
-  .modal-box { background: #fff; border-radius: 8px; padding: 16px; width: 340px; max-width: 92vw; max-height: 90vh; overflow-y: auto; }
-  .modal-box h4 { margin: 0 0 12px; }
-  .modal-box label { display: block; font-size: 12px; color: #666; margin-top: 8px; }
-  .modal-box select, .modal-box button, .modal-box input { width: 100%; margin-top: 4px; padding: 8px; }
-  .status { font-size: 12px; color: #666; margin-top: 8px; }
-  .sync-btns { display: flex; gap: 8px; margin-top: 8px; }
-  .small { font-size: 12px; color: #666; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 6px 4px; text-align: right; border-bottom: 1px solid #eee; }
-  th:first-child, td:first-child { text-align: left; }
-</style>
-</head>
-<body>
-<header>
-  生活収支管理
-  <button onclick="openSync()">⚙ 同期設定</button>
-</header>
-<div class="tabs">
-  <button class="active" onclick="switchTab('home')">ホーム</button>
-  <button onclick="switchTab('cal')">カレンダー</button>
-  <button onclick="switchTab('kakei')">家計</button>
-  <button onclick="switchTab('tax')">税金・目標</button>
-  <button onclick="switchTab('loan')">車ローン</button>
-</div>
-<div class="container">
-
-  <!-- HOME -->
-  <div id="tab-home" class="tab-content active">
-    <div class="card">
-      <h3>手持ち資金</h3>
-      <div class="row"><span>財布現金</span><span><input type="number" class="num" id="cash" onchange="calc()"> 円</span></div>
-      <div class="row"><span>パチ財布</span><span><input type="number" class="num" id="pachi" onchange="calc()"> 円</span></div>
-      <div class="row"><span>銀行</span><span><input type="number" class="num" id="bank" onchange="calc()"> 円</span></div>
-      <div class="row"><span>貯玉合計（引用）</span><span><input type="number" class="num" id="chodama" onchange="calc()"> 円</span></div>
-      <div class="row"><span>手持ち資金合計</span><span id="total">0 円</span></div>
-    </div>
-    <div class="card">
-      <h3>今月の状況</h3>
-      <div class="row"><span>パチスロ収支（引用）</span><span><input type="number" class="num" id="slotMonth" onchange="calc()"> 円</span></div>
-      <div class="row"><span>今月収支</span><span id="monthBalance">-</span></div>
-      <div class="row"><span>目標額</span><span><input type="number" class="num" id="goal" onchange="calcGoal()"> 円</span></div>
-      <div class="row"><span>目標差額</span><span id="goalDiff">-</span></div>
-      <div class="row"><span>スタンド残り日数</span><span id="remainStand">-</span></div>
-    </div>
-  </div>
-
-  <!-- CALENDAR -->
-  <div id="tab-cal" class="tab-content">
-    <div class="card">
-      <div class="nav">
-        <button onclick="prevMonth()">◀</button>
-        <strong id="monthLabel">2026年10月</strong>
-        <button onclick="nextMonth()">▶</button>
-      </div>
-      <div class="cal" id="calendar"></div>
-      <div class="legend">
-        <span><i style="background:#e8f5e9"></i>スタンド</span>
-        <span><i style="background:#fff3e0"></i>稼働</span>
-        <span><i style="background:#f5f5f5"></i>休み</span>
-      </div>
-    </div>
-    <div class="card">
-      <h3>今月の予定サマリー</h3>
-      <div class="row"><span>スタンド日数</span><span id="sumStand">-</span></div>
-      <div class="row"><span>稼働日数</span><span id="sumKado">-</span></div>
-      <div class="row"><span>休み日数</span><span id="sumRest">-</span></div>
-      <div class="row"><span>スタンド給料合計</span><span id="sumPay">-</span></div>
-      <div class="row"><span>稼働収支合計</span><span id="sumKadoProfit">-</span></div>
-    </div>
-  </div>
-
-  <!-- KAKEI -->
-  <div id="tab-kakei" class="tab-content">
-    <div class="card">
-      <h3>家計簿（月次）</h3>
-      <div class="nav">
-        <button onclick="prevKakeiMonth()">◀</button>
-        <strong id="kakeiMonthLabel">2026年10月</strong>
-        <button onclick="nextKakeiMonth()">▶</button>
-      </div>
-      <table id="kakeiTable">
-        <thead><tr><th>項目</th><th>収入</th><th>支出</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button class="btn" style="margin-top:8px;width:100%" onclick="addKakeiItem()">項目を追加</button>
-    </div>
-  </div>
-
-  <!-- TAX -->
-  <div id="tab-tax" class="tab-content">
-    <div class="card">
-      <h3>扶養内・税金</h3>
-      <div class="row"><span>今年の稼いだ額</span><span><input type="number" class="num" id="earned" onchange="calcTax()"> 円</span></div>
-      <div class="row"><span>税金がかかる額</span><span>1,290,000 円</span></div>
-      <div class="row"><span>残り稼げる額</span><span id="remainEarn">-</span></div>
-    </div>
-    <div class="card">
-      <h3>貯金目標</h3>
-      <div class="row"><span>累積目標額</span><span><input type="number" class="num" id="saveGoal" onchange="calcTax()"> 円</span></div>
-      <div class="row"><span>実際累積額</span><span><input type="number" class="num" id="saveActual" onchange="calcTax()"> 円</span></div>
-      <div class="row"><span>目標差</span><span id="saveDiff">-</span></div>
-    </div>
-  </div>
-
-  <!-- LOAN -->
-  <div id="tab-loan" class="tab-content">
-    <div class="card">
-      <h3>車ローン</h3>
-      <div class="row"><span>残回数</span><span><input type="number" class="num" id="loanRemain" onchange="calcLoan()"> 回</span></div>
-      <div class="row"><span>月々返済</span><span><input type="number" class="num" id="loanMonthly" onchange="calcLoan()"> 円</span></div>
-      <div class="row"><span>残額</span><span id="loanLeft">-</span></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="sync-btns">
-      <button class="btn" onclick="pushData()">保存して同期</button>
-      <button class="btn secondary" onclick="pullData()">今すぐ同期</button>
-      <button class="btn secondary" onclick="autoLoadFromChodama()">収支管理から引用</button>
-    </div>
-    <div class="status" id="syncStatus">未設定</div>
-  </div>
-
-</div>
-
-<!-- Day modal -->
-<div class="modal" id="modal">
-  <div class="modal-box">
-    <h4 id="modalDate">日付</h4>
-    <label>予定</label>
-    <select id="modalType">
-      <option value="">未設定</option>
-      <option value="stand">スタンド</option>
-      <option value="kado">稼働</option>
-      <option value="rest">休み</option>
-    </select>
-    <label>出勤時間（h）</label>
-    <input type="number" id="modalHours" step="0.5" placeholder="9">
-    <label>給料（円）</label>
-    <input type="number" id="modalPay" placeholder="9900">
-    <label>稼働時間（h）</label>
-    <input type="number" id="modalKadoHours" step="0.1" placeholder="0">
-    <label>稼働収支（円）</label>
-    <input type="number" id="modalKadoProfit" placeholder="0">
-    <button class="btn" onclick="saveDay()">保存</button>
-    <button class="btn secondary" onclick="closeModal()">キャンセル</button>
-  </div>
-</div>
-
-<!-- Kakei item modal -->
-<div class="modal" id="kakeiModal">
-  <div class="modal-box">
-    <h4>家計項目を追加</h4>
-    <label>項目名</label>
-    <input type="text" id="kakeiName" placeholder="タバコ / 給料 など">
-    <label>種別</label>
-    <select id="kakeiKind">
-      <option value="income">収入</option>
-      <option value="expense">支出</option>
-    </select>
-    <label>金額</label>
-    <input type="number" id="kakeiAmount">
-    <button class="btn" onclick="saveKakeiItem()">追加</button>
-    <button class="btn secondary" onclick="closeKakeiModal()">キャンセル</button>
-  </div>
-</div>
-
-<!-- Sync settings -->
-<div class="modal" id="syncModal">
-  <div class="modal-box">
-    <h4>同期設定</h4>
-    <label>GitHub Token</label>
-    <input type="password" id="ghToken" class="wide" placeholder="ghp_...">
-    <label>リポジトリ (owner/repo)</label>
-    <input type="text" id="ghRepo" class="wide" placeholder="username/repo">
-    <label>ファイルパス</label>
-    <input type="text" id="ghPath" class="wide" value="seikatsu.json">
-    <button class="btn" onclick="saveSyncSettings()">設定を保存</button>
-    <button class="btn secondary" onclick="testToken()">トークンをテスト</button>
-    <button class="btn secondary" onclick="closeSync()">閉じる</button>
-    <div class="status" id="syncSettingStatus"></div>
-  </div>
-</div>
-
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f4f7fc;color:#14213d;font-size:15px;-webkit-text-size-adjust:100%;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{background:linear-gradient(135deg,#1f4fd8,#2b6cf0);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:18px;font-weight:800}
+#st{font-size:12px;color:#fff;background:rgba(255,255,255,.18);padding:3px 9px;border-radius:99px}
+main{max-width:480px;margin:0 auto;padding:12px}
+.card{background:#fff;border:1px solid #e3e9f5;border-radius:16px;box-shadow:0 2px 10px rgba(31,79,216,.06);padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:15px;font-weight:800;color:#14213d;display:flex;justify-content:space-between;align-items:center}
+.big{font-size:38px;font-weight:900;letter-spacing:-.5px;color:#14213d}
+.big small{font-size:18px;font-weight:800}
+.up{color:#1f4fd8;font-weight:800}.dn,.neg{color:#e0283a!important}
+.pos{color:#14213d}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eef2f9}
+.row:last-child{border-bottom:0}
+.row b{font-weight:800}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:#f0f5ff;border-radius:14px;padding:10px 12px}
+.tile .l{font-size:12px;font-weight:700;color:#1f4fd8}
+.tile .v{font-size:19px;font-weight:900;margin-top:3px}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.pill{border:1px solid #cdd9f3;background:#fff;color:#1f4fd8;border-radius:99px;padding:6px 12px;font-size:13px;font-weight:700}
+.pill.on{background:#1f4fd8;color:#fff;border-color:#1f4fd8}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e3e9f5;display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:9}
+nav button{flex:1;border:0;background:none;padding:9px 0 8px;font-size:12px;font-weight:700;color:#7b8bb0;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button.on{color:#1f4fd8}
+nav svg{width:24px;height:24px}
+input,select{font:inherit;border:1px solid #cdd9f3;border-radius:10px;padding:7px 9px;background:#fff;color:#14213d;width:100%}
+input.num{text-align:right}
+.btn{border:0;background:#1f4fd8;color:#fff;font-weight:800;border-radius:12px;padding:10px 14px;font-size:15px}
+.btn.sub{background:#eaf0fd;color:#1f4fd8}
+.btn.del{background:#fde8ea;color:#e0283a}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th{background:#1f4fd8;color:#fff;font-weight:700;padding:5px 4px;white-space:nowrap;position:sticky;top:0}
+td{padding:5px 4px;border-bottom:1px solid #eef2f9;text-align:right;white-space:nowrap}
+td.l{text-align:left}
+tr.sum td{font-weight:800;background:#f0f5ff}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+.bar{position:relative}
+.bar i{position:absolute;left:0;top:3px;bottom:3px;background:#d7e3fd;border-radius:3px;z-index:0}
+.bar i.n{background:#fbd5d9}
+.bar span{position:relative;z-index:1}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .h{text-align:center;font-size:12px;font-weight:700;color:#1f4fd8}
+.cal .d{min-height:58px;border-radius:10px;background:#f6f8fd;padding:3px;font-size:11px;text-align:center;border:1px solid transparent}
+.cal .d.today{border-color:#1f4fd8}
+.cal .d .n{font-weight:800;font-size:13px}
+.cal .d .t{border-radius:6px;color:#fff;font-weight:800;padding:1px 0;margin-top:2px}
+.t-stand{background:#1f4fd8}.t-kado{background:#f08c00}.t-off{background:#2fb36b}.t-other{background:#7a5af8}
+.cal .d .y{font-weight:800;font-size:10px}
+.sheet{position:fixed;inset:0;background:rgba(10,20,50,.35);z-index:20;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet .in{background:#fff;width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.chip{border:2px solid #cdd9f3;background:#fff;border-radius:14px;padding:14px 0;font-size:17px;font-weight:800;color:#14213d}
+.chip.on{color:#fff;border-color:transparent}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.f label{font-size:12px;font-weight:700;color:#1f4fd8}
+.mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mh b{font-size:17px}
+.mh button{border:0;background:#eaf0fd;color:#1f4fd8;font-weight:800;border-radius:10px;width:40px;height:34px;font-size:18px}
+textarea{width:100%;min-height:110px;font:12px monospace;border:1px solid #cdd9f3;border-radius:10px;padding:8px}
+.tag{display:inline-block;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:800;color:#fff}
+.i1-生活費{background:#1f9bd8}.i1-収入{background:#2fb36b}.i1-ギャンブル{background:#e0283a}
+.hide{display:none}
+</style></head><body>
+<header><h1>生活管理ツール</h1><span id="st">読み込み中</span></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div class="sheet" id="sheet"><div class="in" id="sheetIn"></div></div>
 <script>
-const STORAGE_KEY = 'seikatsu_data';
-const SYNC_KEY = 'seikatsu_sync';
-const TOKEN_KEY = 'v2_token';
-let current = new Date(2026, 9, 25);
-let kakeiMonth = new Date(2026, 9, 1);
-let schedule = {}; // date -> {type, hours, pay, kadoHours, kadoProfit}
-let kakei = {};    // 'YYYY-MM' -> [{name, kind, amount}]
-let syncConfig = {};
-
-async function ghGet(path) {
-  if (!syncConfig.token || !syncConfig.repo) return null;
-  const res = await fetch('https://api.github.com/repos/' + syncConfig.repo + '/contents/' + path, {
-    headers: { 'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token, 'Accept': 'application/vnd.github.v3+json' }
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return JSON.parse(decodeURIComponent(escape(atob(data.content))));
-}
-
-async function autoLoadFromChodama() {
-  if (!syncConfig.token || !syncConfig.repo) return;
-  try {
-    document.getElementById('syncStatus').textContent = '収支管理から読み込み中...';
-    const [cd, slotData, pachiData] = await Promise.all([
-      ghGet('chodama.json'),
-      ghGet('data.json'),
-      ghGet('pachinko.json')
-    ]);
-
-    // 貯玉合計：setエントリを円換算
-    let chodamaYen = 0;
-    if (cd && cd.ev) {
-      const stores = (slotData && slotData.stores) || [];
-      const storeMap = {};
-      for (const s of stores) storeMap[s.name] = s;
-      for (const e of cd.ev) {
-        if (e.deleted || e.t !== 'set' || !e.n) continue;
-        const st = storeMap[e.store] || {};
-        let yenPer = 3.57;
-        if (e.k === 's' && st.ex) yenPer = 100 / st.ex;
-        else if (e.k === 'p' && st.val) yenPer = st.val;
-        chodamaYen += e.n * yenPer;
-      }
-    }
-    if (chodamaYen > 0) {
-      document.getElementById('chodama').value = Math.round(chodamaYen);
-    }
-
-    // 今月のパチスロ収支：data.json + pachinko.json の今月yen合計
-    const now = new Date();
-    const ym = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-    let monthYen = 0;
-    for (const src of [slotData, pachiData]) {
-      if (!src || !src.entries) continue;
-      for (const e of src.entries) {
-        if (e.deleted || !e.date || !e.date.startsWith(ym) || e.yen == null) continue;
-        monthYen += +e.yen || 0;
-      }
-    }
-    if (monthYen !== 0) {
-      document.getElementById('slotMonth').value = Math.round(monthYen);
-    }
-
-    calc();
-    document.getElementById('syncStatus').textContent = '収支管理から読み込み完了';
-  } catch(e) {
-    document.getElementById('syncStatus').textContent = '読み込みエラー';
-  }
-}
-
-function loadLocal() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const data = JSON.parse(raw);
-      schedule = data.schedule || {};
-      kakei = data.kakei || {};
-      ['cash','pachi','bank','chodama','slotMonth','goal','earned','saveGoal','saveActual','loanRemain','loanMonthly'].forEach(id => {
-        if (data[id] != null) document.getElementById(id).value = data[id];
-      });
-    }
-    const syncRaw = localStorage.getItem(SYNC_KEY);
-    if (syncRaw) {
-      syncConfig = JSON.parse(syncRaw);
-    }
-    // 既存アプリのトークンがあればそれを使う
-    const existingToken = localStorage.getItem(TOKEN_KEY) || localStorage.getItem('v2_token');
-    if (existingToken && !syncConfig.token) syncConfig.token = existingToken;
-    if (!syncConfig.repo) syncConfig.repo = 'pokoden/slot-data';
-    if (!syncConfig.path) syncConfig.path = 'seikatsu.json';
-    document.getElementById('ghToken').value = syncConfig.token || '';
-    document.getElementById('ghRepo').value = syncConfig.repo || 'pokoden/slot-data';
-    document.getElementById('ghPath').value = syncConfig.path || 'seikatsu.json';
-    updateSyncStatus();
-  } catch(e) {}
-  calc();
-  render();
-  renderKakei();
-  calcTax();
-  calcLoan();
-  autoLoadFromChodama();
-}
-
-function getData() {
-  return {
-    schedule,
-    kakei,
-    cash: +document.getElementById('cash').value || 0,
-    pachi: +document.getElementById('pachi').value || 0,
-    bank: +document.getElementById('bank').value || 0,
-    chodama: +document.getElementById('chodama').value || 0,
-    slotMonth: +document.getElementById('slotMonth').value || 0,
-    goal: +document.getElementById('goal').value || 0,
-    earned: +document.getElementById('earned').value || 0,
-    saveGoal: +document.getElementById('saveGoal').value || 0,
-    saveActual: +document.getElementById('saveActual').value || 0,
-    loanRemain: +document.getElementById('loanRemain').value || 0,
-    loanMonthly: +document.getElementById('loanMonthly').value || 0
-  };
-}
-
-function saveLocal() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(getData()));
-}
-
-function calc() {
-  const d = getData();
-  const total = d.cash + d.pachi + d.bank + d.chodama;
-  document.getElementById('total').textContent = total.toLocaleString() + ' 円';
-  calcGoal();
-  saveLocal();
-}
-
-function calcGoal() {
-  const d = getData();
-  const total = d.cash + d.pachi + d.bank + d.chodama;
-  const diff = total - d.goal;
-  document.getElementById('goalDiff').textContent = (diff >= 0 ? '+' : '') + diff.toLocaleString() + ' 円';
-  document.getElementById('goalDiff').style.color = diff >= 0 ? '#2c5f4e' : '#c45c26';
-}
-
-function calcTax() {
-  const earned = +document.getElementById('earned').value || 0;
-  const remain = 1290000 - earned;
-  document.getElementById('remainEarn').textContent = remain.toLocaleString() + ' 円';
-  const sg = +document.getElementById('saveGoal').value || 0;
-  const sa = +document.getElementById('saveActual').value || 0;
-  const sd = sa - sg;
-  document.getElementById('saveDiff').textContent = (sd >= 0 ? '+' : '') + sd.toLocaleString() + ' 円';
-  saveLocal();
-}
-
-function calcLoan() {
-  const r = +document.getElementById('loanRemain').value || 0;
-  const m = +document.getElementById('loanMonthly').value || 0;
-  document.getElementById('loanLeft').textContent = (r * m).toLocaleString() + ' 円';
-  saveLocal();
-}
-
-function switchTab(name) {
-  document.querySelectorAll('.tabs button').forEach((b, i) => {
-    b.classList.toggle('active', ['home','cal','kakei','tax','loan'][i] === name);
-  });
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-}
-
-function render() {
-  const y = current.getFullYear();
-  const m = current.getMonth();
-  document.getElementById('monthLabel').textContent = `${y}年${m+1}月`;
-
-  const first = new Date(y, m, 1);
-  const last = new Date(y, m+1, 0);
-  const startDow = first.getDay();
-  const days = last.getDate();
-
-  let html = '<div class="dow">日</div><div class="dow">月</div><div class="dow">火</div><div class="dow">水</div><div class="dow">木</div><div class="dow">金</div><div class="dow">土</div>';
-  for (let i = 0; i < startDow; i++) html += '<div class="day other"></div>';
-
-  let stand = 0, kado = 0, rest = 0, pay = 0, kadoProfit = 0;
-  const todayStr = new Date().toISOString().slice(0,10);
-  let remainStand = 0;
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  for (let d = 1; d <= days; d++) {
-    const date = new Date(y, m, d);
-    const key = date.toISOString().slice(0,10);
-    const rec = schedule[key] || {};
-    const type = rec.type || '';
-    const cls = ['day', type, key === todayStr ? 'today' : ''].filter(Boolean).join(' ');
-    html += `<div class="${cls}" onclick="openModal('${key}')">${d}</div>`;
-    if (type === 'stand') { stand++; pay += rec.pay || 0; if (date >= today) remainStand++; }
-    if (type === 'kado') { kado++; kadoProfit += rec.kadoProfit || 0; }
-    if (type === 'rest') rest++;
-  }
-
-  document.getElementById('calendar').innerHTML = html;
-  document.getElementById('sumStand').textContent = stand + '日';
-  document.getElementById('sumKado').textContent = kado + '日';
-  document.getElementById('sumRest').textContent = rest + '日';
-  document.getElementById('sumPay').textContent = pay.toLocaleString() + ' 円';
-  document.getElementById('sumKadoProfit').textContent = kadoProfit.toLocaleString() + ' 円';
-  document.getElementById('remainStand').textContent = remainStand + '日';
-
-  // month balance rough
-  const monthBal = pay + kadoProfit + (+document.getElementById('slotMonth').value || 0);
-  document.getElementById('monthBalance').textContent = monthBal.toLocaleString() + ' 円';
-}
-
-function prevMonth() { current.setMonth(current.getMonth()-1); render(); }
-function nextMonth() { current.setMonth(current.getMonth()+1); render(); }
-
-let editingDate = '';
-function openModal(date) {
-  editingDate = date;
-  const rec = schedule[date] || {};
-  document.getElementById('modalDate').textContent = date;
-  document.getElementById('modalType').value = rec.type || '';
-  document.getElementById('modalHours').value = rec.hours || '';
-  document.getElementById('modalPay').value = rec.pay || '';
-  document.getElementById('modalKadoHours').value = rec.kadoHours || '';
-  document.getElementById('modalKadoProfit').value = rec.kadoProfit || '';
-  document.getElementById('modal').classList.add('show');
-}
-function closeModal() { document.getElementById('modal').classList.remove('show'); }
-function saveDay() {
-  const type = document.getElementById('modalType').value;
-  if (type) {
-    schedule[editingDate] = {
-      type,
-      hours: +document.getElementById('modalHours').value || 0,
-      pay: +document.getElementById('modalPay').value || 0,
-      kadoHours: +document.getElementById('modalKadoHours').value || 0,
-      kadoProfit: +document.getElementById('modalKadoProfit').value || 0
-    };
-  } else {
-    delete schedule[editingDate];
-  }
-  saveLocal();
-  closeModal();
-  render();
-}
-
-function renderKakei() {
-  const y = kakeiMonth.getFullYear();
-  const m = kakeiMonth.getMonth();
-  const key = `${y}-${String(m+1).padStart(2,'0')}`;
-  document.getElementById('kakeiMonthLabel').textContent = `${y}年${m+1}月`;
-  const items = kakei[key] || [];
-  const tbody = document.querySelector('#kakeiTable tbody');
-  tbody.innerHTML = items.map(it => `
-    <tr>
-      <td>${it.name}</td>
-      <td>${it.kind === 'income' ? it.amount.toLocaleString() : ''}</td>
-      <td>${it.kind === 'expense' ? it.amount.toLocaleString() : ''}</td>
-    </tr>
-  `).join('') || '<tr><td colspan="3" style="text-align:center;color:#999">データなし</td></tr>';
-}
-function prevKakeiMonth() { kakeiMonth.setMonth(kakeiMonth.getMonth()-1); renderKakei(); }
-function nextKakeiMonth() { kakeiMonth.setMonth(kakeiMonth.getMonth()+1); renderKakei(); }
-function addKakeiItem() { document.getElementById('kakeiModal').classList.add('show'); }
-function closeKakeiModal() { document.getElementById('kakeiModal').classList.remove('show'); }
-function saveKakeiItem() {
-  const y = kakeiMonth.getFullYear();
-  const m = kakeiMonth.getMonth();
-  const key = `${y}-${String(m+1).padStart(2,'0')}`;
-  if (!kakei[key]) kakei[key] = [];
-  kakei[key].push({
-    name: document.getElementById('kakeiName').value || '項目',
-    kind: document.getElementById('kakeiKind').value,
-    amount: +document.getElementById('kakeiAmount').value || 0
-  });
-  saveLocal();
-  closeKakeiModal();
-  renderKakei();
-  document.getElementById('kakeiName').value = '';
-  document.getElementById('kakeiAmount').value = '';
-}
-
-function openSync() { document.getElementById('syncModal').classList.add('show'); }
-function closeSync() { document.getElementById('syncModal').classList.remove('show'); }
-function saveSyncSettings() {
-  syncConfig = {
-    token: document.getElementById('ghToken').value.trim().replace(/\s+/g, ''),
-    repo: document.getElementById('ghRepo').value.trim() || 'pokoden/slot-data',
-    path: document.getElementById('ghPath').value.trim() || 'seikatsu.json'
-  };
-  localStorage.setItem(SYNC_KEY, JSON.stringify(syncConfig));
-  if (syncConfig.token) localStorage.setItem(TOKEN_KEY, syncConfig.token);
-  updateSyncStatus();
-  document.getElementById('syncSettingStatus').textContent = '設定を保存しました';
-  setTimeout(() => document.getElementById('syncSettingStatus').textContent = '', 2000);
-}
-async function testToken() {
-  const token = document.getElementById('ghToken').value.trim();
-  const repo = document.getElementById('ghRepo').value.trim() || 'pokoden/slot-data';
-  if (!token) { document.getElementById('syncSettingStatus').textContent = 'トークンを入力してください'; return; }
-  document.getElementById('syncSettingStatus').textContent = 'テスト中...';
-  try {
-    const res = await fetch('https://api.github.com/repos/' + repo + '/contents/chodama.json', {
-      headers: { 'Authorization': (token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + token, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (res.status === 401) {
-      document.getElementById('syncSettingStatus').textContent = 'トークンが無効です（401）';
-    } else if (res.ok) {
-      document.getElementById('syncSettingStatus').textContent = 'OK（接続成功）';
-    } else {
-      document.getElementById('syncSettingStatus').textContent = 'エラー: ' + res.status;
-    }
-  } catch(e) {
-    document.getElementById('syncSettingStatus').textContent = '接続エラー';
-  }
-}
-
-function updateSyncStatus() {
-  const el = document.getElementById('syncStatus');
-  el.textContent = (syncConfig.token && syncConfig.repo) ? '同期設定済み（' + syncConfig.repo + '）' : '未設定';
-}
-
-async function ghFetch(method, path, body) {
-  if (!syncConfig.token || !syncConfig.repo) throw new Error('同期設定がありません');
-  const url = `https://api.github.com/repos/${syncConfig.repo}/contents/${path}`;
-  const headers = {
-    'Authorization': (syncConfig.token.startsWith('github_pat_') ? 'Bearer ' : 'token ') + syncConfig.token,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json'
-  };
-  const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-async function pullData() {
-  try {
-    document.getElementById('syncStatus').textContent = '同期中...';
-    let data;
-    try {
-      data = await ghFetch('GET', syncConfig.path);
-    } catch (e) {
-      if (String(e).includes('Not Found') || String(e.message).includes('Not Found')) {
-        document.getElementById('syncStatus').textContent = 'まだデータがありません。保存して同期で作成できます';
-        return;
-      }
-      throw e;
-    }
-    const content = JSON.parse(decodeURIComponent(escape(atob(data.content))));
-    schedule = content.schedule || {};
-    kakei = content.kakei || {};
-    ['cash','pachi','bank','chodama','slotMonth','goal','earned','saveGoal','saveActual','loanRemain','loanMonthly'].forEach(id => {
-      if (content[id] != null) document.getElementById(id).value = content[id];
-    });
-    saveLocal();
-    calc();
-    render();
-    renderKakei();
-    calcTax();
-    calcLoan();
-    document.getElementById('syncStatus').textContent = '同期完了（' + new Date().toLocaleTimeString() + '）';
-  } catch (e) {
-    document.getElementById('syncStatus').textContent = String(e).includes('401') || String(e).includes('Bad credentials') 
-      ? 'トークンが無効です。同期設定で正しいトークンを入れ直してください' 
-      : '同期エラー: ' + (e.message || e).toString().slice(0, 100);
-  }
-}
-
-async function pushData() {
-  try {
-    document.getElementById('syncStatus').textContent = '保存中...';
-    const data = getData();
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-    let sha;
-    try { sha = (await ghFetch('GET', syncConfig.path)).sha; } catch (e) {}
-    await ghFetch('PUT', syncConfig.path, { message: 'Update seikatsu data', content, sha });
-    document.getElementById('syncStatus').textContent = '保存完了（' + new Date().toLocaleTimeString() + '）';
-  } catch (e) {
-    document.getElementById('syncStatus').textContent = String(e).includes('401') || String(e).includes('Bad credentials') 
-      ? 'トークンが無効です。同期設定で正しいトークンを入れ直してください' 
-      : '保存エラー: ' + (e.message || e).toString().slice(0, 100);
-  }
-}
-
-loadLocal();
-</script>
-</body>
-</html>
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const API='https://api.github.com/repos/pokoden/slot-data/contents/';
+const PATH='seikatsu/seikatsu.json';
+const tok=()=>LS.get('v2_token','')||'';
+const yen=n=>{n=Math.round(+n||0);return (n<0?'-':'')+'¥'+Math.abs(n).toLocaleString()};
+const cls=n=>(+n<0?'neg':'');
+const Y=n=>`<span class="${cls(n)}">${yen(n)}</span>`;
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const ymOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1);
+const TODAY=new Date();const TD=ymd(TODAY);const CUR=ymOf(TODAY);
+const addM=(ym,k)=>{let[y,m]=ym.split('-').map(Number);m+=k;while(m>12){m-=12;y++}while(m<1){m+=12;y--}return y+'-'+pad(m)};
+const ymLabel=ym=>{const[y,m]=ym.split('-');return y+'/'+(+m)};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const I1=['生活費','収入','ギャンブル'];
+const I2=['生活固定費','生活変動費','税金','給料収入','雑収入','貯金','競馬','カジノ','パチスロ','調整'];
+const I2of1={'生活固定費':'生活費','生活変動費':'生活費','税金':'生活費','貯金':'生活費','調整':'生活費','給料収入':'収入','雑収入':'収入','競馬':'ギャンブル','カジノ':'ギャンブル','パチスロ':'ギャンブル'};
+const TYPES={stand:'スタンド',kado:'稼働',off:'休み',other:'その他労働'};
+function defData(){return{v:2,wallet:{cash:0,pachi:0,bank:0,small:0,big:0,save:0,car:0},sched:{},ledger:{},fixedDone:{},plans:[],
+ fixed:[['BIGLOBE',6505],['アクサ',13971],['スマホ',14230],['損保',3690],['タバコ',25000],['楽天ネット',1045],['自宅',20000]].map(([n,a])=>({id:uid(),i1:'生活費',i2:'生活固定費',i3:n,exp:a})),
+ set:{rate:1100,stdH:9,step:100000,prevEnd:null,fuyo:1290000,fixedFrom:CUR,loan:{items:[['車本体',700000],['タイヤホイール',148000]],n:24,monthly:37100,start:'2026-10'}},updatedAt:''}}
+let D=LS.get('sk2_data',null);
+let slot={byDate:{}},chodamaYen=null,sha=null,tab=LS.get('sk2_tab','home'),calYM=CUR,monYM=CUR,range=LS.get('sk2_range','1y');
+// 旧データ移行
+function migrate(old){const d=defData();if(!old)return d;
+ const w=d.wallet;w.cash=+old.cash||0;w.pachi=+old.pachi||0;w.bank=+old.bank||0;
+ for(const[k,r]of Object.entries(old.schedule||{})){if(!r||!r.type)continue;const t=r.type==='rest'?'off':(TYPES[r.type]?r.type:'other');d.sched[k]={t,h:+r.hours||0,pay:+r.pay||0}}
+ for(const[ym,arr]of Object.entries(old.kakei||{}))for(const it of arr||[]){const inc=it.kind==='income';(d.ledger[ym]=d.ledger[ym]||[]).push({id:uid(),i1:inc?'収入':'生活費',i2:inc?'雑収入':'生活変動費',i3:it.name||'',inc:inc?+it.amount||0:0,exp:inc?0:+it.amount||0})}
+ d.legacy=old;return d}
+if(!D){D=migrate(LS.get('seikatsu_data',null));}
+function fill(){const b=defData();for(const k in b)if(D[k]==null)D[k]=b[k];for(const k in b.set)if(D.set[k]==null)D.set[k]=b.set[k];for(const k in b.wallet)if(D.wallet[k]==null)D.wallet[k]=b.wallet[k]}
+fill();
+// 固定費を毎月自動で入れる
+function applyFixed(){let ym=D.set.fixedFrom||CUR,ch=false;while(ym<=CUR){if(!D.fixedDone[ym]){const L=D.ledger[ym]=D.ledger[ym]||[];for(const f of D.fixed)if(!L.some(x=>x.i3===f.i3&&x.i2===f.i2))L.push({id:uid(),i1:f.i1,i2:f.i2,i3:f.i3,inc:+f.inc||0,exp:+f.exp||0,fx:1});D.fixedDone[ym]=1;ch=true}ym=addM(ym,1)}return ch}
+// 保存
+let saveT=null,saving=false;
+function save(){D.updatedAt=new Date().toISOString();LS.set('sk2_data',D);clearTimeout(saveT);saveT=setTimeout(push,1500)}
+function b64(s){return btoa(unescape(encodeURIComponent(s)))}
+function ub64(s){return decodeURIComponent(escape(atob(s.replace(/\n/g,''))))}
+async function gh(path){const r=await fetch(API+path+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{nf:1};if(!r.ok)throw new Error(r.status);const j=await r.json();let txt=j.content?ub64(j.content):null;if(txt==null&&j.git_url){const g=await fetch(j.git_url,{headers:{Authorization:'Bearer '+tok()}});txt=ub64((await g.json()).content)}return{sha:j.sha,data:JSON.parse(txt)}}
+let loaded=false;
+async function push(){if(!tok()||!loaded||saving)return;saving=true;st('保存中');try{for(let i=0;i<3;i++){const r=await fetch(API+PATH,{method:'PUT',headers:{Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'seikatsu',content:b64(JSON.stringify(D)),...(sha?{sha}:{})})});if(r.status===409||r.status===422){const g=await gh(PATH);sha=g.sha||null;continue}if(!r.ok)throw new Error(r.status);sha=(await r.json()).content.sha;st('保存済み');break}}catch(e){st('保存失敗')}saving=false}
+function st(t){$('st').textContent=t}
+async function boot(){applyFixed();render();if(!tok()){st('トークン未設定');loaded=false;return}
+ try{const g=await gh(PATH);if(g.nf){const o=await gh('seikatsu.json').catch(()=>({nf:1}));if(!o.nf&&!LS.get('sk2_data',null)){D=migrate(o.data);fill()}}else{sha=g.sha;if(String(g.data.updatedAt||'')>String(D.updatedAt||'')){D=g.data;fill()}}loaded=true;applyFixed();save();st('同期済み')}catch(e){st('読み込み失敗');}
+ try{const[a,p,c,sd]=await Promise.all(['data.json','pachinko.json','chodama.json','data.json'].map(f=>gh(f).catch(()=>({nf:1}))));
+  const by={};for(const s of[a,p]){const es=(s.data&&s.data.entries)||[];for(const e of es){if(!e||e.deleted)continue;const d=e.date||String(e.saved||'').slice(0,10);if(!d||e.yen==null||!isFinite(+e.yen))continue;const o=by[d]=by[d]||{yen:0,h:0};o.yen+=+e.yen;o.h+=+e.hours>0?+e.hours:0}}slot.byDate=by;
+  if(c.data&&c.data.ev){const stores=(a.data&&a.data.stores)||[],sm={};for(const s of stores)sm[s.name]=s;let y=0;for(const e of c.data.ev){if(e.deleted||e.t!=='set'||!e.n)continue;const s=sm[e.store]||{};let per=3.57;if(e.k==='s'&&s.ex)per=100/s.ex;else if(e.k==='p'&&s.val)per=s.val;y+=e.n*per}chodamaYen=Math.round(y*0.95)}
+ }catch(e){}render()}
+// 集計
+function slotMonth(ym){let y=0,h=0,n=0;for(const[d,o]of Object.entries(slot.byDate))if(d.startsWith(ym)){y+=o.yen;h+=o.h;n++}return{y,h,n}}
+function dayInfo(d){const r=D.sched[d]||{};const s=slot.byDate[d];const o={...r};if(r.t==='kado'||(!r.t&&s)){o.t=o.t||'kado';if(s){o.kh=s.h;o.ky=s.yen}else{o.kh=+r.kh||0;o.ky=+r.ky||0}}return o}
+function workMonth(ym){const R={sd:0,sh:0,sp:0,od:0,oh:0,op:0,kd:0,kh:0,ky:0,off:0};const[y,m]=ym.split('-').map(Number);const n=new Date(y,m,0).getDate();for(let i=1;i<=n;i++){const d=ym+'-'+pad(i),o=dayInfo(d);if(o.t==='stand'){R.sd++;R.sh+=+o.h||0;R.sp+=+o.pay||0}if(o.t==='other'){R.od++;R.oh+=+o.h||0;R.op+=+o.pay||0}if(o.t==='kado'){R.kd++;R.kh+=+o.kh||0;R.ky+=+o.ky||0}if(o.t==='off')R.off++}return R}
+function rows(ym){const L=(D.ledger[ym]||[]).slice();const w=workMonth(ym);
+ if(!L.some(x=>x.i2==='給料収入')&&(w.sp+w.op))L.push({auto:1,i1:'収入',i2:'給料収入',i3:'給料',inc:w.sp+w.op,exp:0});
+ if(!L.some(x=>x.i2==='パチスロ')){const s=slotMonth(ym);if(s.n)L.push({auto:1,i1:'ギャンブル',i2:'パチスロ',i3:'パチスロ',inc:s.y>0?s.y:0,exp:s.y<0?-s.y:0})}return L}
+function allMonths(){const s=new Set([...Object.keys(D.ledger),CUR]);for(const d of Object.keys(slot.byDate))s.add(d.slice(0,7));for(const d of Object.keys(D.sched))s.add(d.slice(0,7));const a=[...s].filter(x=>/^\d{4}-\d\d$/.test(x)&&x<=CUR).sort();if(!a.length)return[CUR];const out=[];for(let m=a[0];m<=CUR;m=addM(m,1))out.push(m);return out}
+function summary(){let cum=0;return allMonths().map(ym=>{const L=rows(ym);const o={ym,inc:0,exp:0,c:{}};for(const x of L){o.inc+=+x.inc||0;o.exp+=+x.exp||0;o.c[x.i2]=(o.c[x.i2]||0)+(+x.inc||0)-(+x.exp||0)}o.net=o.inc-o.exp;cum+=o.net;o.cum=cum;o.save40=o.net>0?Math.round(o.net*.4):0;return o})}
+function loanInfo(){const L=D.set.loan,total=L.monthly*L.n;let paid=0;if(L.start<=CUR){let m=L.start;while(m<=CUR){paid++;m=addM(m,1)}}paid=Math.min(paid,L.n);return{total,paid,left:L.n-paid,rem:total-paid*L.monthly}}
+// 描画
+const ICON={home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',money:'<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/>',set:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'};
+const NAV=[['home','ホーム'],['cal','予定'],['money','お金'],['set','設定']];
+function render(){$('nav').innerHTML=NAV.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>${l}</button>`).join('');
+ $('main').innerHTML=({home:vHome,cal:vCal,money:vMoney,set:vSet})[tab]()}
+function go(k){tab=k;LS.set('sk2_tab',k);render();scrollTo(0,0)}
+function spark(vals,w=90,h=28){if(vals.length<2)return'';const mn=Math.min(...vals),mx=Math.max(...vals),r=mx-mn||1;const p=vals.map((v,i)=>(i*w/(vals.length-1)).toFixed(1)+','+(h-2-(v-mn)/r*(h-4)).toFixed(1)).join(' ');const up=vals[vals.length-1]>=vals[0];return`<svg width="${w}" height="${h}"><polyline points="${p}" fill="none" stroke="${up?'#1f4fd8':'#e0283a'}" stroke-width="2"/></svg>`}
+function lineChart(pts){const W=440,H=200,P=46;if(pts.length<2)return'<div style="height:60px"></div>';const vs=pts.map(p=>p[1]);let mn=Math.min(...vs),mx=Math.max(...vs);if(mn===mx){mn-=1;mx+=1}const x=i=>P+i*(W-P-8)/(pts.length-1),y=v=>H-22-(v-mn)/(mx-mn)*(H-36);
+ let g='';for(let k=0;k<=3;k++){const v=mn+(mx-mn)*k/3;g+=`<line x1="${P}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="#eef2f9"/><text x="${P-4}" y="${y(v)+4}" font-size="10" text-anchor="end" fill="#14213d">${Math.round(v).toLocaleString()}</text>`}
+ const step=Math.max(1,Math.ceil(pts.length/5));pts.forEach((p,i)=>{if(i%step===0||i===pts.length-1)g+=`<text x="${x(i)}" y="${H-6}" font-size="10" text-anchor="middle" fill="#14213d">${p[0]}</text>`});
+ const d=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`).join('');
+ return`<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="gf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4fd8" stop-opacity=".25"/><stop offset="1" stop-color="#1f4fd8" stop-opacity="0"/></linearGradient></defs>${g}<path d="${d}L${x(pts.length-1)},${H-22}L${x(0)},${H-22}Z" fill="url(#gf)"/><path d="${d}" fill="none" stroke="#1f4fd8" stroke-width="2.5"/><circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1][1])}" r="4" fill="#1f4fd8"/></svg>`}
+function setRange(r){range=r;LS.set('sk2_range',r);render()}
+function curBalances(){const S=summary();const byYm={};S.forEach(o=>byYm[o.ym]=o);return{S,byYm}}
+function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w.bank+cho+w.small+w.big;
+ const{S,byYm}=curBalances();const cur=byYm[CUR]||{net:0,cum:0},prev=byYm[addM(CUR,-1)]||{net:0,cum:0};
+ const prevEnd=prev.cum;const planLeft=D.plans.filter(p=>!p.done&&(p.ym||CUR)===CUR);const pInc=planLeft.reduce((a,p)=>a+(+p.inc||0),0),pExp=planLeft.reduce((a,p)=>a+(+p.exp||0),0);
+ const proj=cur.cum+pInc-pExp;const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;
+ const pe=D.set.prevEnd!=null&&D.set.prevEnd!==''?+D.set.prevEnd:((byYm[(y-1)+'-12']||{}).cum||0);
+ const target=pe+D.set.step*mo;const diff=proj-target;
+ const n=new Date(y,mo,0).getDate();let sL=0,oL=0,rest=0,kL=0;for(let i=TODAY.getDate()+1;i<=n;i++){const t=(D.sched[CUR+'-'+pad(i)]||{}).t;if(t==='stand')sL++;else if(t==='off')oL++;else if(t==='kado')kL++;rest++}
+ const kadoDays=Math.max(1,rest-sL-oL);const perDay=Math.round(diff/kadoDays);
+ const pct=prev.net?Math.round((cur.net-prev.net)/Math.abs(prev.net)*100):null;
+ const li=loanInfo();const wm=workMonth(CUR);let yIncome=0;for(let m=1;m<=12;m++){const r=workMonth(y+'-'+pad(m));yIncome+=r.sp+r.op}
+ const last=S.slice(-6).map(o=>o.cum);const nets=S.slice(-6).map(o=>o.net);
+ const rng={'1m':1,'3m':3,'1y':12,'all':9999}[range];let pts;
+ if(range==='1m'){pts=[];let c=prev.cum;const[yy,mm]=CUR.split('-').map(Number);const L=rows(CUR);const fixedSum=L.filter(x=>!x.auto&&!/^\d{4}/.test(x.d||'')).reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);c+=fixedSum;for(let i=1;i<=TODAY.getDate();i++){const dd=CUR+'-'+pad(i),o=dayInfo(dd);c+=(o.t==='stand'||o.t==='other'?(+o.pay||0):0)+(o.ky||0);pts.push([i+'日',c])}}
+ else pts=S.slice(-rng).map(o=>[ymLabel(o.ym).slice(2),o.cum]);
+ // 年間目標
+ let yt='';let avgBase=pe;for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),o=byYm[ym];const tg=pe+D.set.step*m;yt+=`<tr><td>${m}</td><td>${yen(tg)}</td><td>${o?Y(o.cum):''}</td><td>${o?Y(o.net):''}</td><td>${o?Y(o.cum-tg):''}</td><td>${o?Y(Math.round((o.cum-pe)/m)):''}</td></tr>`}
+ return`<div class="card"><h2>現在所持金</h2><div class="big">${yen(total)}</div>
+ <div style="margin-top:4px;font-weight:700">今月収支 ${Y(cur.net)} ${pct==null?'':`<span class="${pct>=0?'up':'dn'}">${pct>=0?'▲':'▼'}${Math.abs(pct)}%</span>`}</div>
+ <div style="margin-top:10px">${[['cash','財布現金'],['pachi','パチ財布'],['bank','銀行'],['cho','貯玉'],['small','小封筒'],['big','大封筒']].map(([k,l])=>k==='cho'?`<div class="row"><span>${l}</span><b>${chodamaYen==null?'-':yen(cho)}</b></div>`:`<div class="row"><span>${l}</span><input class="num" style="width:150px" inputmode="numeric" value="${w[k]||''}" onchange="setW('${k}',this.value)"></div>`).join('')}</div>
+ <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">貯金</div><input class="num" inputmode="numeric" value="${w.save||''}" onchange="setW('save',this.value)"></div><div class="tile"><div class="l">車資金</div><input class="num" inputmode="numeric" value="${w.car||''}" onchange="setW('car',this.value)"></div></div></div>
+ <div class="card"><h2>累計収支<span class="pills">${[['1m','1ヶ月'],['3m','3ヶ月'],['1y','1年'],['all','全期間']].map(([k,l])=>`<button class="pill ${range===k?'on':''}" onclick="setRange('${k}')">${l}</button>`).join('')}</span></h2>${lineChart(pts)}</div>
+ <div class="card"><h2>目標・現状</h2>
+ <div class="row"><span>先月最終残高</span><b>${Y(prevEnd)}</b></div>
+ <div class="row"><span>今月最終見込み</span><b>${Y(proj)}</b></div>
+ <div class="row"><span>今月収支</span><b>${Y(cur.net)}</b><span>${spark(nets)}</span></div>
+ <div class="row"><span>目標額</span><b>${yen(target)}</b></div>
+ <div class="row"><span>目標差額</span><b>${Y(diff)}</b><span>${spark(last)}</span></div>
+ <div class="row"><span>稼働日給目安</span><b>${Y(perDay)}</b></div></div>
+ <div class="tiles" style="margin-bottom:12px"><div class="tile card" style="margin:0"><div class="l">スタンド残り日数</div><div class="v">${sL}日</div></div><div class="tile card" style="margin:0"><div class="l">休み予定日数</div><div class="v">${oL}日</div></div><div class="tile card" style="margin:0"><div class="l">今月残り予定</div><div class="v">${rest}日</div></div><div class="tile card" style="margin:0"><div class="l">今月出勤</div><div class="v">${wm.sd+wm.od}日</div></div>
+ <div class="tile card" style="margin:0"><div class="l">扶養まで</div><div class="v ${D.set.fuyo-yIncome<0?'neg':''}">${yen(D.set.fuyo-yIncome)}</div></div><div class="tile card" style="margin:0"><div class="l">車ローン 残り${li.left}回</div><div class="v">${yen(li.rem)}</div></div></div>
+ <div class="card"><h2>今月の予定<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="addPlan()">＋</button></h2>
+ <table><tr><th>済</th><th>項目</th><th>収入予定</th><th>支払い予定</th><th></th></tr>${D.plans.map((p,i)=>`<tr><td><input type="checkbox" style="width:auto" ${p.done?'checked':''} onchange="D.plans[${i}].done=this.checked;save();render()"></td><td class="l"><input value="${esc(p.name)}" onchange="D.plans[${i}].name=this.value;save()" style="width:96px"></td><td><input class="num" inputmode="numeric" value="${p.inc||''}" onchange="D.plans[${i}].inc=+this.value||0;save();render()" style="width:80px"></td><td><input class="num" inputmode="numeric" value="${p.exp||''}" onchange="D.plans[${i}].exp=+this.value||0;save();render()" style="width:80px"></td><td><button class="btn del" style="padding:4px 8px" onclick="D.plans.splice(${i},1);save();render()">×</button></td></tr>`).join('')}
+ <tr class="sum"><td></td><td class="l">残り</td><td>${yen(pInc)}</td><td>${yen(pExp)}</td><td></td></tr></table></div>
+ <div class="card"><h2>${y}年 目標</h2><div class="scroll"><table><tr><th>月</th><th>累積目標額</th><th>実際累積額</th><th>当月収支</th><th>目標差</th><th>平均貯金</th></tr>${yt}</table></div></div>`}
+function setW(k,v){D.wallet[k]=+String(v).replace(/[^\d-]/g,'')||0;save();render()}
+function addPlan(){D.plans.push({name:'',inc:0,exp:0,done:false,ym:CUR});save();render()}
+// 予定
+function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();let h=['日','月','火','水','木','金','土'].map((d,i)=>`<div class="h" style="${i===0?'color:#e0283a':''}">${d}</div>`).join('');for(let i=0;i<first;i++)h+='<div></div>';
+ for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d);let t='',v='';if(o.t){t=`<div class="t t-${o.t}">${TYPES[o.t].slice(0,2)}</div>`;if(o.t==='stand'||o.t==='other')v=`<div class="y">${(+o.pay||0).toLocaleString()}</div>`;if(o.t==='kado'&&o.ky!=null)v=`<div class="y ${cls(o.ky)}">${Math.round(o.ky).toLocaleString()}</div>`}h+=`<div class="d ${d===TD?'today':''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}${v}</div>`}
+ const w=workMonth(calYM);
+ return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><b>${y}年${m}月</b><button onclick="calYM=addM(calYM,1);render()">›</button></div><div class="cal">${h}</div>
+ <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">スタンド</div><div class="v">${w.sd}日 ${yen(w.sp)}</div></div><div class="tile"><div class="l">稼働</div><div class="v ${cls(w.ky)}">${w.kd}日 ${yen(w.ky)}</div></div><div class="tile"><div class="l">その他労働</div><div class="v">${w.od}日 ${yen(w.op)}</div></div><div class="tile"><div class="l">休み</div><div class="v">${w.off}日</div></div></div></div>${monthTable()}`}
+function monthTable(){const y=+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),w=workMonth(ym);R.push({m,ym,w,gd:w.sd+w.od,gh:w.sh+w.oh,gp:w.sp+w.op,td:w.sd+w.od+w.kd,th:w.sh+w.oh+w.kh,ti:w.sp+w.op+w.ky})}
+ const act=R.filter(r=>r.td||r.w.off);const k=act.length||1;const S=f=>R.reduce((a,r)=>a+f(r),0);
+ const mx={gp:Math.max(1,...R.map(r=>r.gp)),ky:Math.max(1,...R.map(r=>Math.abs(r.w.ky))),ti:Math.max(1,...R.map(r=>Math.abs(r.ti)))};
+ const bar=(v,m,txt)=>`<td class="bar"><i class="${v<0?'n':''}" style="width:${Math.min(100,Math.abs(v)/m*100)}%"></i><span class="${cls(v)}">${txt}</span></td>`;
+ const tr=(lab,f)=>`<tr class="sum"><td>${lab}</td>${f}</tr>`;
+ const body=R.map(r=>`<tr><td>${r.ym<CUR?'○':''}${r.m}</td><td>${r.gd}</td><td>${r.gh}</td>${bar(r.gp,mx.gp,r.gp.toLocaleString())}<td>${r.w.kd}</td><td>${r.w.kh}</td>${bar(r.w.ky,mx.ky,Math.round(r.w.ky).toLocaleString())}<td>${r.td}</td><td>${r.th}</td>${bar(r.ti,mx.ti,Math.round(r.ti).toLocaleString())}<td>${r.w.off}</td></tr>`).join('');
+ const cols=[r=>r.gd,r=>r.gh,r=>r.gp,r=>r.w.kd,r=>r.w.kh,r=>r.w.ky,r=>r.td,r=>r.th,r=>r.ti,r=>r.w.off];
+ const sumR=tr('合計',cols.map(f=>`<td class="${cls(S(f))}">${Math.round(S(f)).toLocaleString()}</td>`).join(''));
+ const avgR=tr('平均',cols.map(f=>`<td class="${cls(S(f))}">${Math.round(S(f)/k).toLocaleString()}</td>`).join(''));
+ const sd=S(r=>r.w.sd),sh=S(r=>r.w.sh),sp=S(r=>r.w.sp),kd=S(r=>r.w.kd),kh=S(r=>r.w.kh),ky=S(r=>r.w.ky);
+ const cmp=(l,a,b)=>`<tr><td class="l">${l}</td><td>${a}</td><td>${b}</td></tr>`;const dv=(a,b)=>b?a/b:0;const fx=(v,d=0)=>`<span class="${cls(v)}">${(+v).toLocaleString(undefined,{maximumFractionDigits:d})}</span>`;
+ return`<div class="card"><h2>${y}年 月まとめ</h2><div class="scroll"><table><tr><th rowspan="2">月</th><th colspan="3">ガソスタ+その他</th><th colspan="3">パチスロ</th><th colspan="3">総合</th><th rowspan="2">休日</th></tr><tr><th>日数</th><th>時間</th><th>給料</th><th>日数</th><th>時間</th><th>収支</th><th>日数</th><th>時間</th><th>収入</th></tr>${body}${sumR}${avgR}</table></div></div>
+ <div class="card"><h2>スタンド vs パチスロ</h2><table><tr><th></th><th>スタンド</th><th>パチスロ</th></tr>
+ ${cmp('出勤日数',sd,kd)}${cmp('労働時間',fx(sh,1),fx(kh,1))}${cmp('給料',yen(sp),Y(ky))}${cmp('1日時間',fx(dv(sh,sd),1),fx(dv(kh,kd),1))}${cmp('時給',Y(dv(sp,sh)),Y(dv(ky,kh)))}${cmp('日給',Y(dv(sp,sd)),Y(dv(ky,kd)))}${cmp('月平均',Y(sp/k),Y(ky/k))}${cmp('月平均日数',fx(sd/k,1),fx(kd/k,1))}${cmp('時間比率',Math.round(dv(sh,sh+kh)*100)+'%',Math.round(dv(kh,sh+kh)*100)+'%')}</table></div>`}
+let cur=null;
+function openDay(d){const o=dayInfo(d);cur={d,t:(D.sched[d]||{}).t||(o.t==='kado'?'kado':''),h:o.h??'',pay:o.pay??'',kh:o.kh??'',ky:o.ky??'',auto:!!slot.byDate[d]};drawSheet();$('sheet').classList.add('on')}
+function drawSheet(){const c=cur,[y,m,dd]=c.d.split('-');const col={stand:'#1f4fd8',kado:'#f08c00',off:'#2fb36b',other:'#7a5af8'};
+ let f='';if(c.t==='stand'||c.t==='other')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.h}" oninput="cur.h=this.value;if(cur.t==='stand'){cur.pay=Math.round((+this.value||0)*D.set.rate);$('pay').value=cur.pay}"></div><div><label>給料</label><input id="pay" class="num" inputmode="numeric" value="${c.pay}" oninput="cur.pay=this.value"></div></div>`;
+ if(c.t==='kado')f=`<div class="f"><div><label>時間</label><input class="num" inputmode="decimal" value="${c.kh}" ${c.auto?'disabled':''} oninput="cur.kh=this.value"></div><div><label>収支</label><input class="num ${cls(c.ky)}" inputmode="numeric" value="${c.ky}" ${c.auto?'disabled':''} oninput="cur.ky=this.value"></div></div>`;
+ $('sheetIn').innerHTML=`<div class="mh"><b>${+m}月${+dd}日</b><button onclick="closeSheet()">×</button></div><div class="chips">${Object.entries(TYPES).map(([k,l])=>`<button class="chip ${c.t===k?'on':''}" style="${c.t===k?'background:'+col[k]:''}" onclick="pick('${k}')">${l}</button>`).join('')}</div>${f}
+ <div style="display:flex;gap:8px;margin-top:12px"><button class="btn del" style="flex:1" onclick="pick('');saveDay()">消す</button><button class="btn" style="flex:2" onclick="saveDay()">保存</button></div>`}
+function pick(t){cur.t=t;if(t==='stand'&&!cur.h){cur.h=D.set.stdH;cur.pay=D.set.stdH*D.set.rate}if(t==='other'&&cur.pay==='')cur.pay=0;drawSheet()}
+function saveDay(){const c=cur;if(!c.t)delete D.sched[c.d];else{const r={t:c.t};if(c.t==='stand'||c.t==='other'){r.h=+c.h||0;r.pay=+c.pay||0}if(c.t==='kado'&&!c.auto){r.kh=+c.kh||0;r.ky=+c.ky||0}D.sched[c.d]=r}save();closeSheet();render()}
+function closeSheet(){$('sheet').classList.remove('on')}
+$('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
+// お金
+function vMoney(){const L=rows(monYM);const ri=(D.ledger[monYM]||[]);let inc=0,exp=0;L.forEach(x=>{inc+=+x.inc||0;exp+=+x.exp||0});
+ const sel=(a,v,on)=>`<select onchange="${on}">${a.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('')}</select>`;
+ const lines=L.map(x=>{const i=ri.indexOf(x);if(x.auto)return`<tr><td class="l"><span class="tag i1-${x.i1}">${x.i1}</span></td><td class="l">${x.i2}</td><td class="l">${esc(x.i3)}</td><td>${x.inc?yen(x.inc):''}</td><td>${x.exp?yen(x.exp):''}</td><td></td></tr>`;
+  return`<tr><td class="l"><span class="tag i1-${x.i1}">${x.i1}</span></td><td class="l">${sel(I2,x.i2,`ed(${i},'i2',this.value)`)}</td><td class="l"><input value="${esc(x.i3)}" style="width:90px" onchange="ed(${i},'i3',this.value)"></td><td><input class="num" style="width:78px" inputmode="numeric" value="${x.inc||''}" onchange="ed(${i},'inc',this.value)"></td><td><input class="num" style="width:78px" inputmode="numeric" value="${x.exp||''}" onchange="ed(${i},'exp',this.value)"></td><td><button class="btn del" style="padding:4px 8px" onclick="D.ledger[monYM].splice(${i},1);save();render()">×</button></td></tr>`}).join('');
+ const S=summary();const yS=S.filter(o=>o.ym.slice(0,4)===monYM.slice(0,4));
+ const cats=['給料収入','雑収入','生活固定費','生活変動費','税金','パチスロ','競馬','カジノ'];
+ const cm=(rows(monYM).reduce((a,x)=>{a[x.i2]=(a[x.i2]||0)+(+x.inc||0)-(+x.exp||0);return a},{}));const cmx=Math.max(1,...Object.values(cm).map(Math.abs));
+ const st=S.map(o=>`<tr><td>${ymLabel(o.ym)}</td><td>${yen(o.inc)}</td><td>${yen(o.exp)}</td><td>${Y(o.net)}</td><td>${Y(o.cum)}</td>${cats.map(c=>`<td>${o.c[c]?Y(o.c[c]):''}</td>`).join('')}<td>${o.save40?yen(o.save40):''}</td></tr>`).reverse().join('');
+ return`<div class="card"><div class="mh"><button onclick="monYM=addM(monYM,-1);render()">‹</button><b>${ymLabel(monYM)}</b><button onclick="monYM=addM(monYM,1);render()">›</button></div>
+ <div class="tiles"><div class="tile"><div class="l">収入</div><div class="v">${yen(inc)}</div></div><div class="tile"><div class="l">出費</div><div class="v">${yen(exp)}</div></div><div class="tile"><div class="l">収支</div><div class="v ${cls(inc-exp)}">${yen(inc-exp)}</div></div><div class="tile"><div class="l">累計収支</div><div class="v ${cls((S.find(o=>o.ym===monYM)||{}).cum)}">${yen((S.find(o=>o.ym===monYM)||{}).cum||0)}</div></div></div></div>
+ <div class="card"><h2>明細</h2><div class="pills" style="margin-bottom:8px">${I2.map(c=>`<button class="pill" onclick="addRow('${c}')">${c}</button>`).join('')}</div><div class="scroll"><table><tr><th>項目1</th><th>項目2</th><th>項目3</th><th>収入</th><th>支出</th><th></th></tr>${lines}</table></div></div>
+ <div class="card"><h2>分類</h2>${Object.entries(cm).sort((a,b)=>a[1]-b[1]).map(([k,v])=>`<div class="row bar" style="display:block"><i class="${v<0?'n':''}" style="width:${Math.abs(v)/cmx*100}%"></i><span style="display:flex;justify-content:space-between"><span>${k}</span><b class="${cls(v)}">${yen(v)}</b></span></div>`).join('')}</div>
+ <div class="card"><h2>月の集計</h2><div class="scroll"><table><tr><th>年月</th><th>収入</th><th>出費</th><th>収支</th><th>累計収支</th>${cats.map(c=>`<th>${c.replace('収入','')}</th>`).join('')}<th>40%貯金</th></tr>${st}</table></div></div>
+ <div class="card"><h2>明細の取り込み</h2><textarea id="imp" placeholder="年月	項目1	項目2	項目3	収入	支出"></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="flex:1" onclick="doImport()">取り込む</button></div><div id="impRes" style="margin-top:6px;font-weight:700"></div></div>`}
+function ed(i,k,v){const x=D.ledger[monYM][i];if(k==='inc'||k==='exp')v=+String(v).replace(/[^\d-]/g,'')||0;x[k]=v;if(k==='i2')x.i1=I2of1[v]||x.i1;save();render()}
+function addRow(c){(D.ledger[monYM]=D.ledger[monYM]||[]).push({id:uid(),i1:I2of1[c],i2:c,i3:'',inc:0,exp:0});save();render()}
+function parseYM(s){s=String(s).trim().replace(/^"|"$/g,'');let m=s.match(/(\d{4})\s*[\/\-年.]\s*(\d{1,2})/);if(m)return m[1]+'-'+pad(+m[2]);return null}
+const num=s=>{s=String(s??'').replace(/[¥￥,，"\s円]/g,'');if(s===''||s==='-')return 0;const v=+s;return isFinite(v)?v:0};
+function doImport(){const txt=$('imp').value;const lines=txt.split(/\r?\n/).filter(l=>l.trim());let col={ym:0,i1:1,i2:2,i3:3,inc:4,exp:5};const out={};let ok=0,bad=0;
+ for(const l of lines){const c=l.includes('\t')?l.split('\t'):l.trim().split(/[\s\u3000\u00a0]+/);
+  if(c.some(x=>/項目1/.test(x))){c.forEach((x,i)=>{x=x.trim();if(/年月|日付/.test(x))col.ym=i;if(x==='項目1')col.i1=i;if(x==='項目2')col.i2=i;if(x==='項目3')col.i3=i;if(x==='収入')col.inc=i;if(/^(支出|出費)$/.test(x))col.exp=i});continue}
+  const ym=parseYM(c[col.ym]);if(!ym){bad++;continue}let i2=(c[col.i2]||'').trim(),i1=(c[col.i1]||'').trim();if(!I1.includes(i1))i1=I2of1[i2]||'生活費';
+  (out[ym]=out[ym]||[]).push({id:uid(),i1,i2:i2||'調整',i3:(c[col.i3]||'').trim(),inc:Math.abs(num(c[col.inc])),exp:Math.abs(num(c[col.exp])),imp:1});ok++}
+ for(const[ym,a]of Object.entries(out)){D.ledger[ym]=a;D.fixedDone[ym]=1}
+ const ms=Object.keys(out).sort();if(ms.length&&ms[0]<(D.set.fixedFrom||CUR)){}
+ save();$('impRes').textContent=ok+'件 取り込み'+(bad?' / '+bad+'行 読めず':'')+(ms.length?'（'+ymLabel(ms[0])+'〜'+ymLabel(ms[ms.length-1])+'）':'');setTimeout(render,1200)}
+// 設定
+function vSet(){const s=D.set,li=loanInfo();
+ const inp=(v,on,w)=>`<input class="num" inputmode="numeric" style="width:${w||130}px" value="${v??''}" onchange="${on}">`;
+ return`<div class="card"><h2>トークン</h2><input type="password" value="${tok()?'********':''}" placeholder="github_pat_..." onchange="if(this.value&&!/^\\*+$/.test(this.value)){LS.set('v2_token',this.value.trim());boot()}"><div style="margin-top:6px;font-weight:700">${tok()?'設定済み':'未設定'}</div></div>
+ <div class="card"><h2>固定費<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="D.fixed.push({id:uid(),i1:'生活費',i2:'生活固定費',i3:'',exp:0});save();render()">＋</button></h2>
+ <table>${D.fixed.map((f,i)=>`<tr><td class="l"><input value="${esc(f.i3)}" onchange="D.fixed[${i}].i3=this.value;save()"></td><td>${inp(f.exp,`D.fixed[${i}].exp=+this.value||0;save()`,100)}</td><td><button class="btn del" style="padding:4px 8px" onclick="D.fixed.splice(${i},1);save();render()">×</button></td></tr>`).join('')}</table></div>
+ <div class="card"><h2>給料・目標</h2>
+ <div class="row"><span>スタンド時給</span>${inp(s.rate,"D.set.rate=+this.value||0;save()")}</div>
+ <div class="row"><span>スタンド標準時間</span>${inp(s.stdH,"D.set.stdH=+this.value||0;save()")}</div>
+ <div class="row"><span>前年最終残高</span>${inp(s.prevEnd,"D.set.prevEnd=this.value===''?null:+this.value;save()")}</div>
+ <div class="row"><span>毎月の目標増額</span>${inp(s.step,"D.set.step=+this.value||0;save()")}</div>
+ <div class="row"><span>扶養上限</span>${inp(s.fuyo,"D.set.fuyo=+this.value||0;save()")}</div></div>
+ <div class="card"><h2>車ローン</h2>${s.loan.items.map((it,i)=>`<div class="row"><span>${esc(it[0])}</span>${inp(it[1],`D.set.loan.items[${i}][1]=+this.value||0;save();render()`)}</div>`).join('')}
+ <div class="row"><span>回数</span>${inp(s.loan.n,"D.set.loan.n=+this.value||0;save();render()")}</div>
+ <div class="row"><span>月額</span>${inp(s.loan.monthly,"D.set.loan.monthly=+this.value||0;save();render()")}</div>
+ <div class="row"><span>開始月</span><input type="month" style="width:150px" value="${s.loan.start}" onchange="D.set.loan.start=this.value;save();render()"></div>
+ <div class="row"><span>合計</span><b>${yen(li.total)}</b></div><div class="row"><span>残り回数</span><b>${li.left}回</b></div><div class="row"><span>残高</span><b>${yen(li.rem)}</b></div></div>`}
+boot();
+</script></body></html>
