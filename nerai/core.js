@@ -30,7 +30,11 @@ function splitLine(line,sep){if(sep==='\t')return line.split('\t');const out=[];
   else if(c==='"')q=true;else if(c===','){out.push(cur);cur=''}else cur+=c}out.push(cur);return out}
 // TSV/CSV → 行。列：日付・店舗・機種・台番・回転・BB・RB
 function parseText(text,set){const rows=[],errs=[];text=String(text||'').replace(/^\uFEFF/,'');
- text.split(/\r?\n/).forEach((line,i)=>{if(!line.trim())return;const sep=line.includes('\t')?'\t':',';const p=splitLine(line,sep).map(nz);
+ text.split(/\r?\n/).forEach((line,i)=>{if(!line.trim())return;const sep=line.includes('\t')?'\t':',';let p=splitLine(line,sep).map(nz);
+  // 機種名・台番号・G数・BB・RB・合成・BB確率・RB確率・店舗名・年月日 の並びも読む（日付が最後の列）
+  if(!normDate(p[0])){while(p.length&&p[p.length-1]==='')p.pop();const L=p.length;
+   if(L>=10&&normDate(p[L-1])){p=[p[L-1],p[L-2],p[0],p[1],p[2],p[3],p[4]]}
+   else if(/機種|年月日/.test(p[0]+'|'+(p[L-1]||'')))return}
   const date=normDate(p[0]);if(!date){if(i>0||!/日付|date/i.test(p[0]))errs.push({line:i+1,text:line.slice(0,80),why:'日付が読めない'});return}
   if(p.length<7){errs.push({line:i+1,text:line.slice(0,80),why:'列が足りない（7列必要）'});return}
   const r={d:date,s:normStore(p[1]),m:normMachine(p[2],set),t:nz(p[3]),g:num(p[4]),bb:num(p[5]),rb:num(p[6])};
