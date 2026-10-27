@@ -71,7 +71,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=9"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -183,16 +183,18 @@ const sShort=s=>s.replace(/^マルハン/,'');
 window.bandTog=el=>{const n=el.querySelector('.bn');if(el.classList.toggle('open'))n.textContent=el.dataset.full;else n.textContent=el.dataset.short};
 const band=(n,short,full,cnt,cls='')=>`<tr class="gh"><td colspan="${n}"><div class="bd ${cls}" data-short="${esc(short)}" data-full="${esc(full)}" onclick="bandTog(this)"><span class="bn">${esc(short)}</span><span class="bc">${esc(cnt)}</span></div></td></tr>`;
 // 店舗ごとの「その日」のまとまり。狙い順は全店舗・全機種の通し順位（店舗内の順位は lrank）
+const isRk=x=>x.mark==='○'||x.mark==='△';
 let NRG={nrc:null,m:{}};
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
   else{date=d;day=R.filter(r=>r.s===s&&r.d===date);if(!day.length){const nx=NC.nextDay(R,set,s,date);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true}else rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
   const L=nerFor(s,date,day,rk);out.push({s,day,rk,virt,date,L,T:L.targets||[]})}
- const all=[];for(const u of out)for(const x of u.L)all.push([u,x]);
+ // 狙い順は、狙い印が○か△の台だけに付ける（×・印なしは空白）。rank＝全店舗の通し、srank＝店舗の中
+ const all=[];for(const u of out)for(const x of u.L)if(isRk(x))all.push([u,x]);
  all.sort((a,b)=>b[1].score-a[1].score||a[0].s.localeCompare(b[0].s,'ja')||String(a[1].t).localeCompare(String(b[1].t),'ja',{numeric:true}));
- const g=new Map();all.forEach(([u,x],i)=>g.set(x,i+1));
- for(const u of out)u.L=u.L.map(x=>Object.assign({},x,{rank:g.get(x),lrank:x.rank}));
+ const g=new Map(),sg=new Map();const cn={};all.forEach(([u,x],i)=>{g.set(x,i+1);cn[u.s]=(cn[u.s]||0)+1;sg.set(x,cn[u.s])});
+ for(const u of out)u.L=u.L.map(x=>Object.assign({},x,{rank:g.get(x)||'',srank:sg.get(x)||'',lrank:x.rank}));
  return NRG.m[d]=out}
 function unitsFor(st,stores,R,set){const A=unitsAll(st.d,stores,R,set);return st.s==='*'?A:A.filter(u=>u.s===st.s)}
 let WIC=null;const winI=()=>{if(!WIC||WIC.r!==S.rows)WIC={r:S.rows,w:NC.winIdx(S.rows,setObj())};return WIC.w};
@@ -206,14 +208,14 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0])){
   if(nmode)cols.push({k:'n_'+w[0]+'_'+m[0],w:w[0],m:m[0],lab:w[1]+'<br>'+m[1]});
   else for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(r==='y'?'良':'悪')+'順'})}
- const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=9+cols.length;
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=10+cols.length;
  const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
  const soC=cols.find(c=>c.k===tu.so);
  const rkCell=(v,c,n)=>{const y=rankSty(v,c.k.slice(-1),n);return`<td class="${v===1?'r1':v===2?'r2':''}"${y?` style="${y}"`:''}>${v||''}</td>`};
  const e='<td></td>'.repeat(cols.length);
  const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e}</tr>`;
- const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th>狙い<br>順</th><th>狙い<br>印</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th><th>狙い<br>順</th><th>狙い<br>印</th><th>点数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  let body='';
  for(const u of units){const NM=new Map(u.L.map(x=>[String(x.t),x]));const pk=nmode?NC.winPicks(W,u.s,u.date):null;
   const wsum=(r,c)=>NC.winSum(W,u.s,pk,NC.groupOf(r.m,set),r.t,c.w);
@@ -229,7 +231,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const gst=u.virt?null:{g:{max:Math.max(0,...L.map(r=>r.g))},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))};
    cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null))}:mm(vs)}
    const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
-   body+=L.map(r=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));return`<tr><td class="fix">${esc(r.t)}</td><td>${nm?.rank||''}</td><td>${nm?.mark||''}</td>${u.virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td${sy('g',r.g)}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${sy('bb',NC.den(r.g,r.bb))}>${P(r.g,r.bb)}</td><td${sy('rb',NC.den(r.g,r.rb))}>${P(r.g,r.rb)}</td><td${sy('gs',NC.den(r.g,r.bb+r.rb))}>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>nmode?ncell(r,c):rkCell(x[c.i],c,L.length)).join('')}</tr>`}).join('');
+   body+=L.map(r=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));return`<tr><td class="fix">${esc(r.t)}</td><td>${nm?.rank||''}</td><td>${nm?.mark||''}</td><td>${nm?nm.score.toFixed(4):''}</td>${u.virt?'<td></td><td></td><td></td><td></td><td></td><td></td>':`<td${sy('g',r.g)}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${sy('bb',NC.den(r.g,r.bb))}>${P(r.g,r.bb)}</td><td${sy('rb',NC.den(r.g,r.rb))}>${P(r.g,r.rb)}</td><td${sy('gs',NC.den(r.g,r.bb+r.rb))}>${P(r.g,r.bb+r.rb)}</td>`}${cols.map(c=>nmode?ncell(r,c):rkCell(x[c.i],c,L.length)).join('')}</tr>`}).join('');
    if(!u.virt)body+=sums('合計','平均',t)}
   if(all&&!u.virt&&!tu.g&&ng>1)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${st.n}台`,'st')+sums('店計','店平均',st)}
  $('main').innerHTML=`<div class="card"><h2>🎯 当日データ</h2>
@@ -239,7 +241,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <details><summary>表示する${nmode?'数値':'状態順'}を選ぶ（今 ${cols.length}列）</summary>
  <p class="note">期間</p>${chip('w',NC.WIN)}<p class="note">指標</p>${chip('m',NC.MET)}${nmode?'':`<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}`}
  <div class="row"><button class="b sub" onclick="tuAll(1)">全部（${nmode?28:56}列）</button><button class="b sub" onclick="tuAll(0)">おすすめに戻す</button></div></details>
- <p class="note">${nmode?'数値はその日の朝の時点で、各期間の合計（回転は合計回転、確率は期間ぜんぶの合計回転÷合計当たり回数）。見出しをタップで悪い順（回転が少ない・確率が悪い）に並べ替え、もう一度タップで逆順。':'順位はその日の朝の時点（前の日までのデータで比較）。同じ値の台・データがない台は空白。見出しをタップでその順に並べ替え。'}狙い順は全店舗・全機種の通し順位。帯をタップで機種の正式名。${virtAll?'<br>次の日の台の並びは最後の日と同じとみなしてる。':''}</p>
+ <p class="note">${nmode?'数値はその日の朝の時点で、各期間の合計（回転は合計回転、確率は期間ぜんぶの合計回転÷合計当たり回数）。見出しをタップで悪い順（回転が少ない・確率が悪い）に並べ替え、もう一度タップで逆順。':'順位はその日の朝の時点（前の日までのデータで比較）。同じ値の台・データがない台は空白。見出しをタップでその順に並べ替え。'}狙い順は全店舗・全機種の通し順位で、狙い印が○か△の台だけに付く。帯をタップで機種の正式名。${virtAll?'<br>次の日の台の並びは最後の日と同じとみなしてる。':''}</p>
  ${units.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
 window.tuSo=k=>{if(tu.so===k)tu.rev=tu.rev?0:1;else tu.rev=0;tu.so=k;touPage()};
@@ -334,7 +336,8 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   if(c.k==='mk'){th1.push(`<th rowspan="2" class="s ${an.only?'on':''}" onclick="anOnly()">○${an.only?'<br>のみ':''}</th>`);continue}
   if(c.grp!==undefined&&/^(tk|hy)/.test(c.k))th2.push(`<th class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`);else th1.push(`<th rowspan="2" class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`)}
  const oldScroll=document.querySelector('#main .tw');const sl0=oldScroll?oldScroll.scrollLeft:0;const sy0=window.scrollY;
- $('main').innerHTML=`<div class="card"><h2>🔍 集計と分析</h2>
+ $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">○を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
+ <div class="card"><h2>🔍 集計と分析</h2>
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="an.from=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="an.to=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"><button class="b sub" onclick="an.from='';an.to='';NRC={};anaPage()">全期間</button></div>
  <p class="note">指定範囲（選んだ軸のぜんぶの値を集計）</p>
  <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div>
@@ -342,16 +345,15 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['next','次の日に合わせる'],['all','全部']].concat(vals),an.val)}</div>
- <p class="note">${nRow.toLocaleString()}行${more>0?`（${shown.toLocaleString()}行まで表示中）`:''}　○：${nOn}件　緑の○＝ボーダーで自動、ピンクの○＝自分で付けた、×＝自分で外した。○のマスをタップで切り替え。「○」の見出しをタップで○の台だけ表示（もう一度で全部）。「指定日」やほかの見出しをタップで並べ替え（もう一度で逆順。台番の行と状態順の行は一緒に並ぶ）。回転のオレンジの棒と確率の色（緑＝良い・赤＝悪い）は、同じ機種の中での比べ。指数が水色＝ボーダーの指数以上。台番は各店舗・機種の最終更新日にある台だけ。青い字の「前日回転」などは、その状態順（悪い順）で1位になった台の合計（回転と合算、前日・2日間・3日間・6日間と選んだ軸の前回）。帯をタップで正式名。</p>
  ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="anMore()">もっと見る（残り ${more.toLocaleString()}行）</button></div>`:''}`:'<p class="note">データがないよ</p>'}
- <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">○を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`;
+</div>`;
  const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
 window.anMore=()=>{anNb++;anKeep=true;anaPage()};
 window.anAx=k=>{an.ax=k;an.val='next';an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
 window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anKeep=true;anaPage()};
-window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);anKeep=true;render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
 // ===== ボーダー =====
 const bGet=p=>{let o=bord();for(const k of p.split('.')){if(o==null)return'';o=o[k]}return o==null?'':o};
 window.anB=(p,v)=>{const B=bord();const a=p.split('.');let o=B;for(let i=0;i<a.length-1;i++){if(o[a[i]]==null||typeof o[a[i]]!=='object')o[a[i]]={};o=o[a[i]]}o[a[a.length-1]]=v;anDirty=true;NRC={};borPage()};
@@ -407,8 +409,16 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  // いま選んでいる範囲（店舗・機種）の中だけで順位を付け直す。同じ点数は順位を空白に
  const T=[];for(const u of units)for(const x of u.T)if(!nr.g||x.g===nr.g)T.push(Object.assign({date:u.date,virt:u.virt},x));
  const SK=NC.RANK_KEYS;
- T.sort((a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):a.g.localeCompare(b.g,'ja')||SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1));
- T.forEach((x,i)=>{const tie=(i>0&&T[i-1].score===x.score)||(i<T.length-1&&T[i+1].score===x.score);x.rank=tie?'':i+1});
+ const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):a.g.localeCompare(b.g,'ja')||SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1);
+ T.sort(cmpT);
+ // 同じ店舗で着席台番が同じ行（台番の行と状態順の行、状態順どうし）は、点数がいちばん高い1行だけ残す（着席台番が未定の行はそのまま）
+ const seen=new Set();let nDrop=0;
+ for(let i=0;i<T.length;i++){const x=T[i];if(x.seat==null)continue;const k=x.s+'|'+x.seat;if(seen.has(k)){T.splice(i--,1);nDrop++}else seen.add(k)}
+ // 順位は狙い印が○か△の行だけ。○△の行を上に、その中を点数の高い順に並べる。同じ点数は順位を空白に
+ const rk=x=>x.mark==='○'||x.mark==='△';
+ T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));
+ const nRk=T.filter(rk).length;
+ T.forEach((x,i)=>{if(!rk(x)){x.rank='';return}const tie=(i>0&&rk(T[i-1])&&T[i-1].score===x.score)||(i<nRk-1&&T[i+1].score===x.score);x.rank=tie?'':i+1});
  const sig=[nr.s,nr.g,nr.d].join('|');if(sig!==nerSig){nerSig=sig;nerLim=NER_STEP}
  const mkH=m=>m==='○'?'<span class="mk a">○</span>':m==='△'?'<span class="mk t">△</span>':m==='×'?'<span class="mk x">×</span>':esc(m||'');
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
@@ -426,14 +436,8 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const mx=NC.addDay(last,60);
  const dopts=[['next',all?'次の日（各店の最終日の翌日）':(units[0]&&units[0].virt&&nr.d==='next'?units[0].date+'（次の日）':'次の日')]].concat(isDate(nr.d)&&!dates.includes(nr.d)?[[nr.d,nr.d+'（データなし）']]:[]).concat(dates.map(d=>[d,d]));
  const num=(path,v)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:64px" onchange="nrSet('${path}',this.value)">`;
- const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='0000');
- $('main').innerHTML=`<div class="card"><h2>🏆 狙いリスト</h2>
- <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
- <div class="row">${sel('d',dopts,nr.d)}<input type="date" value="${esc(isDate(nr.d)?nr.d:date)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"></div>
- <p class="note">${date?esc(date)+'（'+'日月火水木金土'[NC.dow(date)]+'）':''}　台番○ ${nT}件・状態順○ ${nS}件。狙い順は、いま選んでいる範囲（店舗・機種）の中だけの順位。同じ点数は順位を空白にしてるよ。</p>
- <p class="note">1行＝1つの狙い。青い字は状態順（その日の朝の時点で1位になる台が着席台番。前日のデータがないときは「未定」）。件数は、その台（状態順）が同じ日末尾・日・曜日に出てきた日数。指数＝${esc(metricN)}。データがない日を選ぶと、最後のデータ日の台番で予想するよ。</p>
- ${T.length?`<div class="tw"><table>${head}${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="nerLim+=NER_STEP;nerPage()">もっと見る（残り${more.toLocaleString()}行）</button></div>`:''}`:`<p class="note">${units.length?'○の付いた狙いがないよ（ボーダーと分析の○を確認してね）':'その日のデータがないよ（最後のデータ日より前で、データがない日）'}</p>`}
- <div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">設定を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
+ const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
+ $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="asNow()">設定を保存${anDirty?'（未保存あり）':''}</button></div><div id="as" class="${asCls}">${esc(asMsg)||'点数・サブ評価・評価印は、変えると自動で保存するよ。'}</div></div>
  <div class="card"><h2>🧮 点数とサブ評価</h2><p class="note">○点数＝その行の○の点数を区分ごとに足したもの（台番の行は「台番の○」、状態順の行は「状態順の○」の点数）。</p>
  <div class="tw"><table><tr><th class="l fix"></th>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr>
  <tr><td class="l fix">台番の○</td>${NC.SEGS.map(sg=>`<td>${num('pts.tai.'+sg,cfg.pts.tai[sg])}</td>`).join('')}</tr>
@@ -441,11 +445,28 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <tr><td class="l fix">サブ評価 %</td>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg])}</td>`).join('')}</tr></table></div>
  <div class="row"><label>サブ評価で使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転偏差値'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>
  <p class="note">サブ評価＝各区分の数字（四捨五入した整数）×割合の合計（整数に四捨五入）。これを÷10,000して○点数に足したのが「点数」（小数4桁）。点数が高い順に並ぶ。指数はボーダータブの「使う指数」と同じもの（両方のときは標準指数。総合トータル指数は店舗機種と標準の両方を使う）。</p></div>
- <div class="card"><h2>🎖 評価印</h2><p class="note">その行の○が、どの区分（日末尾・日・曜日）にあるかの組み合わせで印を決める。「おまかせ」は○が3個で○、2個で△、1個で×。</p>
- <div class="tw"><table><tr><th class="l fix">組み合わせ</th><th>印</th></tr>${combos.map(c=>`<tr><td class="l fix">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>SEGN[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)">${[['auto','おまかせ（'+NC.comboMark(c,{combo:{}})+'）'],['○','○'],['△','△'],['×','×'],['','なし']].map(([k,t])=>`<option value="${k}" ${(cfg.combo[c]==null?'auto':cfg.combo[c])===k?'selected':''}>${t}</option>`).join('')}</select></td></tr>`).join('')}</table></div></div>`}
+ <div class="card"><h2>🎖 評価印</h2><p class="note">その行の○が、どの区分（日末尾・日・曜日）にあるかの組み合わせで印（○・△・×）を決める。決めてない組み合わせは印なしで、狙い順も付かないよ。</p>
+ <div class="tw"><table><tr><th class="l fix">組み合わせ</th><th>印</th></tr>${combos.map(c=>`<tr><td class="l fix">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>SEGN[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)">${NC.comboMark(c,cfg)?'':'<option value="" disabled selected hidden></option>'}${['○','△','×'].map(k=>`<option value="${k}" ${NC.comboMark(c,cfg)===k?'selected':''}>${k}</option>`).join('')}</select></td></tr>`).join('')}</table></div></div>
+<div class="card"><h2>🏆 狙いリスト</h2>
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),nr.s)}${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,mShort(g)])),nr.g||'')}</div>
+ <div class="row">${sel('d',dopts,nr.d)}<input type="date" value="${esc(isDate(nr.d)?nr.d:date)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"></div>
+ <p class="note">${date?esc(date)+'（'+'日月火水木金土'[NC.dow(date)]+'）':''}　台番○ ${nT}件・状態順○ ${nS}件。狙い順は、いま選んでいる範囲（店舗・機種）の中だけの順位で、狙い印が○か△の行だけに付く（○△の行が上）。同じ点数は順位を空白。着席台番が同じ行は点数がいちばん高い1行だけ残してるよ${nDrop?`（${nDrop}行を省略）`:''}。</p>
+ <p class="note">1行＝1つの狙い。青い字は状態順（その日の朝の時点で1位になる台が着席台番。前日のデータがないときは「未定」）。件数は、その台（状態順）が同じ日末尾・日・曜日に出てきた日数。指数＝${esc(metricN)}。データがない日を選ぶと、最後のデータ日の台番で予想するよ。</p>
+ ${T.length?`<div class="tw"><table>${head}${body}</table></div>${more>0?`<div class="row"><button class="b sub" onclick="nerLim+=NER_STEP;nerPage()">もっと見る（残り${more.toLocaleString()}行）</button></div>`:''}`:`<p class="note">${units.length?'○の付いた狙いがないよ（ボーダーと分析の○を確認してね）':'その日のデータがないよ（最後のデータ日より前で、データがない日）'}</p>`}
+</div>`}
 window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);nerPage()};
 window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let i=0;i<p.length-1;i++)o=o[p[i]];const last=p[p.length-1];
- if(p[0]==='combo'){if(v==='auto')delete o[last];else o[last]=v}else if(last==='metric')o[last]=v;else o[last]=v===''?0:+v;anDirty=true;NRC={};nerPage()};
+ if(p[0]==='combo'){if(v!=='○'&&v!=='△'&&v!=='×')return;o[last]=v}else if(last==='metric')o[last]=v;else o[last]=v===''?0:+v;anDirty=true;NRC={};autoSave();nerPage()};
+// 設定の自動保存（変えて少し待ってから保存。保存中にまた変えたら、終わってからもう一度）
+let asT=null,asBusy=false,asMsg='',asCls='st';
+function paintAs(){const e=$('as');if(e){e.className=asCls;e.textContent=asMsg||'点数・サブ評価・評価印は、変えると自動で保存するよ。'}const b=document.querySelector('#main .card .b');if(tab==='ner'&&b&&/設定を保存/.test(b.textContent)){b.disabled=!anDirty;b.textContent='設定を保存'+(anDirty?'（未保存あり）':'')}}
+function autoSave(){clearTimeout(asT);asMsg='変更あり。少し待ってから自動で保存するよ…';asCls='st';asT=setTimeout(asRun,1200)}
+window.asNow=()=>{clearTimeout(asT);asRun()};
+async function asRun(){if(asBusy){asT=setTimeout(asRun,500);return}if(!anDirty){return}asBusy=true;asMsg='保存中…';asCls='st';paintAs();let ok=false;
+ try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙い設定',t=>{asMsg=t;paintAs()});S.anSaved=snap;if(JSON.stringify(S.an)===snap)anDirty=false;const d=new Date();asMsg='自動保存したよ（'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'）';asCls='st ok';ok=true}
+ catch(e){asMsg=e.message+'（変えるとまた保存しにいくよ。「設定を保存」でやり直せる）';asCls='st ng'}
+ asBusy=false;if(ok&&anDirty)asT=setTimeout(asRun,300);paintAs()}
+
 
 // ===== 図面 =====
 let zu=LS.get('nr_zu',{});if(!zu.z)zu.z=1;if(!zu.zg)zu.zg=1;if(zu.top==null)zu.top=10;if(!zu.mode)zu.mode='view';let zuLoading=null;
@@ -460,7 +481,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  if(!zu.d||(zu.d!=='next'&&!dates.includes(zu.d)))zu.d='next';
  let date,mem,rk,dataDay;if(zu.d==='next'&&nx){date=nx.date;mem=nx.rows;rk=nx.ranks;dataDay=nx.base}else{date=zu.d;dataDay=date;mem=SR.filter(r=>r.d===date);rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
  LS.set('nr_zu',zu);
- const L=mem.length?((unitsAll(zu.d,stores,R,set).find(u=>u.s===zu.s)||{}).L||[]):[];const NM=new Map(L.map(x=>[String(x.t),x]));
+ const L=mem.length?(((unitsAll(zu.d,stores,R,set).find(u=>u.s===zu.s)||{}).L||[]).map(x=>Object.assign({},x,{rank:x.srank}))):[];const NM=new Map(L.map(x=>[String(x.t),x]));
  const last=new Map();for(const r of SR){const o=last.get(r.t);if(!o||r.d>=o.d)last.set(r.t,r)}
  const groups=[...new Set([...last.values()].map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));const gi=g=>Math.max(0,groups.indexOf(g));
  window._z={Z,NM,last,rk,date,dataDay,SR,groups,gi,set};
@@ -477,7 +498,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  <div class="row"><button class="b ${edit?'sub':''}" onclick="zu.mode='view';zuPage()">見る</button><button class="b ${edit?'':'sub'}" onclick="zu.mode='edit';zuPage()">編集</button><span style="flex:1"></span><button class="b sub" onclick="zuZoom(-.5)">－</button><span>${G?zu.zg:zu.z}倍</span><button class="b sub" onclick="zuZoom(.5)">＋</button></div>
  ${G?zGridHtml(G,{NM,last,set,gi}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
  ${Z.img&&!imgSrc?'<p class="note">図の画像を読み込み中…</p>':''}${Z.cards.length?'':'<p class="note">まだ台番の札がないよ。「編集」で追加してね。</p>'}
- <div class="zleg">${G?'':legend}</div><p class="note">札：台番／狙い印と狙い順（${esc(date)}の朝の時点・全店舗・全機種の通し順）。枠の色は機種（最終履歴の機種）。</p>
+ <div class="zleg">${G?'':legend}</div><p class="note">札：台番／狙い印と狙い順（${esc(date)}の朝の時点・この店舗の中の順位。狙い印が○か△の台だけに順位が付く）。枠の色は機種（最終履歴の機種）。</p>
  <div id="zd"></div>
  ${edit&&G?zGridEdit(G,groups):''}
  ${edit&&!G?`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ 編集</h2>
@@ -503,7 +524,7 @@ function zuSelPanels(){const d=$('zd');if(!d||!window._z)return;const{NM,last,rk
  const ks=NC.RANK_KEYS;const rr=rk[zu.s+'|'+t]||[];
  const cell=(w,m)=>{const iy=ks.indexOf(w+'_'+m+'_y');return`${rr[iy]||'-'}／${rr[iy+1]||'-'}`};
  d.innerHTML=`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>${esc(t)}番台　<small>${l?esc(l.m):'データなし'}</small></h2>
- ${x?`<div class="kv"><span>狙い順</span><b>${x.rank}位</b><span>狙い印</span><b>${x.mark||'なし'}</b><span>○点数</span><b>${x.pts}（サブ ${x.sub.toFixed(1)}）</b></div>`:'<p class="note">この台番は、この日のデータにないよ。</p>'}
+ ${x?`<div class="kv"><span>狙い順</span><b>${x.rank?x.rank+'位':'-'}</b><span>狙い印</span><b>${x.mark||'なし'}</b><span>○点数</span><b>${x.pts}（サブ ${x.sub.toFixed(1)}）</b></div>`:'<p class="note">この台番は、この日のデータにないよ。</p>'}
  <p class="note" style="margin-top:8px">当日データ（${esc(dataDay)}）</p>
  ${row?`<div class="kv"><span>回転</span><b>${row.g.toLocaleString()}</b><span>BB / RB</span><b>${row.bb} / ${row.rb}</b><span>BB確率</span><b>${P(row.g,row.bb)}</b><span>RB確率</span><b>${P(row.g,row.rb)}</b><span>合算</span><b>${P(row.g,row.bb+row.rb)}</b></div>`:'<p class="note">この日のデータはないよ。</p>'}
  ${x?`<p class="note" style="margin-top:8px">状態順（良い順／悪い順）</p><div class="tw"><table><tr><th class="l">期間</th>${NC.MET.map(m=>`<th>${m[1]}</th>`).join('')}</tr>${NC.WIN.map(w=>`<tr><td class="l">${w[1]}</td>${NC.MET.map(m=>`<td>${cell(w[0],m[0])}</td>`).join('')}</tr>`).join('')}</table></div>`:''}</div>`}
@@ -521,7 +542,7 @@ function zAbbr(g){const o=(S.zu.abbr||{})[g];if(o!=null)return o;if(g.includes('
 function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=+zu.top||0;let html='';const set=x.set;
  const cell=(r,cc,cls,txt,ex='')=>`<div class="g ${cls}" style="grid-row:${r+1};grid-column:${cc+1}" ${ex}>${txt}</div>`;
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
-  const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||nm.rank<=top);const mk=show?nm.mark:'';
+  const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=mk==='○'?' mo':mk==='△'?' mt':mk==='×'?' mx':'';
   html+=cell(r,ac,'ga'+sel,esc(ab))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
  return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:repeat(${G.cols},${c}px);grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>

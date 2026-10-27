@@ -166,8 +166,8 @@ function winSum(W,store,picks,grp,t,w){const S=W.get(store);const m=S&&S.idx.get
 // ===== 狙いリスト =====
 const SEGS=AXES;
 const DEF_CFG={pts:{tai:{matsu:3,hi:1,you:1},st:{matsu:1,hi:0,you:0}},combo:{},sub:{metric:'t',w:{matsu:50,hi:25,you:25}}};
-// 組み合わせ（日末尾・日・曜日の○有無を3桁の0/1）→ 評価印。未設定は○の数で（3個○、2個△、1個×）
-function comboMark(code,cfg){const c=cfg.combo||{};if(c[code]!=null)return c[code];const n=[...code].filter(x=>x==='1').length;return n>=3?'○':n===2?'△':n===1?'×':''}
+// 組み合わせ（日末尾・日・曜日の○有無を3桁の0/1）→ 評価印（○△×のどれか）。未設定は印なし（空）
+function comboMark(code,cfg){const v=(cfg.combo||{})[code];return v==='○'||v==='△'||v==='×'?v:''}
 // 状態順の名前（例：前日回転 悪い順）
 const stName=k=>{const[w,m,d]=k.split('_');return WIN.find(x=>x[0]===w)[1]+MET.find(x=>x[0]===m)[1]+(d==='y'?' 良い順':' 悪い順')};
 const round4=v=>Math.round(v*1e4)/1e4;
