@@ -75,7 +75,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=14"></script>
+<script src="core.js?v=15"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -204,6 +204,9 @@ function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d
  const g=new Map(),sg=new Map();const cn={};all.forEach(([u,x],i)=>{g.set(x,i+1);cn[u.s]=(cn[u.s]||0)+1;sg.set(x,cn[u.s])});
  for(const u of out)u.L=u.L.map(x=>Object.assign({},x,{rank:g.get(x)||'',srank:sg.get(x)||'',lrank:x.rank}));
  return NRG.m[d]=out}
+// 店舗の並び：弘前石渡→五所川原→青森柏→弘前→弘前安原、それ以外は名前順であと
+const ST_ORD=['弘前石渡','五所川原','青森柏','弘前','弘前安原'];
+const storeCmp=(a,b)=>{const x=ST_ORD.indexOf(a.replace(/^マルハン/,'')),y=ST_ORD.indexOf(b.replace(/^マルハン/,''));return (x<0?99:x)-(y<0?99:y)||a.localeCompare(b,'ja')};
 // 店舗の複数選択（何も選んでいないときは全店舗）。古い保存（s）からも引き継ぐ
 function stSel(o,stores){if(!Array.isArray(o.ss))o.ss=o.s&&o.s!=='*'?[o.s]:(o.s==='*'?[]:[]);o.ss=o.ss.filter(x=>stores.includes(x));return o.ss}
 function unitsFor(st,stores,R,set){const A=unitsAll(st.d,stores,R,set);const sl=st.ss&&st.ss.length?st.ss:null;return sl?A.filter(u=>sl.includes(u.s)):A}
@@ -211,10 +214,10 @@ const stChips=(w,ss,stores)=>`<div class="chips" style="margin:4px 0"><button cl
 window.ssTog=(w,x)=>{const o=w==='tu'?tu:nr;const i=o.ss.indexOf(x);if(i>=0)o.ss.splice(i,1);else o.ss.push(x);(w==='tu'?touPage:nerPage)()};
 window.ssAll=w=>{(w==='tu'?tu:nr).ss=[];(w==='tu'?touPage:nerPage)()};
 let WIC=null;const winI=()=>{if(!WIC||WIC.r!==S.rows)WIC={r:S.rows,w:NC.winIdx(S.rows,setObj())};return WIC.w};
-function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();const ss=stSel(tu,stores);
+function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);const ss=stSel(tu,stores);
  const all=(ss.length||stores.length)!==1;const TD=curDate();
- const units=unitsFor({ss,d:TD},stores,R,set);
- const groups=[...new Set(units.flatMap(u=>u.day.map(r=>NC.groupOf(r.m,set))))].sort((a,b)=>a.localeCompare(b,'ja'));if(tu.g&&!groups.includes(tu.g))tu.g='';
+ const units=unitsFor({ss,d:TD},stores,R,set).slice().sort((a,b)=>storeCmp(a.s,b.s));
+ const groups=[...new Set(units.flatMap(u=>u.day.map(r=>NC.groupOf(r.m,set))))].sort(gOrd());if(tu.g&&!groups.includes(tu.g))tu.g='';
  LS.set('nr_tu',tu);
  const keys=NC.RANK_KEYS;const cols=[];const nmode=tu.vm==='n';const W=nmode?winI():null;
  for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0])){
@@ -422,7 +425,7 @@ window.nrDate=v=>{if(!isDate(v)){nerPage();return}let lo='9',hi='0';for(const r 
 window.nrSo=k=>{if(nr.so===k)nr.rev=nr.rev?0:1;else{nr.so=k;nr.rev=0}nerPage()};
 window.nrOnly=()=>{nr.only=nr.only?0:1;nerPage()};
 const COMBO_L={matsu:'末尾',hi:'日',you:'曜日'};
-function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();const ss=stSel(nr,stores);
+function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);const ss=stSel(nr,stores);
  const all=(ss.length||stores.length)!==1;
  curDate();if(!nr.so)nr.so='rank';
  LS.set('nr_nr',nr);const cfg=nerCfg();
