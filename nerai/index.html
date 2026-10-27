@@ -73,7 +73,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['ner','狙い'],['zu','図面'],['chk','状態順'],['set','設定'],['ken','検索',1]];
+const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['ner','狙い'],['zu','図面'],['ken','検索'],['chk','状態順'],['set','設定']];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
 let anDirty=false,zuDirty=false;
@@ -116,7 +116,7 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{if((anDirty||zuDirty)&&t!==tab&&!confirm('設定や図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);render()};
 function render(){nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage()}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -423,6 +423,57 @@ window.zuImg=async f=>{if(!f)return;try{const url=await new Promise((ok,ng)=>{co
 document.addEventListener('paste',e=>{if(tab!=='zu'||zu.mode!=='edit')return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){e.preventDefault();zuImg(it.getAsFile())}});
 window.zuSave=async()=>{const sv=$('sv');try{const out={'nerai/zumen.json':JSON.stringify(S.zu)};for(const nm in S.zimgNew)out['nerai/'+nm]=S.zimgNew[nm];
  await saveFiles(out,'設定狙い図面',t=>sv.textContent=t);for(const nm in S.zimgNew)S.zimg[nm]=S.zimgNew[nm];S.zimgNew={};zuDirty=false;S.zuSaved=JSON.stringify(S.zu);zuPage();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+
+// ===== 検索 =====
+const KN0=()=>({st:[],g:'',ty:'',from:'',to:'',mt:[],hi:'',yo:[],tai:'',gmin:'',gmax:'',bmin:'',bmax:'',rmin:'',rmax:'',smin:'',smax:'',w:'',m:'gs',dr:'w',n:'',so:'d-',open:10});
+let kn=Object.assign(KN0(),LS.get('nr_kn',{}));
+function kenParse(txt){const o=new Set();for(const w of NC.nz(String(txt).replace(/[\n,、]/g,' ')).split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&Math.abs(+m[2]-+m[1])<=500){const a=Math.min(+m[1],+m[2]),b=Math.max(+m[1],+m[2]);for(let i=a;i<=b;i++)o.add(String(i))}else o.add(w)}return o}
+function kenRun(){const R=S.rows,set=setObj();const nn=v=>v===''||v==null||isNaN(+v)?null:+v;
+ const tai=kn.tai.trim()?kenParse(kn.tai):null;const his=kn.hi.trim()?new Set([...kenParse(kn.hi)].map(Number)):null;
+ const g0=nn(kn.gmin),g1=nn(kn.gmax),b0=nn(kn.bmin),b1=nn(kn.bmax),r0=nn(kn.rmin),r1=nn(kn.rmax),s0=nn(kn.smin),s1=nn(kn.smax);
+ const wi=kn.w?NC.RANK_KEYS.indexOf(kn.w+'_'+kn.m+'_'+kn.dr):-1;const N=nn(kn.n);
+ const ok=(v,lo,hi)=>(lo==null||v>=lo)&&(hi==null||v<=hi);const out=[];
+ for(const r of R){if(kn.st.length&&!kn.st.includes(r.s))continue;if(kn.from&&r.d<kn.from)continue;if(kn.to&&r.d>kn.to)continue;
+  if(tai&&!tai.has(r.t))continue;const dd=+r.d.slice(8);if(kn.mt.length&&!kn.mt.includes(String(dd%10)))continue;if(his&&!his.has(dd))continue;
+  if(kn.yo.length&&!kn.yo.includes(String(NC.dow(r.d))))continue;
+  if(kn.g&&NC.groupOf(r.m,set)!==kn.g)continue;if(kn.ty&&NC.typeOf(r.m,set)!==kn.ty)continue;
+  if(!ok(r.g,g0,g1))continue;const bd=NC.den(r.g,r.bb),rd=NC.den(r.g,r.rb),sd=NC.den(r.g,r.bb+r.rb);
+  if(!ok(bd,b0,b1)||!ok(rd,r0,r1)||!ok(sd,s0,s1))continue;
+  let rank=0;if(wi>=0){const x=(((S.agg[r.d.slice(0,7)]||{}).ranks||{})[r.d]||{})[r.s+'|'+r.t];rank=x?x[wi]:0;if(!rank)continue;if(N!=null&&rank>N)continue}
+  out.push({r,bd,rd,sd,rank})}
+ const so=kn.so;const cmp={'d-':(a,b)=>b.r.d.localeCompare(a.r.d),'d+':(a,b)=>a.r.d.localeCompare(b.r.d),'t':(a,b)=>a.r.t.localeCompare(b.r.t,'ja',{numeric:true}),'g-':(a,b)=>b.r.g-a.r.g,'g+':(a,b)=>a.r.g-b.r.g,'s+':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?-1:1),'s-':(a,b)=>(a.sd===b.sd?0:a.sd<b.sd?1:-1),'k':(a,b)=>a.rank-b.rank}[so]||((a,b)=>0);
+ out.sort((a,b)=>cmp(a,b)||b.r.d.localeCompare(a.r.d)||a.r.t.localeCompare(b.r.t,'ja',{numeric:true}));return{out,wi}}
+function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();
+ const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
+ const {out,wi}=kenRun();const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const t={n:out.length,g:0,bb:0,rb:0};const days=new Set(),tais=new Set();for(const x of out){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb;days.add(x.r.d);tais.add(x.r.s+'|'+x.r.t)}
+ const sel=(id,L,v)=>`<select onchange="kn.${id}=this.value;kn.open=10;kenPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
+ const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${kn[id].includes(k)?'on':''}" onclick="knTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
+ const num=(id,ph,w=70)=>`<input type="number" inputmode="decimal" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kn.open=10;kenPage()">`;
+ const txt=(id,ph,w=140)=>`<input value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kn.open=10;kenPage()">`;
+ const shown=out.slice(0,kn.open);
+ const rows=shown.map(x=>{const r=x.r;return`<tr><td class="fix">${esc(r.t)}</td><td class="l">${r.d.slice(2)}</td><td class="l">${esc(r.s.replace(/^マルハン/,''))}</td><td class="l">${esc(r.m)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${wi>=0?`<td>${x.rank}</td>`:''}</tr>`}).join('');
+ $('main').innerHTML=`<div class="card"><h2>🔎 データ検索 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="knReset()">条件をリセット</button></h2>
+ <p class="note">店舗（押さなければ全店）</p>${chip('st',stores.map(s=>[s,s.replace(/^マルハン/,'')]))}
+ <div class="row">${sel('g',[['','すべての機種']].concat(groups.map(g=>[g,g])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
+ <p class="note">期間</p><div class="row"><input type="date" value="${kn.from}" onchange="kn.from=this.value;kn.open=10;kenPage()" style="width:150px">〜<input type="date" value="${kn.to}" onchange="kn.to=this.value;kn.open=10;kenPage()" style="width:150px"></div>
+ <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
+ <p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
+ <div class="row"><label>日 ${txt('hi','例 7,17,27',110)}</label><label>台番 ${txt('tai','例 401 405-410',130)}</label></div>
+ <p class="note">回転数の範囲</p><div class="row">${num('gmin','以上')}〜${num('gmax','以下')}</div>
+ <p class="note">確率の範囲（1/○の○。小さいほど良い）</p>
+ <div class="row"><label>BB ${num('bmin','○以上',64)}〜${num('bmax','○以下',64)}</label></div><div class="row"><label>RB ${num('rmin','○以上',64)}〜${num('rmax','○以下',64)}</label></div><div class="row"><label>合算 ${num('smin','○以上',64)}〜${num('smax','○以下',64)}</label></div>
+ <p class="note">状態順の順位（その日の朝の時点。同じ値で空白の台は対象外）</p>
+ <div class="row">${sel('w',[['','指定しない']].concat(NC.WIN.map(w=>[w[0],w[1]])),kn.w)}${sel('m',NC.MET.map(m=>[m[0],m[1]]),kn.m)}${sel('dr',[['y','良い順'],['w','悪い順']],kn.dr)}<label>${num('n','○位まで',64)}位まで</label></div>
+ <div class="row"><label>並び ${sel('so',[['d-','日付が新しい順'],['d+','日付が古い順'],['t','台番順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']].concat(wi>=0?[['k','状態順の順位']]:[]),kn.so)}</label></div></div>
+ <div class="card"><h2>📋 結果 ${out.length.toLocaleString()}件</h2>
+ ${out.length?`<p class="note">${days.size}日分・${tais.size.toLocaleString()}台</p><div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
+ <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td></tr>
+ <tr class="sum"><td class="l">平均（1件）</td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td></tr></table></div>
+ ${shown.length?`<div class="tw" style="margin-top:8px"><table><tr><th class="fix">台番</th><th class="l">日付</th><th class="l">店舗</th><th class="l">機種</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th>${wi>=0?'<th>順位</th>':''}</tr>${rows}</table></div>`:''}
+ <div class="row"><span class="note">${shown.length}/${out.length.toLocaleString()}件を表示中</span>${shown.length<out.length?`<button class="b sub" onclick="kn.open+=10;kenPage()">さらに10件開く</button>`:''}${kn.open>0?`<button class="b sub" onclick="kn.open=0;kenPage()">閉じる</button>`:`<button class="b sub" onclick="kn.open=10;kenPage()">10件開く</button>`}</div>`:'<p class="note">条件に合うデータがないよ</p>'}</div>`}
+window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kn.open=10;kenPage()};
+window.knReset=()=>{kn=KN0();kenPage()};
 
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
