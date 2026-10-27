@@ -173,13 +173,14 @@ function vHome(){const w=D.wallet,cho=chodamaYen??0;const total=w.cash+w.pachi+w
  const rng={'1m':1,'3m':3,'1y':12,'all':9999}[range];let pts;
  if(range==='1m'){pts=[];let c=prev.cum;const[yy,mm]=CUR.split('-').map(Number);const L=rows(CUR);const fixedSum=L.filter(x=>!x.auto&&!/^\d{4}/.test(x.d||'')).reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);c+=fixedSum;for(let i=1;i<=TODAY.getDate();i++){const dd=CUR+'-'+pad(i),o=dayInfo(dd);c+=(isS(o.t)||o.t==='other'?(+o.pay||0):0)+(o.ky||0);pts.push([i+'日',c])}}
  else pts=S.slice(-rng).map(o=>[ymLabel(o.ym).slice(2),o.cum]);
+ {const G=LS.get('sk2_gr',{from:'',to:''});pts=S.filter(o=>(!G.from||o.ym>=G.from)&&(!G.to||o.ym<=G.to)).map(o=>[ymLabel(o.ym).slice(2),o.cum]);var grSel=(k)=>`<select style="flex:1;font-size:16px;padding:10px;border-radius:10px;border:1px solid #cfd9ee" onchange="const G=LS.get('sk2_gr',{from:'',to:''});G['${k}']=this.value;LS.set('sk2_gr',G);render()"><option value="">${k==='from'?'最初':'最新'}</option>${S.map(o=>`<option value="${o.ym}" ${G[k]===o.ym?'selected':''}>${o.ym.replace('-','/')}</option>`).join('')}</select>`}
  // 年間目標
  let yt='';let avgBase=pe;for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),o=byYm[ym];const tg=pe+D.set.step*m;yt+=`<tr><td>${m}</td><td>${yen(tg)}</td><td>${o?Y(o.cum):''}</td><td>${o?Y(o.net):''}</td><td>${o?Y(o.cum-tg):''}</td><td>${o?Y(Math.round((o.cum-pe)/m)):''}</td></tr>`}
  return`<div class="card"><h2>現在所持金</h2><div class="big">${yen(total)}</div>
  <div style="margin-top:4px;font-weight:700">今月収支 ${Y(cur.net)} ${pct==null?'':`<span class="${pct>=0?'up':'dn'}">${pct>=0?'▲':'▼'}${Math.abs(pct)}%</span>`}</div>
  <div style="margin-top:10px">${[['cash','財布現金'],['pachi','パチ財布'],['bank','銀行'],['cho','貯玉'],['small','小封筒'],['big','大封筒']].map(([k,l])=>k==='cho'?`<div class="row"><span>${l}</span><b>${chodamaYen==null?'-':yen(cho)}</b></div>`:`<div class="row"><span>${l}</span><input class="num" style="width:150px" inputmode="numeric" value="${w[k]||''}" onchange="setW('${k}',this.value)"></div>`).join('')}</div>
  <div class="tiles" style="margin-top:10px"><div class="tile"><div class="l">貯金</div><input class="num" inputmode="numeric" value="${w.save||''}" onchange="setW('save',this.value)"></div><div class="tile"><div class="l">車資金</div><input class="num" inputmode="numeric" value="${w.car||''}" onchange="setW('car',this.value)"></div></div></div>
- <div class="card"><h2>累計収支<span class="pills">${[['1m','1ヶ月'],['3m','3ヶ月'],['1y','1年'],['all','全期間']].map(([k,l])=>`<button class="pill ${range===k?'on':''}" onclick="setRange('${k}')">${l}</button>`).join('')}</span></h2>${lineChart(pts)}</div>
+ <div class="card"><h2>累計収支</h2><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">${grSel('from')}<b>〜</b>${grSel('to')}</div>${lineChart(pts)}</div>
  <div class="card"><h2>目標・現状</h2>
  <div class="row"><span>先月最終残高</span><b>${Y(prevEnd)}</b></div>
  <div class="row"><span>今月最終見込み</span><b>${Y(proj)}</b></div>
