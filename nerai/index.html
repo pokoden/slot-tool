@@ -75,7 +75,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=16"></script>
+<script src="core.js?v=17"></script>
 <script src="layouts.js?v=1"></script>
 <script>
 'use strict';
@@ -167,11 +167,12 @@ function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null
 const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
 function idxOfV(m,v){if(!(v.g>0)||v.bb==null||v.rb==null||!TOUB)return null;return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base)}
 let TOUB=null;
-const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs'],['it','t']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}"${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`}).join('')};
+const okIx=x=>!!x&&x.g!=null&&x.rb!=null&&x.gs!=null&&x.g>=55&&x.rb>=55&&x.gs>=55;
+const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs'],['it','t']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}"${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`}).join('')+`<td data-c="iok" style="text-align:center">${okIx(x)?'<span class="mk a">○</span>':''}</td>`};
 function touPaint(tr){const v={};tr.querySelectorAll('input.mi').forEach(i=>{v[i.dataset.f]=i.value.trim()===''?null:+i.value});
  const put=(c,t,blue)=>{const td=tr.querySelector(`[data-c="${c}"]`);if(!td)return;td.textContent=t;td.removeAttribute('style');td.classList.toggle('ib',!!blue)};
  put('pbb',probT(v.g,v.bb));put('prb',probT(v.g,v.rb));put('pgs',v.bb!=null&&v.rb!=null?probT(v.g,v.bb+v.rb):'');
- const x=idxOfV(tr.dataset.m,v);for(const[c,k]of[['ig','g'],['irb','rb'],['igs','gs'],['it','t']]){const n=x?x[k]:null;put(c,n==null?'':n,n!=null&&n>=55)}}
+ const x=idxOfV(tr.dataset.m,v);for(const[c,k]of[['ig','g'],['irb','rb'],['igs','gs'],['it','t']]){const n=x?x[k]:null;put(c,n==null?'':n,n!=null&&n>=55)}const o=tr.querySelector('[data-c="iok"]');if(o)o.innerHTML=okIx(x)?'<span class="mk a">○</span>':''}
 window.touIn=el=>{const k=el.dataset.k,f=el.dataset.f,M=manAll(),raw=el.value.trim();let o=M[k];
  if(raw===''||!isFinite(+raw)){if(o){delete o[f];if(!Object.keys(o).length)delete M[k]}}else{if(!o)o=M[k]={};o[f]=Math.max(0,Math.round(+raw))}
  anDirty=true;autoSave();touPaint(el.closest('tr'))};
@@ -223,15 +224,15 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0])){
   if(nmode)cols.push({k:'n_'+w[0]+'_'+m[0],w:w[0],m:m[0],lab:w[1]+'<br>'+m[1]});
   else for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:w[1]+'<br>'+m[1]+(tu.r.length>1?(r==='y'?'良':'悪'):'')})}
- const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=14+cols.length;const TDset=setObj();TOUB={set:TDset,base:NC.stdBaseAt(R,TDset,TD||'0000-00-00')};
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=15+cols.length;const TDset=setObj();TOUB={set:TDset,base:kenBase()};
  const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
  const soC=cols.find(c=>c.k===tu.so);
  const rkCell=(v,c,n)=>{const y=rankSty(v,c.k.slice(-1),n);return`<td class="${v===1?'r1':v===2?'r2':''}"${y?` style="${y}"`:''}>${v||''}</td>`};
- const e='<td></td>'.repeat(cols.length),e4='<td></td>'.repeat(4);
+ const e='<td></td>'.repeat(cols.length),e4='<td></td>'.repeat(5);
  const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td>${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td>${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr>`;
  const flat=tu.so==='rank';const flatRows=[];const onlyF=nm=>!tu.only||(nm&&isRk(nm));
- const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th>回転<br>指数</th><th>RB<br>指数</th><th>合算<br>指数</th><th>総合<br>指数</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数'],['it','総合<br>指数']].map(([k,t])=>`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map(c=>`<th class="s ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  let body='';
  for(const u of units){const NM=new Map(u.L.map(x=>[String(x.t),x]));const pk=nmode?NC.winPicks(W,u.s,u.date):null;
   const wsum=(r,c)=>NC.winSum(W,u.s,pk,NC.groupOf(r.m,set),r.t,c.w);
@@ -239,12 +240,13 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   const tval=(r,k)=>{const nm=NM.get(String(r.t));
    if(k==='rank')return nm&&nm.rank!==''?nm.rank:null;if(k==='mark')return nm&&nm.mark?NC.MARKS.indexOf(nm.mark):null;if(k==='score')return nm?-nm.score:null;
    if(k==='g'||k==='bb'||k==='rb'||k==='pbb'||k==='prb'||k==='pgs'){if(u.virt)return null;return k==='g'?-r.g:k==='bb'?-r.bb:k==='rb'?-r.rb:NC.den(r.g,k==='pbb'?r.bb:k==='prb'?r.rb:r.bb+r.rb)}
+   if(k==='ig'||k==='irb'||k==='igs'||k==='it'){const x=idxOfV(r.m,effV(u.s,u.date,r.t,u.virt?null:r));const n=x?x[{ig:'g',irb:'rb',igs:'gs',it:'t'}[k]]:null;return n==null?null:-n}
    if(!soC||soC.k!==k)return null;
    if(nmode)return nkey(r,soC);const v=(u.rk[r.s+'|'+r.t]||[])[soC.i];return v||null};
   const sorter=(a,b)=>{const k=tu.so;const dir=tu.rev?-1:1;if(k&&k!=='t'){const va=tval(a,k),vb=tval(b,k);if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb)return(va<vb?-1:1)*dir}return a.t.localeCompare(b.t,'ja',{numeric:true})*(k==='t'?dir:1)};
   let cst={};const ncell=(r,c)=>{const x=wsum(r,c);const y=x?(c.m==='g'?barSty(x.g,cst[c.k]):tintSty(NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb),cst[c.k])):'';return`<td${y?` style="${y}"`:''}>${x?(c.m==='g'?x.g.toLocaleString():P(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):''}</td>`};
   const st={n:0,g:0,bb:0,rb:0};let ng=0;
-  for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>NC.groupOf(r.m,set)===g).sort(sorter);if(!L.length)continue;ng++;
+  for(const g of groups){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>NC.groupOf(r.m,set)===g&&(!tu.ok||okIx(idxOfV(r.m,effV(u.s,u.date,r.t,u.virt?null:r))))).sort(sorter);if(!L.length)continue;ng++;
    const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;
    const full=(all?sShort(u.s)+'｜':'')+[...new Set(L.map(r=>r.m))].join('／');
    if(!flat&&!(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t))))))body+=band(NCOL,(all?sShort(u.s)+'｜':'')+mShort(g),full,`${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}`);
@@ -274,6 +276,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   ${units.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
 window.tuDef=()=>{tu.so='t';tu.rev=0;touPage()};
+window.tuOk=()=>{tu.ok=tu.ok?0:1;touPage()};
 window.tuOnly=()=>{tu.only=tu.only?0:1;touPage()};
 window.tuSo=k=>{if(tu.so===k)tu.rev=tu.rev?0:1;else tu.rev=0;tu.so=k;touPage()};
 window.tuVm=k=>{tu.vm=k;tu.so='t';tu.rev=0;touPage()};
@@ -469,19 +472,24 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  V=V.map(x=>({x,v:sv(x)}));
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
  const shown=V.map(o=>o.x);
+ // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
+ const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();
+ const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl"></td>'+'<td></td>'.repeat(11);
+  const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`;
+  return`<td class="gl">${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}${b(ix.t)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr">${mkH(x.mark||'×')}</td>`};
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
  const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   const lab=x.kind==='t'?'台番':esc(x.label);const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" ${x.kind==='s'?'style="color:#1f5fd6;font-weight:600"':''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" ${x.kind==='s'?'style="color:#1f5fd6;font-weight:600"':''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')
   +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
-  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+'</tr><tr>'
-  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+'</tr>';
+  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="12" class="gl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
+  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','総合<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl':''}${i===11?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,60);
  const num=(path,v,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
@@ -720,7 +728,7 @@ ${kenCal()}
 const KRH=30,KBUF=40;let KV=null;
 function kenRow(x){const r=x.r,P=(g,n)=>NC.fmtP(NC.den(g,n));const ix=NC.rowIdx(r,KV.set,KV.base);const hit=ix.g!=null&&ix.rb!=null&&ix.gs!=null&&ix.g>=55&&ix.rb>=55&&ix.gs>=55;
  const tc=x.k?`<td class="fix kst">${esc(x.k.lab)}<span>(${esc(r.t)})</span></td>`:`<td class="fix">${esc(r.t)}</td>`;
- return`<tr class="kr">${tc}<td class="l">${r.d.slice(5)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${stTd(r.s)}<td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(r.m))}</span>${hit?' <span class="mk a">○</span>':''}</td></tr>`}
+ return`<tr class="kr">${tc}<td class="l">${r.d.slice(5)}</td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${stTd(r.s)}<td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(r.m))}</span></td><td style="text-align:center">${hit?'<span class="mk a">○</span>':''}</td></tr>`}
 function knPaint(force){const tb=$('kvb');const tbl=$('kvt');if(!KV||!tb||!tbl)return;const n=KV.out.length;
  const top=tbl.getBoundingClientRect().top+(tbl.tHead?tbl.tHead.offsetHeight:0);
  const step=KBUF/2;let first=Math.max(0,Math.floor((-top/KRH-KBUF)/step)*step);if(first>n)first=Math.max(0,n-KBUF);
@@ -729,16 +737,18 @@ function knPaint(force){const tb=$('kvb');const tbl=$('kvt');if(!KV||!tb||!tbl)r
  let h=sp(first*KRH);for(let i=first;i<end;i++)h+=kenRow(KV.out[i]);h+=sp((n-end)*KRH);tb.innerHTML=h}
 let knSc=0;window.addEventListener('scroll',()=>{if(tab!=='ken'||!KV||knSc)return;knSc=requestAnimationFrame(()=>{knSc=0;knPaint(false)})},{passive:true});
 // 上の合計・平均は、台番の行だけで数える（状態の行は入れない）
-function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();const {out,nT,nS}=kenRun();const P=(g,n)=>NC.fmtP(NC.den(g,n));
+function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();let {out,nT,nS}=kenRun();
+ if(kn.ok){const b=kenBase();out=out.filter(x=>okIx(NC.rowIdx(x.r,set,b)));nT=out.filter(x=>!x.k).length;nS=out.length-nT}const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const t={n:nT,g:0,bb:0,rb:0};for(const x of out)if(!x.k){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb}
  KV={out,set,base:out.length?kenBase():null,first:-1};
- const cw=[116,52,56,40,40,58,58,50,66,120];
+ const cw=[116,52,56,40,40,58,58,50,66,120,34];
  el.innerHTML=`<div class="card"><h2>📋 結果 ${nT.toLocaleString()}件${nS?`（状態 ${nS.toLocaleString()}件）`:''}</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
 <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td rowspan="2">${P(t.g,t.bb)}</td><td rowspan="2">${P(t.g,t.rb)}</td><td rowspan="2">${P(t.g,t.bb+t.rb)}</td></tr>
 <tr class="sum"><td class="l">平均</td><td></td><td>${t.n?Math.round(t.g/t.n).toLocaleString():''}</td><td>${t.n?(t.bb/t.n).toFixed(1):''}</td><td>${t.n?(t.rb/t.n).toFixed(1):''}</td></tr></table></div>
-<div class="tw" style="margin-top:8px"><table id="kvt" style="table-layout:fixed;width:${cw.reduce((a,b)=>a+b,0)}px"><colgroup>${cw.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix s ${kn.so==='t'?'on':''}" onclick="knSo('t')">台番</th><th class="l s ${kn.so[0]==='d'?'on':''}" onclick="knSo('d')">月日</th><th class="s ${kn.so[0]==='g'?'on':''}" onclick="knSo('g')">回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th class="s ${kn.so[0]==='s'?'on':''}" onclick="knSo('s')">合算</th><th class="l">店舗</th><th class="l s ${kn.so==='def'?'on':''}" onclick="knSo('def')">機種</th></tr></thead><tbody id="kvb"></tbody></table></div>`:'<p class="note">条件に合うデータがないよ</p>'}</div>`;
+<div class="tw" style="margin-top:8px"><table id="kvt" style="table-layout:fixed;width:${cw.reduce((a,b)=>a+b,0)}px"><colgroup>${cw.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix s ${kn.so==='t'?'on':''}" onclick="knSo('t')">台番</th><th class="l s ${kn.so[0]==='d'?'on':''}" onclick="knSo('d')">月日</th><th class="s ${kn.so[0]==='g'?'on':''}" onclick="knSo('g')">回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th class="s ${kn.so[0]==='s'?'on':''}" onclick="knSo('s')">合算</th><th class="l">店舗</th><th class="l s ${kn.so==='def'?'on':''}" onclick="knSo('def')">機種</th><th class="s ${kn.ok?'on':''}" onclick="knOk()">○</th></tr></thead><tbody id="kvb"></tbody></table></div>`:'<p class="note">条件に合うデータがないよ</p>'}</div>`;
  if(out.length)knPaint(true)}
+window.knOk=()=>{kn.ok=kn.ok?0:1;kenRes()};
 window.knSo=k=>{kn.so=k==='t'||k==='def'?k:(kn.so===k+'-'?k+'+':k+'-');kenRes()};
 window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kenPage()};
 window.knPer=n=>{const p=kenPer()[n];kn.from=p[0];kn.to=p[1];kenPage()};
