@@ -116,12 +116,15 @@ function idx(rT,rbT,gsT){if(rT==null||rbT==null||gsT==null)return{p:null,t:null}
 const SM=new WeakMap();
 function storeRows(rows,s){let m=SM.get(rows);if(!m){m=new Map();for(const r of rows){let a=m.get(r.s);if(!a)m.set(r.s,a=[]);a.push(r)}SM.set(rows,m)}return m.get(s)||[]}
 // 店舗1つぶんの集計。軸の値（日末尾なら0〜9）ごとに、台番別と状態順1位別を出す
-function analyzeStore(rows,set,ranks,store,axis,from,to,B){const hitLine=+B.hit||0;
+// 検索割合の分母：期間（from〜to）のカレンダー上で、その軸の値に当たる日の数（データがない日も数える）
+const calC=new Map();
+function calDays(from,to,axis){const key=from+'|'+to+'|'+axis;let c=calC.get(key);if(c)return c;c={};if(from<=to&&to<'2200'){for(let d=from;d<=to;d=addDay(d,1)){const v=segOf(d,axis);c[v]=(c[v]||0)+1}}calC.set(key,c);return c}
+function analyzeStore(rows,set,ranks,store,axis,from,to,B){const cal=calDays(from,to,axis);
  const ks=stKeys(axis).map(k=>[k,RANK_KEYS.indexOf(k)]);const G=new Map();
- const add=(M,key,k,v,r)=>{let u=M.get(key);if(!u)M.set(key,u={k,v:String(v),cnt:0,hit:0,g:0,bb:0,rb:0});u.cnt++;u.g+=r.g;u.bb+=r.bb;u.rb+=r.rb;if(hitLine>0&&r.bb+r.rb>0&&r.g/(r.bb+r.rb)<=hitLine)u.hit++;return u};
+ const add=(M,key,k,v,r)=>{let u=M.get(key);if(!u)M.set(key,u={k,v:String(v),cnt:0,g:0,bb:0,rb:0});u.cnt++;u.g+=r.g;u.bb+=r.bb;u.rb+=r.rb;return u};
  for(const r of storeRows(rows,store)){if(r.d<from||r.d>to)continue;
-  const g=groupOf(r.m,set);let o=G.get(g);if(!o)G.set(g,o={g,typ:typeOf(r.m,set),days:{},tai:new Map(),st:new Map()});
-  const v=segOf(r.d,axis);(o.days[v]||(o.days[v]=new Set())).add(r.d);
+  const g=groupOf(r.m,set);let o=G.get(g);if(!o)G.set(g,o={g,typ:typeOf(r.m,set),cal,tai:new Map(),st:new Map()});
+  const v=segOf(r.d,axis);
   add(o.tai,v+'|'+r.t,r.t,v,r).m=r.m;
   const x=(ranks[r.d]||{})[r.s+'|'+r.t];if(x)for(const[k,i]of ks)if(x[i]===1)add(o.st,v+'|'+k,k,v,r)}
  return G}
@@ -132,7 +135,7 @@ const topFn=vals=>{const s=vals.slice().sort((a,b)=>b-a);const n=s.length;return
 function finalize(G,B,base){
  for(const o of G.values()){const sb=base.rot[o.typ],pb=base.prob[o.g]||{};o.taiL=[...o.tai.values()];o.stL=[...o.st.values()];
   for(const L of[o.taiL,o.stL]){
-   for(const u of L){const nd=o.days[u.v].size;u.typ=o.typ;u.ratio=nd?(+B.hit>0?u.hit:u.cnt)/nd:0;u.avg=u.g/u.cnt;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0}
+   for(const u of L){const nd=o.cal[u.v]||0;u.typ=o.typ;u.ratio=nd?u.cnt/nd:0;u.avg=u.g/u.cnt;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0}
    const pool=L.filter(u=>!has(B.ratio)||u.ratio*100>=+B.ratio);const inP=new Set(pool);
    const sg=stat(pool.map(u=>u.avg));let p55=pool.filter(u=>dev(u.avg,sg)>=55);if(!p55.length)p55=pool;
    const s1={rb:stat(p55.map(u=>u.rbR)),gs:stat(p55.map(u=>u.gsR))};
@@ -182,6 +185,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
     res[sg]={o:to,ost,u:T&&T.u,ix}}
    out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/1000000,code,mark:comboMark(code,cfg),seg:res,one})}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);return out}
-const api={SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
