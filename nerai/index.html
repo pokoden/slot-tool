@@ -42,6 +42,16 @@ th.fix{background:#f6f7fa;z-index:2}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}
 .kv b{text-align:right}
 .hidden{display:none}
+.zw{overflow:auto;-webkit-overflow-scrolling:touch;max-height:70vh;border:1px solid #ccc;border-radius:8px;background:#fafafa}
+.zb{position:relative;min-width:100%}
+.zc{position:absolute;transform:translate(-50%,-50%);min-width:36px;padding:1px 3px;border-radius:6px;border:2px solid #999;background:#fff;text-align:center;font-size:11px;line-height:1.15;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.zc b{display:block;font-size:12px}.zc.ed{touch-action:none;cursor:move}.zc.sel{box-shadow:0 0 0 3px #1f5fd6;z-index:2}
+.zgrid{display:grid;width:max-content;padding:2px;background:#fff}
+.g{border:1px solid #444;margin:0 -1px -1px 0;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;white-space:nowrap;line-height:1}
+.gt{font-weight:700;cursor:pointer}.ga{color:#333}.gk{font-weight:700}.mo{background:#00c853}.mt{background:#ffee00}.mx{background:#ddd}
+.g.sel{background:#cfe0ff;z-index:2}.g.mo.sel{background:#00c853}.g.mt.sel{background:#ffee00}.gt.sel{outline:2px solid #1f5fd6;outline-offset:-2px}
+.zl b{display:inline-block;min-width:16px;text-align:center;border:1px solid #444;border-radius:3px;padding:0 2px}
+.zl{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-right:10px}.zl i{width:12px;height:12px;border-radius:3px;display:inline-block}.zleg{margin:6px 0}
 .r1{color:#c62828;font-weight:700}.r2{color:#d4561c;font-weight:600}
 tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
 tr.gh td{background:#20242c;color:#e9c46a;font-weight:600;text-align:left}
@@ -54,7 +64,8 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=5"></script>
+<script src="core.js?v=6"></script>
+<script src="layouts.js?v=1"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -62,10 +73,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['ner','狙い'],['chk','状態順'],['set','設定'],['zu','図面',1],['ken','検索',1]];
+const TABS=[['imp','取込'],['tou','当日'],['ana','分析'],['ner','狙い'],['zu','図面'],['chk','状態順'],['set','設定'],['ken','検索',1]];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
-let anDirty=false;
+let anDirty=false,zuDirty=false;
 let NRC={};
 const S={an:{v:1,border:{},marks:{}},loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
 const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});
@@ -77,13 +88,14 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  if(!tok()){S.loadErr='この画面にはGitHubトークンが入ってないよ。下の欄に、スロ判別ツールと同じトークンを入れてね。';S.needTok=true;return}
  S.needTok=false;const why=st=>st===401?'トークンが違うか期限切れみたい（401）':st===403?'トークンに slot-data の読み書き権限がないか、回数制限（403）':st===404?'slot-data が見えない（404）。トークンの対象リポジトリを確認してね':'通信エラー（'+st+'）';
  const r=await gh('contents/nerai'); if(!r.ok){if(r.status===401||r.status===404)S.needTok=true;throw new Error('一覧の読み込みに失敗：'+why(r.status))}
- const list=(await r.json()).filter(f=>f.type==='file'&&/\.json$/.test(f.name));
+ const all=(await r.json()).filter(f=>f.type==='file');const list=all.filter(f=>/\.json$/.test(f.name));
+ for(const f of all)if(!/\.json$/.test(f.name))S.files['nerai/'+f.name]={sha:f.sha,txt:null};
  // iPhoneで重くならないよう3つずつ読む。失敗したら1回だけやり直す
  let done=0;const q=[...list];const one=async f=>{let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
   if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
   const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
  await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
- const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);
+ const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);const zf=S.files['nerai/zumen.json'];S.zu=zf?JSON.parse(zf.txt):{v:1,stores:{}};if(!S.zu.stores)S.zu.stores={};S.zuSaved=JSON.stringify(S.zu);S.zimg={};S.zimgNew={};
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
  for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
@@ -101,10 +113,10 @@ function allFiles(rows){const out=NC.monthFiles(rows,setObj());out['nerai/settin
 function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(out[k])}
 
 function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
-window.go=t=>{if(anDirty&&t!==tab&&!confirm('ボーダー・○・狙いの設定が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}tab=t;LS.set('nr_tab',t);render()};
+window.go=t=>{if((anDirty||zuDirty)&&t!==tab&&!confirm('設定や図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);render()};
 function render(){nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='ner')return nerPage()}
+ if(tab==='imp')return impPage();if(tab==='chk')return chkPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -295,6 +307,123 @@ window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1
 window.nrSet=(path,v)=>{const c=nerCfg();const p=path.split('.');let o=c;for(let i=0;i<p.length-1;i++)o=o[p[i]];const last=p[p.length-1];
  if(p[0]==='combo'){if(v==='auto')delete o[last];else o[last]=v}else if(last==='metric')o[last]=v;else o[last]=v===''?0:+v;anDirty=true;NRC={};nerPage()};
 
+// ===== 図面 =====
+let zu=LS.get('nr_zu',{});if(!zu.z)zu.z=1;if(!zu.zg)zu.zg=1;if(zu.top==null)zu.top=10;if(!zu.mode)zu.mode='view';let zuLoading=null;
+const zHash=s=>{let h=5381;for(const c of s)h=((h*33)^c.codePointAt(0))>>>0;return h.toString(16)};
+const zName=store=>'zu-'+zHash(store)+'.txt';
+function zStore(store){const st=S.zu.stores;return st[store]||(st[store]={img:null,cards:[]})}
+function zColor(i){return`hsl(${(i*67)%360},65%,45%)`}
+function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort();if(!zu.s||!stores.includes(zu.s))zu.s=stores[0]||'';
+ if(!zu.s){$('main').innerHTML='<div class="card">データがないよ</div>';return}
+ const Z=zStore(zu.s);const SR=R.filter(r=>r.s===zu.s);
+ const dates=[...new Set(SR.map(r=>r.d))].sort().reverse();const nx=NC.nextDay(R,set,zu.s);
+ if(!zu.d||(zu.d!=='next'&&!dates.includes(zu.d)))zu.d='next';
+ let date,mem,rk,dataDay;if(zu.d==='next'&&nx){date=nx.date;mem=nx.rows;rk=nx.ranks;dataDay=nx.base}else{date=zu.d;dataDay=date;mem=SR.filter(r=>r.d===date);rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+ LS.set('nr_zu',zu);
+ const L=mem.length?nerFor(zu.s,date,mem,rk):[];const NM=new Map(L.map(x=>[String(x.t),x]));
+ const last=new Map();for(const r of SR){const o=last.get(r.t);if(!o||r.d>=o.d)last.set(r.t,r)}
+ const groups=[...new Set([...last.values()].map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));const gi=g=>Math.max(0,groups.indexOf(g));
+ window._z={Z,NM,last,rk,date,dataDay,SR,groups,gi,set};
+ let imgSrc=Z.img?(S.zimgNew[Z.img]||S.zimg[Z.img]):null;
+ if(Z.img&&!imgSrc&&S.files['nerai/'+Z.img]&&zuLoading!==Z.img){zuLoading=Z.img;const nm=Z.img;(async()=>{try{const b=await gh('git/blobs/'+S.files['nerai/'+nm].sha);if(b.ok)S.zimg[nm]=b64dec((await b.json()).content)}catch(e){}zuLoading=null;if(tab==='zu')zuPage()})()}
+ const old=$('zw');const sl=old?old.scrollLeft:0,stp=old?old.scrollTop:0;
+ const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+ const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
+ const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span></div>`}).join('');
+ const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
+ $('main').innerHTML=`<div class="card"><h2>🗺 図面</h2>
+ <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}${sel('d',(nx?[['next',nx.date+'（次の日）']]:[]).concat(dates.map(d=>[d,d])),zu.d)}</div>
+ <div class="row"><button class="b ${edit?'sub':''}" onclick="zu.mode='view';zuPage()">見る</button><button class="b ${edit?'':'sub'}" onclick="zu.mode='edit';zuPage()">編集</button><span style="flex:1"></span><button class="b sub" onclick="zuZoom(-.5)">－</button><span>${G?zu.zg:zu.z}倍</span><button class="b sub" onclick="zuZoom(.5)">＋</button></div>
+ ${G?zGridHtml(G,{NM,last,set,gi}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
+ ${Z.img&&!imgSrc?'<p class="note">図の画像を読み込み中…</p>':''}${Z.cards.length?'':'<p class="note">まだ台番の札がないよ。「編集」で追加してね。</p>'}
+ <div class="zleg">${G?'':legend}</div><p class="note">札：台番／狙い印と狙い順（${esc(date)}の朝の時点・店舗内の全機種で1から）。枠の色は機種（最終履歴の機種）。</p>
+ <div id="zd"></div>
+ ${edit&&G?zGridEdit(G,groups):''}
+ ${edit&&!G?`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ 編集</h2>
+ <div class="row"><button class="b sub" onclick="zgMake()">マス目の図にする</button></div>
+ <div class="row"><input type="file" id="zf" accept="image/*" onchange="zuImg(this.files[0])"><button class="b sub" onclick="zuNoImg()">画像を外す</button></div>
+ <p class="note">配置図の画像を選んでね（写真アプリから。自動で小さくするよ）。札はドラッグで動かす。</p>
+ <textarea id="zt" placeholder="台番をまとめて貼る（例: 401 402 403 / 410-420 / 改行やカンマ区切りもOK）" style="height:70px"></textarea>
+ <div class="row"><button class="b" onclick="zuAdd()">札を追加</button><button class="b sub" onclick="zuAddAll()">データにある台番を全部追加</button></div>
+ <div id="ze"></div></div>`:''}
+ <div class="row"><button class="b" id="zsv" ${zuDirty?'':'disabled'} onclick="zuSave()">図面を保存${zuDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`;
+ const w=$('zw');w.scrollLeft=sl;w.scrollTop=stp;zuBind();zuSelPanels()}
+window.zuZoom=d=>{if(zGridOf(_z.Z,zu.s))zu.zg=Math.min(3,Math.max(.5,zu.zg+d/2));else zu.z=Math.min(4,Math.max(1,zu.z+d));zuPage()};
+function zuBind(){const b=$('zb');if(!b)return;b.querySelectorAll('.zc').forEach(el=>{
+ el.addEventListener('pointerdown',ev=>{const c=_z.Z.cards[+el.dataset.i];zu.sel=String(c.t);document.querySelectorAll('.zc.sel').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');zuSelPanels();
+  if(zu.mode!=='edit')return;ev.preventDefault();el.setPointerCapture(ev.pointerId);const r=b.getBoundingClientRect();let moved=false;
+  const mv=e=>{moved=true;c.x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));c.y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));el.style.left=c.x*100+'%';el.style.top=c.y*100+'%'};
+  const up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);if(moved){zuDirty=true;const bt=$('zsv');if(bt){bt.disabled=false;bt.textContent='図面を保存（未保存あり）'}}};
+  el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)})})}
+function zuSelPanels(){const d=$('zd');if(!d||!window._z)return;const{NM,last,rk,dataDay,SR}=_z;const t=zu.sel;
+ const e=$('ze');const GG=zGridOf(_z.Z,zu.s);if(e&&GG)zuEditSel(t);else if(e)e.innerHTML=t==null?'<p class="note">札をタップすると、台番の修正・削除ができるよ。</p>':`<div class="row"><label>台番 <input id="zr" value="${esc(t)}" style="width:90px"></label><button class="b" onclick="zuRen()">直す</button><button class="b sub" onclick="zuDel()">この札を削除</button></div>`;
+ if(t==null){d.innerHTML='<p class="note">札をタップすると、その台の当日データが出るよ。</p>';return}
+ const x=NM.get(String(t));const l=last.get(String(t));const row=SR.find(r=>r.d===dataDay&&r.t===String(t));const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const ks=NC.RANK_KEYS;const rr=rk[zu.s+'|'+t]||[];
+ const cell=(w,m)=>{const iy=ks.indexOf(w+'_'+m+'_y');return`${rr[iy]||'-'}／${rr[iy+1]||'-'}`};
+ d.innerHTML=`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>${esc(t)}番台　<small>${l?esc(l.m):'データなし'}</small></h2>
+ ${x?`<div class="kv"><span>狙い順</span><b>${x.rank}位</b><span>狙い印</span><b>${x.mark||'なし'}</b><span>○点数</span><b>${x.pts}（サブ ${x.sub.toFixed(1)}）</b></div>`:'<p class="note">この台番は、この日のデータにないよ。</p>'}
+ <p class="note" style="margin-top:8px">当日データ（${esc(dataDay)}）</p>
+ ${row?`<div class="kv"><span>回転</span><b>${row.g.toLocaleString()}</b><span>BB / RB</span><b>${row.bb} / ${row.rb}</b><span>BB確率</span><b>${P(row.g,row.bb)}</b><span>RB確率</span><b>${P(row.g,row.rb)}</b><span>合算</span><b>${P(row.g,row.bb+row.rb)}</b></div>`:'<p class="note">この日のデータはないよ。</p>'}
+ ${x?`<p class="note" style="margin-top:8px">状態順（良い順／悪い順）</p><div class="tw"><table><tr><th class="l">期間</th>${NC.MET.map(m=>`<th>${m[1]}</th>`).join('')}</tr>${NC.WIN.map(w=>`<tr><td class="l">${w[1]}</td>${NC.MET.map(m=>`<td>${cell(w[0],m[0])}</td>`).join('')}</tr>`).join('')}</table></div>`:''}</div>`}
+function zuMark(){zuDirty=true;NRC={};zuPage()}
+window.zuRen=()=>{const v=NC.nz($('zr').value);const Z=_z.Z;if(!v)return;if(Z.cards.some(c=>String(c.t)===v&&String(c.t)!==String(zu.sel))){alert('その台番はもうあるよ');return}const c=Z.cards.find(c=>String(c.t)===String(zu.sel));if(!c)return;c.t=v;zu.sel=v;zuMark()};
+window.zuDel=()=>{const Z=_z.Z;const i=Z.cards.findIndex(c=>String(c.t)===String(zu.sel));if(i<0)return;Z.cards.splice(i,1);zu.sel=null;zuMark()};
+function zuPlace(Z,list){let n=Z.cards.length;let added=0;for(const t of list){if(Z.cards.some(c=>String(c.t)===t))continue;Z.cards.push({t,x:.07+(n%8)*.12,y:.06+Math.floor(n/8)*.09});n++;added++}return added}
+window.zuAdd=()=>{const txt=NC.nz($('zt').value.replace(/[\n,、]/g,' '));const out=[];for(const w of txt.split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&+m[2]>=+m[1]&&+m[2]-+m[1]<=300){for(let i=+m[1];i<=+m[2];i++)out.push(String(i))}else out.push(w)}
+ const a=zuPlace(_z.Z,out);$('zt').value='';if(a)zuMark();else zuPage()};
+window.zuAddAll=()=>{const{SR,dataDay,Z}=_z;const day=SR.filter(r=>r.d===dataDay).map(r=>r.t).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));if(zuPlace(Z,day))zuMark()};
+// ----- マス目の図 -----
+function zGridOf(Z,store){if(Z.grid)return Z.grid;if(!Z.noGrid&&typeof DEFAULT_LAYOUT!=='undefined'&&DEFAULT_LAYOUT[store])return DEFAULT_LAYOUT[store];return null}
+function zGE(){const Z=_z.Z;if(!Z.grid)Z.grid=JSON.parse(JSON.stringify(zGridOf(Z,zu.s)));return Z.grid}
+function zAbbr(g){const o=(S.zu.abbr||{})[g];if(o!=null)return o;if(g.includes('カバネリ'))return'カ';return NC.nz(g).replace(/^(スマスロ|スロット|Lパチスロ|パチスロ|A‐SLOT\+|A-SLOT\+|L|S)\s*/,'').charAt(0)}
+function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=+zu.top||0;let html='';const set=x.set;
+ const cell=(r,cc,cls,txt,ex='')=>`<div class="g ${cls}" style="grid-row:${r+1};grid-column:${cc+1}" ${ex}>${txt}</div>`;
+ for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
+  const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||nm.rank<=top);const mk=show?nm.mark:'';
+  const sel=t===String(zu.sel)?' sel':'';const mcls=mk==='○'?' mo':mk==='△'?' mt':mk==='×'?' mx':'';
+  html+=cell(r,ac,'ga'+sel,esc(ab))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
+ return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:repeat(${G.cols},${c}px);grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>
+ <div class="row"><label style="font-size:13px">狙い順を上位 <input type="number" inputmode="numeric" min="0" value="${top}" style="width:60px" onchange="zu.top=+this.value||0;zuPage()"> 位まで表示（0で全部）</label></div>
+ <div class="zleg">${zLegendGrid(x)}</div>`}
+function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
+ return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
+window.zuTap=t=>{zu.sel=zu.sel===t?null:t;zuPage()};
+function zuEditSel(t){const e=$('ze');const k=t==null?null:zGridOf(_z.Z,zu.s).cards.find(k=>String(k[0])===String(t));
+ e.innerHTML=!k?'<p class="note">台番をタップすると、台番の修正・削除・移動ができるよ。</p>':`<div class="row"><label>台番 <input id="zr" value="${esc(t)}" style="width:80px"></label><button class="b" onclick="zgRen()">直す</button><button class="b sub" onclick="zgDel()">削除</button></div>
+ <div class="row"><span class="note">位置：${k[1]+1}行 ${k[2]+1}列</span><button class="b sub" onclick="zgMove(-1,0)">↑</button><button class="b sub" onclick="zgMove(1,0)">↓</button><button class="b sub" onclick="zgMove(0,-1)">←</button><button class="b sub" onclick="zgMove(0,1)">→</button><button class="b sub" onclick="zgFlip()">印の側を反転</button></div>`}
+function zgK(){return zGE().cards.find(k=>String(k[0])===String(zu.sel))}
+window.zgRen=()=>{const v=NC.nz($('zr').value);if(!v)return;const G=zGE();if(G.cards.some(k=>String(k[0])===v&&String(k[0])!==String(zu.sel))){alert('その台番はもうあるよ');return}const k=zgK();if(!k)return;k[0]=v;zu.sel=v;zuMark()};
+window.zgDel=()=>{const G=zGE();const i=G.cards.findIndex(k=>String(k[0])===String(zu.sel));if(i<0)return;G.cards.splice(i,1);zu.sel=null;zuMark()};
+function zgFit(G,k,r,c,d){const lo=d==='R'?1:2,hi=d==='R'?G.cols-3:G.cols-2;if(r<0||c<lo)return false;if(c>hi)G.cols+=c-hi;if(r>=G.rows)G.rows=r+1;k[1]=r;k[2]=c;k[3]=d;return true}
+window.zgMove=(dr,dc)=>{const G=zGE();const k=zgK();if(k&&zgFit(G,k,k[1]+dr,k[2]+dc,k[3]))zuMark()};
+window.zgFlip=()=>{const G=zGE();const k=zgK();if(k&&zgFit(G,k,k[1],k[2],k[3]==='R'?'L':'R'))zuMark()};
+window.zgMake=()=>{const Z=_z.Z;Z.noGrid=false;Z.grid={rows:20,cols:17,cards:[]};zuMark()};
+window.zgToImg=()=>{if(!confirm('マス目の配置を消して、画像の図にする？'))return;const Z=_z.Z;Z.grid=null;Z.noGrid=true;zu.sel=null;zuMark()};
+window.zgReset=()=>{if(!confirm('最初の配置に戻す？（この店のマス目の修正が消えるよ）'))return;const Z=_z.Z;Z.grid=null;Z.noGrid=false;zu.sel=null;zuMark()};
+window.zgAddBlock=()=>{const G=zGE();const r=(+$('gbr').value||1)-1,c=(+$('gbc').value||1)-1,d=$('gbd').value;const out=[];
+ for(const w of NC.nz($('gbt').value.replace(/[\n,、]/g,' ')).split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&Math.abs(+m[2]-+m[1])<=300){const a=+m[1],b=+m[2];if(b>=a)for(let i=a;i<=b;i++)out.push(String(i));else for(let i=a;i>=b;i--)out.push(String(i))}else out.push(w)}
+ let n=0,dup=[];for(const t of out){if(G.cards.some(k=>String(k[0])===t)){dup.push(t);continue}const k=[t,0,0,d];if(zgFit(G,k,r+n,c,d)){G.cards.push(k);n++}}
+ if(dup.length)alert('もうある台番は飛ばしたよ：'+dup.slice(0,10).join('・'));if(n)zuMark();else zuPage()};
+window.zgAbbr=(g,v)=>{S.zu.abbr=S.zu.abbr||{};v=NC.nz(v);if(v)S.zu.abbr[g]=v.charAt(0);else delete S.zu.abbr[g];zuMark()};
+function zGridEdit(G,groups){const inG=new Set(G.cards.map(k=>String(k[0])));const miss=[...new Set(_z.SR.filter(r=>r.d===_z.dataDay).map(r=>r.t))].filter(t=>!inG.has(t)).sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}));
+ const rngs=[];for(const t of miss){const n=+t,l=rngs[rngs.length-1];if(l&&/^\d+$/.test(t)&&l.e+1===n){l.e=n}else rngs.push({s:n,e:n,t})}
+ const gs=[...new Set([..._z.last.values()].map(r=>NC.groupOf(r.m,_z.set)))].sort((a,b)=>a.localeCompare(b,'ja'));
+ return`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ マス目の編集</h2><div id="ze"></div>
+ <details><summary>台番をまとめて追加（縦に並べる）</summary><p class="note">行・列は左上から数えた番号。向き：「右」＝台番の右に印と順位（左の列）、「左」＝台番の左に印と順位（右の列）。台番は 401-420（増える順）や 420-401（減る順）もOK。</p>
+ <div class="row"><label>行 <input id="gbr" type="number" value="1" style="width:60px"></label><label>列 <input id="gbc" type="number" value="2" style="width:60px"></label><select id="gbd"><option value="R">右に印</option><option value="L">左に印</option></select></div>
+ <textarea id="gbt" placeholder="401-420" style="height:60px"></textarea><div class="row"><button class="b" onclick="zgAddBlock()">追加</button></div></details>
+ <details><summary>機種の略称</summary>${gs.map(g=>`<div class="row"><span style="flex:1;font-size:13px">${esc(g)}</span><input value="${esc(zAbbr(g))}" maxlength="2" style="width:50px" onchange="zgAbbr('${esc(g).replace(/'/g,'')}',this.value)"></div>`).join('')}</details>
+ <p class="note">最新日の履歴にあって、図にない台番：${miss.length?esc(rngs.map(x=>x.s===x.e?x.t:x.s+'-'+x.e).join('、')):'なし'}</p>
+ <div class="row"><button class="b sub" onclick="zgReset()">最初の配置に戻す</button><button class="b sub" onclick="zgToImg()">画像の図にする</button></div></div>`}
+window.zuNoImg=()=>{if(!confirm('この店の図の画像を外す？（札はそのまま）'))return;_z.Z.img=null;zuMark()};
+window.zuImg=async f=>{if(!f)return;try{const url=await new Promise((ok,ng)=>{const u=URL.createObjectURL(f),im=new Image();im.onload=()=>{let k=1400/Math.max(im.width,im.height);if(k>1)k=1;const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>700000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(u);ok(d)};im.onerror=()=>ng(new Error('画像が読めない'));im.src=u});
+ const nm=zName(zu.s);S.zimgNew[nm]=url;_z.Z.img=nm;zuMark()}catch(e){alert(e.message)}};
+document.addEventListener('paste',e=>{if(tab!=='zu'||zu.mode!=='edit')return;const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){e.preventDefault();zuImg(it.getAsFile())}});
+window.zuSave=async()=>{const sv=$('sv');try{const out={'nerai/zumen.json':JSON.stringify(S.zu)};for(const nm in S.zimgNew)out['nerai/'+nm]=S.zimgNew[nm];
+ await saveFiles(out,'設定狙い図面',t=>sv.textContent=t);for(const nm in S.zimgNew)S.zimg[nm]=S.zimgNew[nm];S.zimgNew={};zuDirty=false;S.zuSaved=JSON.stringify(S.zu);zuPage();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
  const al=Object.entries(set.alias).map(([a,b])=>a+'='+b).join('\n');
@@ -316,7 +445,7 @@ window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups=
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新${m.dup?`・重複${m.dup}件削除`:''}）`}
  catch(e){S.set=old;sv.className='st ng';sv.textContent=e.message}};
 
-window.addEventListener('beforeunload',e=>{if(anDirty){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(anDirty||zuDirty){e.preventDefault();e.returnValue=''}});
 reload();
 </script>
 </body>
