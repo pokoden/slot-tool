@@ -300,6 +300,9 @@ const barSty=(v,st)=>v==null||!st||!(st.max>0)||(st.n!=null&&st.n<2)?'':`backgro
 const tintSty=(d,st)=>tintGR(d,st);
 // 確率の緑赤（同じ店舗・機種の中で比べる。分母が小さい=良い=緑、大きい=悪い=赤。真ん中から離れるほど濃く）
 const tintGR=(d,st)=>{if(d==null||!st||st.max===st.min||(st.n!=null&&st.n<2))return'';const t=Number.isFinite(d)?(d-st.min)/(st.max-st.min):1;const a=Math.abs(t-.5)*2;return`background:hsla(${t<.5?120:0},80%,50%,${(.12+.5*a).toFixed(2)})`};
+// 行の集まりから色の基準（回転の最大・確率の幅）を作る
+const grpSt=L=>({g:{max:Math.max(0,...L.map(r=>r.g||0)),n:L.length},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))});
+const gSty=(r,st,k)=>{if(!st)return'';const y=k==='g'?barSty(r.g,st.g):tintGR(NC.den(r.g,k==='bb'?r.bb:k==='rb'?r.rb:r.bb+r.rb),st[k]);return y?` style="${y}"`:''};
 // 順位：良い順は1位が緑、悪い順は1位が赤（薄く、順位が下がるほど薄く）
 const rankSty=(v,dir,n)=>{if(!v)return'';const a=.3*Math.max(0,1-(v-1)/Math.max(n,2));return`background:hsla(${dir==='y'?120:0},75%,55%,${a.toFixed(2)})`};
 // ===== 分析 =====
@@ -493,10 +496,10 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
  const shown=V.map(o=>o.x);
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
- const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();
+ const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();const HG=new Map();for(const r of HD.values()){const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
  const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(10);
   const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`;
-  return`<td class="gl hl">${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr">${mkH(x.mark||'×')}</td>`};
+  const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr">${mkH(x.mark||'×')}</td>`};
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
@@ -759,8 +762,9 @@ ${kenCal()}
 // 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える
 const KRH=30,KBUF=40;let KV=null;
 function kenRow(x){const r=x.r,P=(g,n)=>NC.fmtP(NC.den(g,n));const ix=NC.rowIdx(r,KV.set,KV.base);const hit=ix.g!=null&&ix.rb!=null&&ix.gs!=null&&ix.g>=55&&ix.rb>=55&&ix.gs>=55;
+ const ks=KV.KGS.get(r.s+'|'+NC.groupOf(r.m,KV.set)+'|'+r.d);
  const tc=x.k?`<td class="fix kst">${esc(x.k.lab)}<span>(${esc(r.t)})</span></td>`:`<td class="fix">${esc(r.t)}</td>`;
- return`<tr class="kr">${tc}<td class="l">${r.d.slice(5)}</td><td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(NC.groupOf(r.m,KV.set)))}</span></td><td>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td><td style="text-align:center">${hit?'<span class="mk a">○</span>':''}</td>${stTd(r.s)}</tr>`}
+ return`<tr class="kr">${tc}<td class="l">${r.d.slice(5)}</td><td class="l"><span class="mn" title="${esc(r.m)}">${esc(mShort(NC.groupOf(r.m,KV.set)))}</span></td><td${gSty(r,ks,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,ks,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,ks,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,ks,'gs')}>${P(r.g,r.bb+r.rb)}</td><td style="text-align:center">${hit?'<span class="mk a">○</span>':''}</td>${stTd(r.s)}</tr>`}
 function knPaint(force){const tb=$('kvb');const tbl=$('kvt');if(!KV||!tb||!tbl)return;const n=KV.out.length;
  const top=tbl.getBoundingClientRect().top+(tbl.tHead?tbl.tHead.offsetHeight:0);
  const step=KBUF/2;let first=Math.max(0,Math.floor((-top/KRH-KBUF)/step)*step);if(first>n)first=Math.max(0,n-KBUF);
@@ -772,7 +776,8 @@ let knSc=0;window.addEventListener('scroll',()=>{if(tab!=='ken'||!KV||knSc)retur
 function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();let {out,nT,nS}=kenRun();
  if(kn.ok){const b=kenBase();out=out.filter(x=>okIx(NC.rowIdx(x.r,set,b)));nT=out.filter(x=>!x.k).length;nS=out.length-nT}const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const t={n:nT,g:0,bb:0,rb:0};for(const x of out)if(!x.k){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb}
- if(kn.vw==='s')out=out.filter(x=>x.k);else if(kn.vw==='t')out=out.filter(x=>!x.k);KV={out,set,base:out.length?kenBase():null,first:-1};
+ const KG=new Map();for(const x of out)if(!x.k){const k=x.r.s+'|'+NC.groupOf(x.r.m,set)+'|'+x.r.d;let a=KG.get(k);if(!a)KG.set(k,a=[]);a.push(x.r)}const KGS=new Map();for(const[k,a]of KG)KGS.set(k,grpSt(a));
+ if(kn.vw==='s')out=out.filter(x=>x.k);else if(kn.vw==='t')out=out.filter(x=>!x.k);KV={KGS,out,set,base:out.length?kenBase():null,first:-1};
  const cw=[116,52,120,56,40,40,58,58,50,34,66];
  el.innerHTML=`<div class="card"><h2>📋 結果 ${nT.toLocaleString()}件${nS?`（状態 ${nS.toLocaleString()}件）`:''}</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
