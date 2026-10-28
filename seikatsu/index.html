@@ -45,7 +45,7 @@ input.num{text-align:right}
 table{border-collapse:collapse;width:100%;font-size:12px}
 th{background:#1f4fd8;color:#fff;font-weight:700;padding:5px 4px;white-space:nowrap;position:sticky;top:0}
 td{padding:5px 4px;border-bottom:1px solid #eef2f9;text-align:right;white-space:nowrap}
-td.l{text-align:left}
+td.l{text-align:left}td .btn,td .tag{font-size:12px}
 tr.sum td{font-weight:800;background:#f0f5ff}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
 .bar{position:relative}
@@ -60,7 +60,7 @@ tr.sum td{font-weight:800;background:#f0f5ff}
 .cal .d .t{border-radius:6px;color:#fff;font-weight:800;padding:1px 0;margin-top:2px}
 .t-stand{background:#2fb36b}.t-kado{background:#1f4fd8}.t-off{background:#e0283a}.t-other{background:#f08c00}.cal .d .t.t-free{background:none;color:#14213d}.t-standkado{background:linear-gradient(90deg,#2fb36b 50%,#1f4fd8 50%)}
 .cal .d.b-off{background:#fde3e6}.cal .d.b-kado{background:#e1eafc}.cal .d.b-stand{background:#dff5e8}.cal .d.b-other{background:#fff0dc}.cal .d.b-standkado{background:linear-gradient(90deg,#dff5e8 50%,#e1eafc 50%)}
-.cal .d .y{font-weight:800;font-size:10px;word-break:break-all}.cal .d .t{word-break:break-all;white-space:normal;font-size:10px}.cal .d .mm{font-size:9px;word-break:break-all;white-space:pre-wrap;text-align:left}.tbtn{border:1px solid #c9d4ee;background:#fff;border-radius:8px;padding:5px 4px;min-width:96px;font-size:13px}
+.cal .d .y{font-weight:800;font-size:10px;word-break:break-all}.cal .d .t{word-break:break-all;white-space:normal;font-size:10px}.cal .d .mm{font-size:10px;word-break:break-all;white-space:pre-wrap;text-align:left}.tbtn{border:1px solid #c9d4ee;background:#fff;border-radius:8px;padding:5px 4px;min-width:96px;font-size:12px}
 .sheet{position:fixed;inset:0;background:rgba(10,20,50,.35);z-index:20;display:none;align-items:flex-end}
 .sheet.on{display:flex}
 .sheet .in{background:#fff;width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
@@ -283,7 +283,7 @@ function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
 // 一覧表
 let LF=LS.get('sk2_lf',{from:'',to:'',i1:'',i2:'',i3:''});
 function setLF(k,v){LF[k]=v;LS.set('sk2_lf',LF);render()}
-function multiChart(f){const by={};for(const x of f){const o=by[x.ym]=by[x.ym]||{i:0,e:0};o.i+=+x.inc||0;o.e+=+x.exp||0}const ks=Object.keys(by).sort();if(ks.length<2)return'';
+function multiChart(f){const by={};for(const x of f){const o=by[x.ym]=by[x.ym]||{i:0,e:0};o.i+=+x.inc||0;o.e+=+x.exp||0}const ks=Object.keys(by).sort();if(ks.length<2)return'';{let ci=0,ce=0;for(const k of ks){ci+=by[k].i;ce+=by[k].e;by[k]={i:ci,e:ce}}}
  const W=440,H=210,P=78,S=[['収入','#2fb36b',k=>by[k].i],['支出','#e0283a',k=>by[k].e],['収支','#1f4fd8',k=>by[k].i-by[k].e]];const vs=[];S.forEach(z=>ks.forEach(k=>vs.push(z[2](k))));let mn=Math.min(0,...vs),mx=Math.max(...vs);if(mn===mx)mx=mn+1;
  const raw=(mx-mn)/4,e=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(q=>q*e).find(q=>q>=raw);mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;
  const x=i=>P+i*(W-P-8)/(ks.length-1),y=v=>H-22-(v-mn)/(mx-mn)*(H-36);let g='';
