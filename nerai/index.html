@@ -52,7 +52,7 @@ th.fix{background:#f6f7fa;z-index:2}
 .g.sel{background:#cfe0ff;z-index:2}.g.mo.sel{background:#39ff14}.g.mt.sel{background:#f5ff00}.g.ms.sel{background:#ff9100}.g.mb.sel{background:#00b0ff}.g.mq.sel{background:#b4b4b4}.gt.sel{outline:2px solid #1f5fd6;outline-offset:-2px}
 .zl b{display:inline-block;min-width:16px;text-align:center;border:1px solid #444;border-radius:3px;padding:0 2px}
 .zl{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-right:10px}.zl i{width:12px;height:12px;border-radius:3px;display:inline-block}.zleg{margin:6px 0}
-.r1{color:#c62828;font-weight:700}.r2{color:#d4561c;font-weight:600}
+.r1{color:#c62828;font-weight:700}td.r1b{background:#e53935;color:#fff;font-weight:700}.ci{display:inline-block;min-width:22px;line-height:20px;padding:0 2px;border:1.5px solid #111;border-radius:12px;text-align:center}.ci.w{border:3px double #111;line-height:17px}table.tt td,table.tt input.mi{font-size:14px}table.tt input.mi{width:52px;padding:2px 3px}table.tt input.mi.s{width:40px}table.tt td.pw{width:58px;min-width:58px;max-width:58px}.r2{color:#d4561c;font-weight:600}
 tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
 tr.gh td{background:#20242c;padding:0;text-align:left}
 .bd{position:sticky;left:0;display:flex;gap:6px;width:calc(100vw - 56px);box-sizing:border-box;padding:1px 6px;font-size:11px;line-height:1.35;color:#e9c46a;font-weight:600;cursor:pointer}
@@ -168,11 +168,12 @@ const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
 function idxOfV(m,v){if(!(v.g>0)||v.bb==null||v.rb==null||!TOUB)return null;return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base)}
 let TOUB=null;
 const okIx=x=>!!x&&x.g!=null&&x.rb!=null&&x.gs!=null&&x.g>=55&&x.rb>=55&&x.gs>=55;
-const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs'],['it','t']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}" class="${n!=null&&n>=55?'ib':''}${c==='ig'?' hl':''}">${n==null?'':n}</td>`}).join('')+`<td data-c="iok" style="text-align:center">${okIx(x)?'<span class="mk a">○</span>':''}</td>`};
+const ciH=(c,n)=>{if(n==null)return'';const hi=c==='ig'?65:60;return n>=hi?`<span class="ci w">${n}</span>`:n>=55?`<span class="ci">${n}</span>`:String(n)};
+const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}"${c==='ig'?' class="hl"':''}>${ciH(c,n)}</td>`}).join('')+`<td data-c="iok" style="text-align:center">${okIx(x)?'<span class="mk a">○</span>':''}</td>`};
 function touPaint(tr){const v={};tr.querySelectorAll('input.mi').forEach(i=>{v[i.dataset.f]=i.value.trim()===''?null:+i.value});
  const put=(c,t,blue)=>{const td=tr.querySelector(`[data-c="${c}"]`);if(!td)return;td.textContent=t;td.removeAttribute('style');td.classList.toggle('ib',!!blue)};
  put('pbb',probT(v.g,v.bb));put('prb',probT(v.g,v.rb));put('pgs',v.bb!=null&&v.rb!=null?probT(v.g,v.bb+v.rb):'');
- const x=idxOfV(tr.dataset.m,v);for(const[c,k]of[['ig','g'],['irb','rb'],['igs','gs'],['it','t']]){const n=x?x[k]:null;put(c,n==null?'':n,n!=null&&n>=55)}const o=tr.querySelector('[data-c="iok"]');if(o)o.innerHTML=okIx(x)?'<span class="mk a">○</span>':''}
+ const x=idxOfV(tr.dataset.m,v);for(const[c,k]of[['ig','g'],['irb','rb'],['igs','gs']]){const n=x?x[k]:null;const td=tr.querySelector(`[data-c="${c}"]`);if(td)td.innerHTML=ciH(c,n)}const o=tr.querySelector('[data-c="iok"]');if(o)o.innerHTML=okIx(x)?'<span class="mk a">○</span>':''}
 window.touIn=el=>{const k=el.dataset.k,f=el.dataset.f,M=manAll(),raw=el.value.trim();let o=M[k];
  if(raw===''||!isFinite(+raw)){if(o){delete o[f];if(!Object.keys(o).length)delete M[k]}}else{if(!o)o=M[k]={};o[f]=Math.max(0,Math.round(+raw))}
  anDirty=true;autoSave();touPaint(el.closest('tr'))};
@@ -232,15 +233,15 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  for(const w of NC.WIN)if(tu.w.includes(w[0]))for(const m of NC.MET)if(tu.m.includes(m[0])){
   if(nmode)cols.push({k:'n_'+w[0]+'_'+m[0],w:w[0],m:m[0],lab:wl(w[1])+'<br>'+m[1]});
   else for(const r of ['y','w'])if(tu.r.includes(r))cols.push({k:w[0]+'_'+m[0]+'_'+r,i:keys.indexOf(w[0]+'_'+m[0]+'_'+r),lab:wl(w[1])+'<br>'+m[1]+(tu.r.length>1?(r==='y'?'良':'悪'):'')})}
- const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=15+cols.length;const TDset=setObj();TOUB={set:TDset,base:kenBase()};
+ const P=(g,n)=>NC.fmtP(NC.den(g,n));const NCOL=14+cols.length;const TDset=setObj();TOUB={set:TDset,base:kenBase()};
  const sel=(id,L,v)=>`<select onchange="tu.${id}=this.value;touPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,t])=>`<button class="${tu[id].includes(k)?'on':''}" onclick="tuTog('${id}','${k}')">${t}</button>`).join('')}</div>`;
  const soC=cols.find(c=>c.k===tu.so);
- const rkCell=(v,c,n,i)=>`<td class="${v===1?'r1':''}${i===0?' hl':''}">${v||''}</td>`;
- const e=cols.length?'<td class="hl"></td>'+'<td></td>'.repeat(cols.length-1):'',e4='<td class="hl"></td>'+'<td></td>'.repeat(4);
- const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td></td><td class="hl">${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td></td><td class="hl">${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td>${P(t.g,t.bb)}</td><td>${P(t.g,t.rb)}</td><td>${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr>`;
+ const rkCell=(v,c,n,i)=>`<td class="${v===1?'r1b':''}${i===0?' hl':''}">${v||''}</td>`;
+ const e=cols.length?'<td class="hl"></td>'+'<td></td>'.repeat(cols.length-1):'',e4='<td class="hl"></td>'+'<td></td>'.repeat(3);
+ const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td></td><td></td><td></td><td class="hl">${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td></td><td></td><td></td><td class="hl">${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr>`;
  const flat=tu.so==='rank';const flatRows=[];const onlyF=nm=>!tu.only||(nm&&isRk(nm));
- const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='g'?`<th class="s hl ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`:k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数'],['it','総合<br>指数']].map(([k,t])=>`<th class="s${k==='ig'?' hl':''} ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map((c,i)=>`<th class="s hc${i===0?' hl':''} ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='g'?`<th class="s hl ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`:k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数']].map(([k,t])=>`<th class="s${k==='ig'?' hl':''} ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map((c,i)=>`<th class="s hc${i===0?' hl':''} ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  let body='';
  for(const u of units){const NM=u.TM;const pk=nmode?NC.winPicks(W,u.s,u.date):null;
   const wsum=(r,c)=>NC.winSum(W,u.s,pk,NC.groupOf(r.m,set),r.t,c.w);
@@ -264,7 +265,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
     const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input class="mi${w}" type="number" inputmode="numeric" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
-    const pc=(c,k,n)=>`<td data-c="${c}"${sty?sy(k,NC.den(r.g,n)):''}>${probT(V.g,n==null?null:n)}</td>`;
+    const pc=(c,k,n)=>`<td data-c="${c}" class="pw">${probT(V.g,n==null?null:n)}</td>`;
     return`<tr data-m="${esc(r.m)}"><td class="fix">${esc(r.t)}</td>${ex}<td>${nm?.rank||''}</td><td class="mkc">${mkH(nm?.mark)}</td><td>${nm?nm.score.toFixed(1):''}</td>${inp('g','')}${inp('bb',' s')}${inp('rb',' s')}${pc('pbb','bb',V.bb)}${pc('prb','rb',V.rb)}${pc('pgs','gs',V.bb!=null&&V.rb!=null?V.bb+V.rb:null)}${idxTds(r.m,V)}${cols.map((c,i)=>nmode?ncell(r,c,i):rkCell(x[c.i],c,L.length,i)).join('')}</tr>`};
    if(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t)))))continue;
    if(flat){for(const r of L){const nm=NM.get(String(r.t));if(onlyF(nm))flatRows.push({nm,s:u.s,t:r.t,html:mkRow(r,`${stTd(u.s)}<td class="l ml" title="${esc(r.m)}">${esc(mShort(g))}</td>`)})}}
@@ -281,7 +282,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <p class="note">期間</p>${chip('w',NC.WIN)}<p class="note">指標</p>${chip('m',NC.MET)}${nmode?'':`<p class="note">向き</p>${chip('r',[['y','良い順'],['w','悪い順']])}`}
  <div class="row"><button class="b sub" onclick="tuAll(1)">全部（${nmode?28:56}列）</button><button class="b sub" onclick="tuAll(0)">おすすめに戻す</button></div></details>
  <div class="row"><button class="b sub" onclick="tuDef()">標準の並びに戻す</button></div>
-  ${units.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
+  ${units.length?`<div class="tw"><table class="tt">${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
 window.tuDef=()=>{tu.so='t';tu.rev=0;touPage()};
 window.tuOk=()=>{tu.ok=tu.ok?0:1;touPage()};
@@ -319,7 +320,7 @@ const stLab=k=>{const[w,m]=k.split('_');return NC.WIN.find(x=>x[0]===w)[1]+NC.ME
 function anaPage(){const R=S.rows,set=setObj();const B=bord();
  const stores=[...new Set(R.map(r=>r.s))].sort();if(an.s!=='*'&&!stores.includes(an.s))an.s='*';
  let first='9',last='0';const lastD={};for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d;if(!lastD[r.s]||r.d>lastD[r.s])lastD[r.s]=r.d}
- const from=an.from||first,to=an.to||last;const sl=an.s==='*'?stores:[an.s];
+ const PD=anPer();const from=PD.from||first,to=PD.to||last;const sl=an.s==='*'?stores:[an.s];
  const AN=anaCalc(sl,from,to,B);
  const groups=[...new Set(sl.flatMap(s=>[...AN[s].keys()]))].sort((a,b)=>a.localeCompare(b,'ja'));if(an.g&&!groups.includes(an.g))an.g='';
  const vals=segVals(an.ax);if(an.val==='next'||(an.val!=='all'&&!vals.some(x=>x[0]===String(an.val))))an.val=dVal();
@@ -336,7 +337,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   {k:'rb',th:'RB<br>確率',get:u=>dn(u,'rb'),best:'lo',c:u=>P(u.g,u.rb),vis:'tint'},
   {k:'gs',th:'合算',get:u=>dn(u,'gs'),best:'lo',c:u=>P(u.g,u.bb+u.rb),vis:'tint'},
   {k:'tt',th:'総合<br>トータル<br>指数',get:u=>u.tt,best:'hi',c:u=>`<b>${f(u.tt)}</b>`},
-  ...[['tk','店舗機種指数'],['hy','標準指数']].flatMap(([x,gl])=>[['g','回転'],['rb','RB'],['gs','合算'],['t','総合']].map(([m,ml],i)=>({k:x+m,grp:i===0?gl:'',th:ml,get:u=>u[x][m],best:'hi',idx:m==='t'?null:[x,m],c:u=>m==='t'?`<b>${f(u[x][m])}</b>`:f(u[x][m])}))),
+  ...[['tk','店舗機種指数'],['hy','標準指数']].flatMap(([x,gl])=>[['g','回転'],['rb','RB'],['gs','合算']].map(([m,ml],i)=>({k:x+m,grp:i===0?gl:'',th:ml,get:u=>u[x][m],best:'hi',idx:m==='t'?null:[x,m],c:u=>m==='t'?`<b>${f(u[x][m])}</b>`:f(u[x][m])}))),
   {k:'tg',th:'合計<br>回転',get:u=>u.g,best:'hi',c:u=>u.g.toLocaleString(),vis:'bar'},
   {k:'tbb',th:'BB',get:u=>u.bb,best:'hi',c:u=>u.bb},{k:'trb',th:'RB',get:u=>u.rb,best:'hi',c:u=>u.rb}];
  const col=COLS.concat([{k:'v',get:u=>+u.v,best:'lo'}]).find(c=>c.k===an.so&&c.k!=='mk');const NCOL=COLS.length+2;
@@ -373,13 +374,13 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   const sel=(id,L,v,extra='')=>`<select onchange="an.${id}=this.value;${extra}anaPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const th1=[];const th2=[];
  for(let i=0;i<COLS.length;i++){const c=COLS[i];const cls=`s ${an.so===c.k?'on':''}`;
-  if(c.grp){th1.push(`<th colspan="4">${c.grp}</th>`)}
+  if(c.grp){th1.push(`<th colspan="3">${c.grp}</th>`)}
   if(c.k==='mk'){th1.push(`<th rowspan="2" class="s ${an.only?'on':''}" onclick="anOnly()">○${an.only?'<br>のみ':''}</th>`);continue}
   if(c.grp!==undefined&&/^(tk|hy)/.test(c.k))th2.push(`<th class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`);else th1.push(`<th rowspan="2" class="${cls}" onclick="anSo('${c.k}')">${c.th}</th>`)}
  const oldScroll=document.querySelector('#main .tw');const sl0=oldScroll?oldScroll.scrollLeft:0;const sy0=window.scrollY;
- $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">○を保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
+ $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
  <div class="card"><h2>🔍 集計と分析</h2>
- <div class="row"><label>期間 <input type="date" value="${from}" onchange="an.from=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="an.to=this.value;NRC={};anaPage()" style="width:136px;font-size:14px"><button class="b sub" onclick="an.from='';an.to='';NRC={};anaPage()">全期間</button></div>
+ <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:14px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
@@ -387,6 +388,9 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>`:'<p class="note">データがないよ</p>'}
 </div>`;
  const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
+// 期間は analysis.json（S.an.period）に保存。保存ボタンを押すまで確定しない
+function anPer(){const p=S.an&&S.an.period;if(p&&typeof p==='object')return p;return{from:an.from||'',to:an.to||''}}
+window.anPd=(k,v)=>{const p=Object.assign({},anPer());if(k)p[k]=v;else{p.from='';p.to=''}S.an.period=p;anDirty=true;NRC={};anaPage()};
 window.anAx=k=>{an.ax=k;an.val=dVal();an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
@@ -423,7 +427,7 @@ function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.D
 // 分析タブの期間を使う。終わりは狙う日の前日まで
 function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
  let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
- const from=an.from||first;let to=an.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
+ const PD=anPer();const from=PD.from||first;let to=PD.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
  const base=NC.stdBase(S.rows,set,to);
  const hasPrev=NC.storeHas(S.rows,store,pv);const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:bord(),marks:S.an.marks||{},cfg:nerCfg(),hasPrev});L.from=from;L.to=to;return NRC[k]=L}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
@@ -734,7 +738,8 @@ ${kenCal()}
 <p class="note">台番</p><div class="row"><label>${txt('tai','例 401 405-410',150)}</label></div>
 <p class="note">状態の期間</p>${chip('sw',NC.WIN.map(w=>[w[0],w[1]]))}
 <p class="note">状態の指標</p>${chip('sm',[['g','回転'],['gs','合算']])}
-<div class="row"><label>並び ${sel('so',[['def','店舗・機種・台番順'],['d-','日付が新しい順'],['d+','日付が古い順'],['t','台番順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']],kn.so)}</label><button class="b sub" onclick="knSo('def')">標準の並びに戻す</button></div></div>
+<div class="chips" style="margin-top:6px"><button class="${kn.nt?'on':''}" onclick="kn.nt=kn.nt?0:1;kenPage()">台番別無し</button></div>
+<div class="row"><label>並び ${sel('so',(kn.so==='def'||kn.so==='t'?[[kn.so,'']]:[]).concat([['d-','日付が新しい順'],['d+','日付が古い順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']]),kn.so)}</label><button class="b sub" onclick="knSo('def')">標準の並びに戻す</button></div></div>
 <div id="kres"></div>`;kenRes()}
 // 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える
 const KRH=30,KBUF=40;let KV=null;
@@ -752,7 +757,7 @@ let knSc=0;window.addEventListener('scroll',()=>{if(tab!=='ken'||!KV||knSc)retur
 function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();let {out,nT,nS}=kenRun();
  if(kn.ok){const b=kenBase();out=out.filter(x=>okIx(NC.rowIdx(x.r,set,b)));nT=out.filter(x=>!x.k).length;nS=out.length-nT}const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const t={n:nT,g:0,bb:0,rb:0};for(const x of out)if(!x.k){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb}
- KV={out,set,base:out.length?kenBase():null,first:-1};
+ if(kn.nt)out=out.filter(x=>x.k);KV={out,set,base:out.length?kenBase():null,first:-1};
  const cw=[116,52,56,40,40,58,58,50,66,120,34];
  el.innerHTML=`<div class="card"><h2>📋 結果 ${nT.toLocaleString()}件${nS?`（状態 ${nS.toLocaleString()}件）`:''}</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
