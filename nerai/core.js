@@ -20,7 +20,15 @@ const DEF_ALIAS={'東京喰種':'L東京喰種','戦国乙女5':'L戦国乙女5 
 
 const nz=s=>String(s==null?'':s).normalize('NFKC').replace(/\s+/g,' ').trim();
 const normStore=s=>nz(s).replace(/店$/,'');
-function normMachine(s,set){let m=nz(s);const a=set&&set.alias||{};if(a[m])m=nz(a[m]);return m}
+const FIX_ALIAS={'甲鉄城のカバネリ 海門(うなと)決戦':'スマスロ 甲鉄城のカバネリ 海門決戦','ジャグラーガールズ':'ジャグラーガールズSS','アイムジャグラーEX-TP':'SアイムジャグラーEX-TP','甲鉄城のカバネリ':'パチスロ 甲鉄城のカバネリ','ミリオンゴッド‐神々の軌跡‐':'スマスロ ミリオンゴッド-神々の軌跡-'};
+const FIXN={};for(const k in FIX_ALIAS)FIXN[nz(k)]=nz(FIX_ALIAS[k]);
+const mKey=s=>nz(s).replace(/[‐‑‒–—―−ｰ]/g,'-').replace(/[〜～]/g,'~').replace(/^(スマスロ ?|Lパチスロ ?|パチスロ ?|スロット ?|L ?|S ?)/,'').replace(/\s+/g,'');
+const KC=new WeakMap();
+function keyMap(set){const k=set&&set.known;if(!k)return null;let m=KC.get(k);if(m)return m;m=new Map();for(const n of k){const x=mKey(n);if(!x)continue;const o=m.get(x);m.set(x,o===undefined||o===n?n:null)}KC.set(k,m);return m}
+function normMachine(s,set){let m=nz(s);const a=set&&set.alias||{};if(a[m])m=nz(a[m]);if(FIXN[m])return FIXN[m];
+ const km=keyMap(set);if(km){if(set.known.includes(m))return m;const x=km.get(mKey(m));if(x)return nz(x)}return m}
+// 「2026/10/24 店舗名 データまとめ<TAB>機種<TAB>台番<TAB>回転<TAB>BB<TAB>RB」
+function splitHead(p){if(p.length!==6)return null;const h=nz(p[0]).replace(/\s*データまとめ$/,'');const m=h.match(/^(\S+)\s+(.+)$/);if(!m||!normDate(m[1]))return null;return[m[1],m[2],...p.slice(1)]}
 function normDate(s){s=nz(s);let m=s.match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?/)||s.match(/^(\d{4})(\d{2})(\d{2})$/);
  if(!m)return null;const y=+m[1],mo=+m[2],d=+m[3];if(mo<1||mo>12||d<1||d>31)return null;
  const t=new Date(Date.UTC(y,mo-1,d));if(t.getUTCDate()!==d)return null;return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0')}
@@ -40,6 +48,7 @@ function dateLast1(q){q=q.slice();while(q.length&&q[q.length-1]==='')q.pop();con
 function parseText(text,set){const rows=[],errs=[];text=String(text||'').replace(/^\uFEFF/,'');
  text.split(/\r?\n/).forEach((line,i)=>{if(!line.trim())return;const sep=line.includes('\t')?'\t':',';let p=splitLine(line,sep).map(nz);
   // 機種名・台番号・G数・BB・RB・(確率)・店舗名・年月日 の並びも読む（日付が最後の列。確率の列は空・なしでもよい）
+  {const sh=splitHead(p);if(sh)p=sh}
   if(!normDate(p[0])){const dl=dateLast(line,sep);if(dl)p=dl;else if(/機種|年月日|日付/.test(line))return}
   const date=normDate(p[0]);if(!date){if(i>0||!/日付|date/i.test(p[0]))errs.push({line:i+1,text:line.slice(0,80),why:'日付が読めない'});return}
   if(p.length<7){errs.push({line:i+1,text:line.slice(0,80),why:'列が足りない（7列必要）'});return}
@@ -231,6 +240,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:baseOf(cfg,mk),score:baseOf(cfg,mk)+sub/10000,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);

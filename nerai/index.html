@@ -91,7 +91,8 @@ let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 let anDirty=false,zuDirty=false;
 let NRC={};
 const S={an:{v:1,border:{},marks:{}},loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
-const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});
+let KNOWN=null,KNOWN_R=null;const knownM=()=>{if(KNOWN_R!==S.rows){const k=new Set();for(const r of S.rows||[])k.add(r.m);const a=S.set.alias||NC.DEF_ALIAS;for(const x in a)if(a[x])k.add(a[x]);KNOWN=[...k];KNOWN_R=S.rows}return KNOWN};
+const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS,known:knownM()});
 
 async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
 function b64dec(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
