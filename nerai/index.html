@@ -163,22 +163,37 @@ function vlist(id,items,head,rowF,cols){const el=$(id);if(!el)return;if(!items.l
  w.onscroll=paint;paint();return paint}
 const vtd='style="height:30px;padding-top:0;padding-bottom:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"';
 const cbx='style="width:20px;height:20px;vertical-align:middle;margin:0"';
-let ckPt=null;
-function ckPaint(){const el=$('ckr');if(!el||!S.chk)return;const L=S.chk.list;if(!S.chk.sel)S.chk.sel=new Set();const c={};for(const x of L)c[x.k]=(c[x.k]||0)+1;
- el.innerHTML=`<div class="st ${L.length?'ng':'ok'}">${S.chk.all?'全データ':'取り込んだデータ'}：${L.length?L.length.toLocaleString()+'件 '+Object.keys(CKN).filter(k=>c[k]).map(k=>CKN[k]+c[k]).join('・'):'異常なし'}</div>${L.length?`<div class="row"><button class="b sub" onclick="ckSelAll()">一括チェック</button><button class="b" style="background:#c62828" onclick="ckDelSel()">削除</button><button class="b" style="background:#137a3a" onclick="ckOkSel()">了承</button><span class="st" id="ckn" style="margin:0">${S.chk.sel.size}件</span></div><div id="cks" class="st"></div>`:''}<div id="ckl"></div>`;
- ckPt=vlist('ckl',L,'<th></th><th class="l">日付</th><th class="l">店舗</th><th class="l">機種</th><th>台番</th><th>回転</th><th>BB</th><th>RB</th><th class="l">理由</th><th></th>',
-  (x,i)=>{const r=x.r;return`<tr><td ${vtd}><input type="checkbox" ${cbx} ${S.chk.sel.has(i)?'checked':''} onchange="ckTg(${i},this.checked)"></td><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(r.s)}</td><td class="l" ${vtd}>${esc(r.m)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${r.g??''}</td><td ${vtd}>${r.bb??''}</td><td ${vtd}>${r.rb??''}</td><td class="l ng" ${vtd}>${x.why}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="ckOpen(${i})">開く</button></td></tr>`},[30,50,100,120,44,52,40,40,120,56])}
-window.ckTg=(i,on)=>{if(on)S.chk.sel.add(i);else S.chk.sel.delete(i);if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件'};
-window.ckSelAll=()=>{const L=S.chk.list;const all=S.chk.sel.size===L.length;S.chk.sel=all?new Set():new Set(L.map((_,i)=>i));if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件';if(ckPt)ckPt()};
+let ckPt=null;const CKF={d:'日付',s:'店舗',m:'機種',t:'台番',w:'理由'};let CF=[];
+const ckV=(x,k)=>k==='w'?x.why:String(x.r[k]??'');
+const ckMatch=(x,F,skip)=>Object.keys(CKF).every(k=>k===skip||!F[k]||ckV(x,k)===F[k]);
+function ckFix(){const F=S.ckf||(S.ckf={d:'',s:'',m:'',t:'',w:''});const L=S.chk.list;for(const k in CKF)if(F[k]&&!L.some(x=>ckV(x,k)===F[k]))F[k]=''}
+function hdPop(title,vs,cur,cb){window._hpv=vs;window._hpc=cb;
+ $('ckpop').innerHTML=`<div onclick="if(event.target===this)hpX()" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding-top:60px"><div style="background:#fff;border-radius:12px;width:min(92vw,420px);max-height:70vh;display:flex;flex-direction:column"><div class="row" style="padding:0 10px"><b style="flex:1">${title}</b><button class="b sub" onclick="hpX()">閉じる</button></div><div style="overflow:auto;-webkit-overflow-scrolling:touch;padding:0 10px 10px">${['',...vs].map((v,i)=>`<div onclick="hpPick(${i-1})" style="padding:10px 6px;border-bottom:1px solid #ddd;font-size:15px;${(cur||'')===v?'background:#dbe7fd;font-weight:700':''}">${i?esc(v):'すべて'}</div>`).join('')}</div></div></div>`}
+window.hpX=()=>{$('ckpop').innerHTML=''};
+window.hpPick=i=>{const cb=window._hpc;hpX();cb(i<0?'':window._hpv[i])};
+window.ckHd=k=>{const F=S.ckf;const vs=[...new Set(S.chk.list.filter(x=>ckMatch(x,F,k)).map(x=>ckV(x,k)))];
+ vs.sort(k==='d'?(a,b)=>a<b?1:-1:(a,b)=>a.localeCompare(b,'ja',{numeric:true}));hdPop(CKF[k],vs,F[k],v=>{F[k]=v;ckPaint()})};
+function ckPaint(){const el=$('ckr');if(!el||!S.chk)return;const L=S.chk.list;if(!(S.chk.sel instanceof Set))S.chk.sel=new Set();ckFix();const F=S.ckf;
+ CF=L.filter(x=>ckMatch(x,F));const cs=new Set(CF);for(const x of [...S.chk.sel])if(!cs.has(x))S.chk.sel.delete(x);
+ const cnt=A=>{const c={};for(const x of A)c[x.k]=(c[x.k]||0)+1;return A.length.toLocaleString()+'件 '+Object.keys(CKN).filter(k=>c[k]).map(k=>CKN[k]+c[k]).join('・')};
+ const fon=Object.keys(CKF).some(k=>F[k]);
+ el.innerHTML=`<div class="st ${L.length?'ng':'ok'}">${S.chk.all?'全データ':'取り込んだデータ'}：${L.length?cnt(L):'異常なし'}</div>${L.length&&fon?`<div class="st ng">絞り込み：${cnt(CF)}</div>`:''}${L.length?`<div class="row"><button class="b sub" onclick="ckSelAll()">一括チェック</button><button class="b" style="background:#c62828" onclick="ckDelSel()">削除</button><button class="b" style="background:#137a3a" onclick="ckOkSel()">了承</button><span class="st" id="ckn" style="margin:0">${S.chk.sel.size}件</span></div><div id="cks" class="st"></div>`:''}<div id="ckpop"></div><div id="ckl"></div>`;
+ const th=(k,c)=>`<th ${c?'class="l" ':''}onclick="ckHd('${k}')" style="cursor:pointer;color:${F[k]?'#1f5fd6':'inherit'}">${CKF[k]}▼</th>`;
+ ckPt=vlist('ckl',CF,`<th></th>${th('d',1)}${th('s',1)}${th('m',1)}${th('t')}<th>回転</th><th>BB</th><th>RB</th>${th('w',1)}<th></th>`,
+  (x,i)=>{const r=x.r;return`<tr><td ${vtd}><input type="checkbox" ${cbx} ${S.chk.sel.has(x)?'checked':''} onchange="ckTg(${i},this.checked)"></td><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(r.s)}</td><td class="l" ${vtd}>${esc(r.m)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${r.g??''}</td><td ${vtd}>${r.bb??''}</td><td ${vtd}>${r.rb??''}</td><td class="l ng" ${vtd}>${x.why}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="ckOpen(${i})">開く</button></td></tr>`},[30,56,100,120,52,52,40,40,130,56]);
+ if(L.length&&!CF.length)$('ckl').innerHTML=`<div class="tw"><table><thead><tr><th></th>${th('d',1)}${th('s',1)}${th('m',1)}${th('t')}${th('w',1)}</tr></thead></table></div>`}
+window.ckTg=(i,on)=>{const x=CF[i];if(!x)return;if(on)S.chk.sel.add(x);else S.chk.sel.delete(x);if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件'};
+window.ckSelAll=()=>{const all=CF.length&&CF.every(x=>S.chk.sel.has(x));S.chk.sel=all?new Set():new Set(CF);if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件';if(ckPt)ckPt()};
 const ckMsg=(c,t)=>{const e=$('cks');if(e){e.className='st '+c;e.textContent=t}};
-window.ckDelSel=async()=>{const L=S.chk.list,sel=[...S.chk.sel].map(i=>L[i]).filter(x=>x&&(x.k==='g'||x.k==='p'));if(!sel.length){ckMsg('ng','削除できる行がないよ');return}
+const ckSelF=()=>{const cs=new Set(CF);return[...S.chk.sel].filter(x=>cs.has(x))};
+window.ckDelSel=async()=>{const L=S.chk.list,sel=ckSelF().filter(x=>x.k==='g'||x.k==='p');if(!sel.length){ckMsg('ng','削除できる行がないよ');return}
  if(!confirm(sel.length+'件を削除する？'))return;const del=new Set(sel.map(x=>x.r));const keep=S.rows;S.rows=S.rows.filter(r=>!del.has(r));
  try{await edSaveNow(t=>ckMsg('',t));S.chk.list=L.filter(x=>!del.has(x.r));S.chk.sel=new Set();ckPaint();ckMsg('ok','削除したよ');edList()}catch(e){S.rows=keep;ckMsg('ng',e.message)}};
-window.ckOkSel=async()=>{const L=S.chk.list,sel=[...S.chk.sel].map(i=>L[i]).filter(Boolean);if(!sel.length)return;
+window.ckOkSel=async()=>{const L=S.chk.list,sel=ckSelF();if(!sel.length)return;
  const old=(S.an.ckOk||[]).slice();const set=new Set(old);sel.forEach(x=>set.add(ckKey(x)));S.an.ckOk=[...set];
  try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙いチェック了承',t=>ckMsg('',t));S.anSaved=snap;const ss=new Set(sel);S.chk.list=L.filter(x=>!ss.has(x));S.chk.sel=new Set();ckPaint();ckMsg('ok','了承したよ')}
  catch(e){S.an.ckOk=old;ckMsg('ng',e.message)}};
-window.ckOpen=i=>{const x=S.chk.list[i],r=x.r;S.ed={d:r.d,s:r.s,m:r.m,t:(x.k==='m'||x.k==='t')?'':String(r.t||'')};if(x.k==='m')S.ed.m='';edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})};
+window.ckOpen=i=>{const x=CF[i];if(!x)return;const r=x.r;S.ed={d:r.d,s:r.s,m:r.m,t:(x.k==='m'||x.k==='t')?'':String(r.t||'')};if(x.k==='m')S.ed.m='';edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})};
 const EDN={d:'日付',s:'店舗',m:'機種',t:'台番'};
 const edMatch=(r,E,skip)=>(skip==='d'||!E.d||r.d===E.d)&&(skip==='s'||!E.s||r.s===E.s)&&(skip==='m'||!E.m||r.m===E.m)&&(skip==='t'||!E.t||String(r.t)===E.t);
 function edForm(){const E=S.ed||(S.ed={d:'',s:'',m:'',t:''});
