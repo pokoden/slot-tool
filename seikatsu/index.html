@@ -288,7 +288,7 @@ function openMP(w){const v=w==='cal'?calYM:monYM;const end=addM(CUR,24);let o=''
 function goMP(w,ym){if(w==='cal')calYM=ym;else monYM=ym;closeSheet();render()}
 
 // 扶養
-function fuyoInfo(){const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;let earned=0,plan=0;for(const[d,r]of Object.entries(D.sched)){if(!d.startsWith(y+'-'))continue;let p=isS(r.t)?(+r.pay||0):0;for(const x of xs(d))if(isS(x.t))p+=+x.pay||0;if(d<=TD)earned+=p;else plan+=p}
+function fuyoInfo(){const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;let earned=0,plan=0;for(const[d,r]of Object.entries(D.sched)){if(!d.startsWith(y+'-'))continue;let p=isS(r.t)?(+r.pay||0):0;for(const x of xs(d))if(isS(x.t))p+=+x.pay||0;earned+=p}
  const lim=+D.set.fuyo||0,left=lim-earned,autoM=12-mo+1,months=+D.set.fuyoMonths>0?+D.set.fuyoMonths:autoM,per=Math.max(0,Math.floor(left/months)),hours=D.set.rate?Math.floor(per/D.set.rate):0,proj=earned+plan;return{y,lim,earned,plan,left,months,autoM,per,hours,proj}}
 function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
  <div class="row"><span>上限</span><input class="num" inputmode="numeric" style="width:130px" value="${D.set.fuyo??''}" onchange="D.set.fuyo=+this.value||0;save();render()"></div>
@@ -296,8 +296,7 @@ function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
  <div class="row"><span>上限まで残り</span><b class="${F.left<0?'neg':''}">${yen(F.left)}</b></div>
  <div class="row"><span>残り月数</span><input class="num" inputmode="numeric" style="width:90px" value="${F.months}" onchange="const v=+this.value;D.set.fuyoMonths=v>0&&v!==fuyoInfo().autoM?v:null;save();render()"></div>
  <div class="row"><span>1ヶ月あたり</span><b>${yen(F.per)}</b></div>
- <div class="row"><span>1ヶ月あたり時間</span><b>${F.hours}時間</b></div>
- <div class="row"><span>予定込みの見込み</span><b class="${F.proj>F.lim?'neg':''}">${yen(F.proj)}</b></div>`}
+ <div class="row"><span>1ヶ月あたり時間</span><b>${F.hours}時間</b></div>`}
 // 一覧表
 let LF=LS.get('sk2_lf',{from:'',to:'',i1:'',i2:'',i3:''});
 function setLF(k,v){LF[k]=v;LS.set('sk2_lf',LF);render()}
