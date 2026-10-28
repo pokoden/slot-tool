@@ -68,7 +68,7 @@ td.fs b{display:block}
 td.kst{color:#0b57d0;font-weight:700;font-size:11px;line-height:12px;white-space:normal;overflow:hidden}td.kst span{white-space:nowrap}#kvt .mn{max-width:9.5em}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
-.mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:2px solid #555!important}.hl{border-left:3px solid #111!important}th.hc{width:1px}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:normal!important;max-width:8.5em;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
+.mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:2px solid #555!important}.hl{border-left:3px solid #111!important}th.hc{width:1px}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:nowrap!important;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
 </style>
 </head>
 <body>
@@ -443,6 +443,11 @@ window.nrDef=()=>{nr.so='def';nr.rev=0;nerPage()};
 window.nrSo=k=>{if(nr.so===k)nr.rev=nr.rev?0:1;else{nr.so=k;nr.rev=0}nerPage()};
 window.nrOnly=()=>{nr.only=nr.only?0:1;nerPage()};
 const COMBO_L={matsu:'末尾',hi:'日',you:'曜日'};
+window.nrML=(ev,i)=>{ev.stopPropagation();let p=$('mlp');if(p&&p.dataset.i==String(i)){p.remove();return}if(p)p.remove();const L=_ml[i];if(!L)return;p=document.createElement('div');p.id='mlp';p.dataset.i=i;p.dataset.t=Date.now();
+ p.style.cssText='position:fixed;z-index:50;background:#fff;border:2px solid #1f5fd6;border-radius:8px;padding:6px 10px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:80vw';
+ p.innerHTML=L.map(o=>`<div style="display:flex;gap:12px;justify-content:space-between;white-space:nowrap;line-height:24px"><span style="${o.k==='s'?'color:#1f5fd6;font-weight:600':''}">${esc(o.l)}</span><b>${o.sc!=null?o.sc.toFixed(1)+'点':''}</b></div>`).join('');
+ document.body.appendChild(p);const r=ev.currentTarget.getBoundingClientRect();const top=r.bottom+4+p.offsetHeight>innerHeight?r.top-4-p.offsetHeight:r.bottom+4;p.style.top=Math.max(4,top)+'px';p.style.left=Math.min(r.left,innerWidth-p.offsetWidth-4)+'px'};
+document.addEventListener('click',()=>{const p=$('mlp');if(p)p.remove()});window.addEventListener('scroll',()=>{const p=$('mlp');if(p&&Date.now()-(+p.dataset.t||0)>400)p.remove()},{passive:true});
 function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);const ss=stSel(nr,stores);
  const all=(ss.length||stores.length)!==1;
  curDate();if(nr.v!==109){nr.v=109;nr.so='def';nr.rev=0}if(!nr.so)nr.so='def';
@@ -488,22 +493,22 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const shown=V.map(o=>o.x);
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
  const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();
- const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(11);
+ const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(10);
   const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`;
-  return`<td class="gl hl">${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}${b(ix.t)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr">${mkH(x.mark||'×')}</td>`};
+  return`<td class="gl hl">${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td>${P(r.g,r.bb)}</td><td>${P(r.g,r.rb)}</td><td>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr">${mkH(x.mark||'×')}</td>`};
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
- const body=shown.map(x=>{
+ window._ml=[];const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
-  const lab=x.mlabel?esc(x.mlabel):x.kind==='t'?'台番':esc(x.label);const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" ${x.kind==='s'?'style="color:#1f5fd6;font-weight:600"':''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')
   +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
-  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="12" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
-  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','総合<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===11?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
+  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="11" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
+  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===10?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,60);
  const num=(path,v,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');

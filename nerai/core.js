@@ -228,7 +228,7 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
   tg.length=0;for(const a of T2){if(!Array.isArray(a)){tg.push(a);continue}if(a.length===1){tg.push(a[0]);continue}
    const b=a.find(x=>x.kind==='t')||a[0];const seg={};let code='';for(const sg of SEGS){const w=a.find(x=>x.seg[sg].o);code+=w?'1':'0';seg[sg]=w?w.seg[sg]:b.seg[sg]}
    const sub=Math.max(...a.map(x=>x.sub));const pv=a.some(x=>x.prev);const mk=useP&&pv?'×':comboMark(code,cfg);
-   tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:baseOf(cfg,mk),score:baseOf(cfg,mk)+sub/10000,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),merged:a.length}))}}
+   tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:baseOf(cfg,mk),score:baseOf(cfg,mk)+sub/10000,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
 const api={prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
