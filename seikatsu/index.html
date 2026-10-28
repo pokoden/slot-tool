@@ -284,7 +284,7 @@ function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
 let LF=LS.get('sk2_lf',{from:'',to:'',i1:'',i2:'',i3:''});
 function setLF(k,v){LF[k]=v;LS.set('sk2_lf',LF);render()}
 function multiChart(f){const by={};for(const x of f){const o=by[x.ym]=by[x.ym]||{i:0,e:0};o.i+=+x.inc||0;o.e+=+x.exp||0}const ks=Object.keys(by).sort();if(ks.length<2)return'';{let ci=0,ce=0;for(const k of ks){ci+=by[k].i;ce+=by[k].e;by[k]={i:ci,e:ce}}}
- const W=440,H=210,P=78,S=[['収入','#2fb36b',k=>by[k].i],['支出','#e0283a',k=>by[k].e],['収支','#1f4fd8',k=>by[k].i-by[k].e]];const vs=[];S.forEach(z=>ks.forEach(k=>vs.push(z[2](k))));let mn=Math.min(0,...vs),mx=Math.max(...vs);if(mn===mx)mx=mn+1;
+ const W=440,H=210,P=78,S=[['収支','#1f4fd8',k=>by[k].i-by[k].e]];const vs=[];S.forEach(z=>ks.forEach(k=>vs.push(z[2](k))));let mn=Math.min(0,...vs),mx=Math.max(...vs);if(mn===mx)mx=mn+1;
  const raw=(mx-mn)/4,e=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(q=>q*e).find(q=>q>=raw);mn=Math.floor(mn/st)*st;mx=Math.ceil(mx/st)*st;
  const x=i=>P+i*(W-P-8)/(ks.length-1),y=v=>H-22-(v-mn)/(mx-mn)*(H-36);let g='';
  for(let v=mn;v<=mx+st/2;v+=st)g+=`<line x1="${P}" x2="${W-8}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?'#9fb3dc':'#eef2f9'}"/><text x="${P-6}" y="${y(v)+4}" font-size="12" font-weight="700" text-anchor="end" fill="${v<0?'#e0283a':'#1f4fd8'}">${Math.round(v).toLocaleString()}</text>`;
