@@ -214,26 +214,26 @@ window.edPick=i=>{S.ed[window._edk]=i<0?'':window._edv[i];S.edMode='list';edPop(
 window.edAll=()=>{S.ed={d:'',s:'',m:'',t:''};S.edMode='list';edForm();edList()};
 window.edAdd=()=>{const E=S.ed;(S.edPh||(S.edPh=[])).unshift(edNew(E.d||curDate(),E.s||'',E.m||'',''));if(S.edMode!=='pick')S.edMode='list';edList()};
 window.edF=(k,v)=>{S.ed[k]=v;edForm();edList()};
-let ED=[];const edDirty=new Set();
+let ED=[];const edDirty=new Set();const edSv=new WeakSet();
 const edP=(g,n)=>+g>0&&n!=null&&n!==''?NC.fmtP(NC.den(+g,+n)):'';
 const edPs=r=>[edP(r.g,r.bb),edP(r.g,r.rb),edP(r.g,r.bb==null&&r.rb==null?null:(+r.bb||0)+(+r.rb||0))];
 function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  const md=S.edMode||'none';const PK=S.edPick||[];const pm=r=>PK.some(p=>r.d===p.d&&r.s===p.s&&(!p.m||r.m===p.m)&&(p.k==='m'||!p.t||String(r.t)===p.t));
  S.edPh=(S.edPh||[]).filter(r=>r._ph);
  ED=(md==='none'?[]:S.rows.filter(r=>md==='pick'?pm(r):edMatch(r,E))).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.s<b.s?-1:a.s>b.s?1:String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));ED=S.edPh.concat(ED);
- el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div id="edl"></div>`;
+ el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div class="row"><button class="b" onclick="edSave()">一括保存</button></div><div id="edl"></div>`;
  const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'inputmode="numeric"':'type="number" inputmode="numeric"'} style="width:${w}px;height:24px;padding:0 2px;box-sizing:border-box;font-size:13px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
-  (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,126)}</td><td ${vtd}>${inp(i,'t',r.t,46)}</td><td ${vtd}>${inp(i,'g',r.g,50)}</td><td ${vtd}>${inp(i,'bb',r.bb,38)}</td><td ${vtd}>${inp(i,'rb',r.rb,38)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" onclick="edSave()">保存</button></td></tr>`},[44,36,130,50,54,42,42,56,56,56,116])}
+  (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,46)}</td><td ${vtd}>${inp(i,'g',r.g,60)}</td><td ${vtd}>${inp(i,'bb',r.bb,46)}</td><td ${vtd}>${inp(i,'rb',r.rb,46)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
 window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else if(f==='t'){if(!v)return;if(S.rows.some(x=>x!==r&&x.d===r.d&&x.s===r.s&&String(x.t)===v)){alert('その台番はもうあるよ');return}r.t=v}else r[f]=v===''?null:+v;
- if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);
+ if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);if(edSv.has(r)){edSv.delete(r);const b=$('edb'+i);if(b)b.textContent='保存'}
  const p=edPs(r);['a','b','c'].forEach((c,j)=>{const e=$('edp'+c+i);if(e)e.textContent=p[j]});const s=$('eds');if(s){s.className='st ng';s.textContent='未保存 '+edDirty.size+'件'}};
 window.edDel=async i=>{const r=ED[i];if(r&&r._ph){S.edPh=S.edPh.filter(x=>x!==r);edList();return}if(!r||!confirm(`${r.d} ${r.s} ${r.t} を削除する？`))return;const keep=S.rows;S.rows=S.rows.filter(x=>x!==r);edDirty.delete(r);edList();await edSave(keep)};
 async function edSaveNow(prog){const out=allFiles(S.rows);NRC={};await saveFiles(out,'設定狙い編集',prog);refreshAgg(out)}
 let edBusy=false;
 async function edSave(undo){if(edBusy)return;edBusy=true;const sv=$('eds');
- try{await edSaveNow(t=>{if($('eds'))$('eds').textContent=t});edDirty.clear();const d=new Date();
+ try{await edSaveNow(t=>{if($('eds'))$('eds').textContent=t});edDirty.forEach(r=>edSv.add(r));ED.forEach((r,i)=>{const b=$('edb'+i);if(b&&edSv.has(r))b.textContent='保存済'});edDirty.clear();const d=new Date();
   if($('eds')){$('eds').className='st ok';$('eds').textContent='保存したよ（'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'）'}}
  catch(e){if(Array.isArray(undo)){S.rows=undo;edList()}if($('eds')){$('eds').className='st ng';$('eds').textContent=e.message}}
  edBusy=false}
