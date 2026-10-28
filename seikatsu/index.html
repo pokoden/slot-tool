@@ -60,7 +60,7 @@ tr.sum td{font-weight:800;background:#f0f5ff}
 .cal .d .t{border-radius:6px;color:#fff;font-weight:800;padding:1px 0;margin-top:2px}
 .t-stand{background:#2fb36b}.t-kado{background:#1f4fd8}.t-off{background:#e0283a}.t-other{background:#f08c00}.cal .d .t.t-free{background:none;color:#14213d}.t-standkado{background:linear-gradient(90deg,#2fb36b 50%,#1f4fd8 50%)}
 .cal .d.b-off{background:#fde3e6}.cal .d.b-kado{background:#e1eafc}.cal .d.b-stand{background:#dff5e8}.cal .d.b-other{background:#fff0dc}.cal .d.b-standkado{background:linear-gradient(90deg,#dff5e8 50%,#e1eafc 50%)}
-.cal .d .y{font-weight:800;font-size:10px}
+.cal .d .y{font-weight:800;font-size:10px;word-break:break-all}.cal .d .t{word-break:break-all;white-space:normal;font-size:10px}.cal .d .mm{font-size:9px;word-break:break-all;white-space:pre-wrap;text-align:left}.tbtn{border:1px solid #c9d4ee;background:#fff;border-radius:8px;padding:5px 4px;min-width:96px;font-size:13px}
 .sheet{position:fixed;inset:0;background:rgba(10,20,50,.35);z-index:20;display:none;align-items:flex-end}
 .sheet.on{display:flex}
 .sheet .in{background:#fff;width:100%;max-width:480px;margin:0 auto;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
@@ -102,7 +102,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const I1=['生活費','収入','ギャンブル'];
 const I2=['生活固定費','生活変動費','税金','給料収入','雑収入','貯金','競馬','カジノ','パチスロ','調整'];
 const I2of1={'生活固定費':'生活費','生活変動費':'生活費','税金':'生活費','貯金':'生活費','調整':'生活費','給料収入':'収入','雑収入':'収入','競馬':'ギャンブル','カジノ':'ギャンブル','パチスロ':'ギャンブル'};
-const TYPES={stand:'スタンド',kado:'稼働',standkado:'スタンド+稼働',off:'休み',other:'その他労働'};const TL={...TYPES,free:'予定'};const isS=t=>t==='stand'||t==='standkado',isK=t=>t==='kado'||t==='standkado';
+const TYPES={stand:'GS',kado:'稼働',standkado:'GS+稼働',off:'休み',other:'仕事'};const TL={...TYPES,free:'予定'};const isS=t=>t==='stand'||t==='standkado',isK=t=>t==='kado'||t==='standkado';
 function defData(){return{v:2,wallet:{cash:0,pachi:0,bank:0,other:0},sched:{},ledger:{},fixedDone:{},plans:[],
  fixed:[['BIGLOBE',6505],['アクサ',13971],['スマホ',14230],['損保',3690],['タバコ',25000],['楽天ネット',1045],['自宅',20000]].map(([n,a])=>({id:uid(),i1:'生活費',i2:'生活固定費',i3:n,exp:a})),
  set:{rate:1100,stdH:9,step:100000,prevEnd:null,fuyo:1290000,fixedFrom:CUR,loan:{items:[['車本体',700000],['タイヤホイール',148000]],n:24,monthly:37100,start:'2026-10'}},updatedAt:''}}
@@ -200,22 +200,42 @@ function setW(k,v){D.wallet[k]=+String(v).replace(/[^\d-]/g,'')||0;save();render
 function addPlan(){D.plans.push({name:'',inc:0,exp:0,done:false,ym:CUR});save();render()}
 // 予定
 function vCal(){const[y,m]=calYM.split('-').map(Number);const first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate();let h=['日','月','火','水','木','金','土'].map((d,i)=>`<div class="h" style="${i===0?'color:#e0283a':''}">${d}</div>`).join('');for(let i=0;i<first;i++)h+='<div></div>';
- for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d),E=ents(d);let t='';for(const e of E){if(!e.t)continue;t+=`<div class="t t-${e.t}">${e.t==='free'?esc(String(e.note||'').slice(0,3)):(e.t==='standkado'?'ス稼':(TL[e.t]||'').slice(0,2))}</div>`;if(e.tm)t+=`<div class="y">${esc(e.tm)}</div>`}h+=`<div class="d ${d===TD?'today':''} ${o.t&&o.t!=='free'?'b-'+o.t:''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}</div>`}
+ for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),o=dayInfo(d),E=ents(d);let t='';for(const e of E){if(!e.t)continue;t+=`<div class="t t-${e.t}">${e.t==='free'?esc(String(e.note||'')):esc(TL[e.t]||'')}</div>`;if(e.tm)t+=`<div class="y">${esc(e.tm)}</div>`;if(e.note&&e.t!=='free')t+=`<div class="mm">${esc(e.note)}</div>`}h+=`<div class="d ${d===TD?'today':''} ${o.t&&o.t!=='free'?'b-'+o.t:''}" onclick="openDay('${d}')"><div class="n">${i}</div>${t}</div>`}
  return`<div class="card"><div class="mh"><button onclick="calYM=addM(calYM,-1);render()">‹</button><button class="mpick" onclick="openMP('cal')">${y}年${m}月 ▾</button><button onclick="calYM=addM(calYM,1);render()">›</button><button onclick="calShot()">📷</button></div><div id="calbox" style="background:#fff;padding:4px"><div style="text-align:center;font-weight:800;margin-bottom:4px">${y}年${m}月</div><div class="cal">${h}</div></div></div>${schedTable()}`}
 const SCOL={stand:'#2fb36b',standkado:'#2fb36b',kado:'#1f4fd8',off:'#e0283a',other:'#f08c00',free:'#14213d'};
 function schedTable(){const[y,m]=calYM.split('-').map(Number),n=new Date(y,m,0).getDate(),W='日月火水木金土';let b='';
- for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),wd=new Date(y,m-1,i).getDay(),o=dayInfo(d),X=xs(d);const L=[o].concat(X);
-  L.forEach((e,j)=>{const col=SCOL[e.t]||'#14213d';const opt=['<option value=""></option>'].concat(Object.entries(TL).map(([k,l])=>`<option value="${k}" ${e.t===k?'selected':''}>${l}</option>`)).join('');const pv=isK(e.t)&&j===0?(e.ky??''):(e.pay??'');
-  b+=`<tr>${j===0?`<td rowspan="${L.length}">${i}</td><td rowspan="${L.length}" style="color:${wd===0?'#e0283a':wd===6?'#1f4fd8':''}">${W[wd]}</td>`:''}<td><select style="width:78px;color:#fff;background:${e.t?col:'#fff'};font-weight:700" onchange="se('${d}',${j},'t',this.value)">${opt}</select></td><td><input style="width:66px" value="${esc(e.tm||'')}" onchange="se('${d}',${j},'tm',this.value)"></td><td><input class="num" inputmode="numeric" style="width:70px" value="${pv}" ${j===0&&isK(e.t)&&slot.byDate[d]?'disabled':''} onchange="se('${d}',${j},'pay',this.value)"></td><td><input style="width:80px" value="${esc(e.note||'')}" onchange="se('${d}',${j},'note',this.value)"></td><td>${j===0?`<button class="btn sub" style="padding:4px 8px" onclick="addE('${d}')">＋</button>`:`<button class="btn del" style="padding:4px 8px" onclick="delE('${d}',${j})">×</button>`}</td></tr>`})}
- return`<div class="card"><h2>スケジュール</h2><div class="scroll"><table><tr><th>日付</th><th>曜日</th><th>区分</th><th>時間</th><th>金額</th><th>メモ</th><th></th></tr>${b}</table></div></div>`}
-function se(d,j,k,v){let r=D.sched[d];if(!r){r=D.sched[d]={t:''}}const e=j===0?r:r.x[j-1];
- if(k==='pay'){v=+String(v).replace(/[^\d-]/g,'')||0;if(j===0&&isK(e.t)&&!isS(e.t))e.ky=v;else e.pay=v}
- else if(k==='tm'){e.tm=String(v).trim();const hh=tmH(e.tm);if(hh!=null&&(isS(e.t)||e.t==='other')){e.h=hh;if(isS(e.t))e.pay=Math.round(hh*D.set.rate)}}
- else if(k==='t'){e.t=v;if(isS(v)&&!e.h){const hh=tmH(e.tm||'');e.h=hh??D.set.stdH;if(!e.pay)e.pay=Math.round(e.h*D.set.rate)}}
+ for(let i=1;i<=n;i++){const d=calYM+'-'+pad(i),wd=new Date(y,m-1,i).getDay(),o=dayInfo(d),X=xs(d);const L=[o].concat(X);const memo=L.some(e=>e.note&&e.t!=='free'||e.t==='free'&&e.note);
+  L.forEach((e,j)=>{const col=SCOL[e.t]||'#14213d';const opt=['<option value=""></option>'].concat(Object.entries(TL).map(([k,l])=>`<option value="${k}" ${e.t===k?'selected':''}>${l}</option>`)).join('');const pv=isK(e.t)&&!isS(e.t)&&j===0?(e.ky!=null?Math.round(e.ky):''):(e.pay??'');const lock=j===0&&isK(e.t)&&!isS(e.t)&&slot.byDate[d];
+  b+=`<tr onclick="if(event.target===this||event.target.tagName==='TD')openE('${d}',${j})">${j===0?`<td rowspan="${L.length}" onclick="openE('${d}',0)">${i}${memo?'📝':''}</td><td rowspan="${L.length}" style="color:${wd===0?'#e0283a':wd===6?'#1f4fd8':''}">${W[wd]}</td>`:''}<td><select style="width:74px;color:${e.t?'#fff':'#14213d'};background:${e.t?col:'#fff'};font-weight:700" onchange="se('${d}',${j},'t',this.value)">${opt}</select></td><td><button class="tbtn" onclick="openTP('${d}',${j})">${esc(e.tm||'')}&nbsp;</button></td><td><input class="num" inputmode="decimal" style="width:46px" value="${j===0&&isK(e.t)&&!isS(e.t)?(e.kh!=null&&e.kh!==''?Math.round(e.kh*10)/10:''):(e.h||'')}" ${lock?'disabled':''} onchange="se('${d}',${j},'h',this.value)"></td><td><input class="num" inputmode="numeric" style="width:70px" value="${pv}" ${lock?'disabled':''} onchange="se('${d}',${j},'pay',this.value)"></td><td>${j===0?`<button class="btn sub" style="padding:4px 8px" onclick="addE('${d}')">＋</button>`:`<button class="btn del" style="padding:4px 8px" onclick="delE('${d}',${j})">×</button>`}</td></tr>`})}
+ const w=workMonth(calYM),th=w.kh+w.sh+w.oh,ta=w.ky+w.sp+w.op,f1=v=>Math.round(v*10)/10;
+ const sum=`<table style="margin-top:10px"><tr><th>区分</th><th>時間</th><th>金額</th></tr><tr><td>稼働</td><td>${f1(w.kh)}</td><td class="${cls(w.ky)}">${Math.round(w.ky).toLocaleString()}</td></tr><tr><td>GS</td><td>${f1(w.sh)}</td><td>${Math.round(w.sp).toLocaleString()}</td></tr><tr><td>仕事</td><td>${f1(w.oh)}</td><td>${Math.round(w.op).toLocaleString()}</td></tr><tr class="sum"><td>合計</td><td>${f1(th)}</td><td class="${cls(ta)}">${Math.round(ta).toLocaleString()}</td></tr></table>`;
+ return`<div class="card"><h2>スケジュール<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="openBulk()">一括変更</button></h2><div class="scroll"><table><tr><th>日付</th><th>曜日</th><th>区分</th><th>時間</th><th>合計時間</th><th>金額</th><th></th></tr>${b}</table></div>${sum}</div>`}
+function ent(d,j){let r=D.sched[d];if(!r){const o=dayInfo(d);r=D.sched[d]={t:o.t||''}}return j===0?r:r.x[j-1]}
+function tidy(d){const r=D.sched[d];if(r&&!r.t&&!r.tm&&!r.note&&!r.h&&!(r.x&&r.x.length))delete D.sched[d]}
+function se(d,j,k,v,nr){const e=ent(d,j);const kOnly=j===0&&isK(e.t)&&!isS(e.t);
+ if(k==='pay'){v=+String(v).replace(/[^\d-]/g,'')||0;if(kOnly)e.ky=v;else e.pay=v}
+ else if(k==='h'){v=+String(v).replace(/[^\d.]/g,'')||0;if(kOnly)e.kh=v;else{e.h=v;if(isS(e.t))e.pay=Math.round(v*D.set.rate)}}
+ else if(k==='t'){e.t=v;if(isS(v))e.pay=Math.round((+e.h||0)*D.set.rate)}
  else e[k]=v;
- if(j===0&&!r.t&&!r.tm&&!r.note&&!(r.x&&r.x.length))delete D.sched[d];save();render()}
-function addE(d){const r=D.sched[d]=D.sched[d]||{t:''};(r.x=r.x||[]).push({t:'',tm:'',pay:0,note:''});save();render()}
-function delE(d,j){const r=D.sched[d];r.x.splice(j-1,1);if(!r.x.length)delete r.x;if(!r.t&&!r.x)delete D.sched[d];save();render()}
+ tidy(d);save();if(!nr)render()}
+function addE(d){const r=D.sched[d]=D.sched[d]||{t:''};(r.x=r.x||[]).push({t:'',tm:'',h:0,pay:0,note:''});save();render()}
+function delE(d,j){const r=D.sched[d];r.x.splice(j-1,1);if(!r.x.length)delete r.x;tidy(d);save();render()}
+function tOpts(sel,none){let o=`<option value="">${none}</option>`;for(let m=6*60;m<=24*60;m+=30){const v=Math.floor(m/60)+':'+pad(m%60);o+=`<option ${v===sel?'selected':''}>${v}</option>`}return o}
+function splitTm(tm){const m=String(tm||'').split('〜');return[m[0]||'',m[1]||'']}
+function openTP(d,j){event&&event.stopPropagation();const e=ent(d,j);const[a,b]=splitTm(e.tm);
+ $('sheetIn').innerHTML=`<div class="mh"><b>時間</b><button onclick="closeSheet()">×</button></div><div class="f"><div><select id="tpA" style="width:100%;font-size:17px;padding:10px">${tOpts(a,'なし')}</select></div><div><select id="tpB" style="width:100%;font-size:17px;padding:10px">${tOpts(b,'〜なし')}</select></div></div><div class="f" style="margin-top:10px"><button class="btn del" onclick="setTm('${d}',${j},'')">取り消し</button><button class="btn" onclick="setTm('${d}',${j},fmtTm($('tpA').value,$('tpB').value))">決定</button></div>`;$('sheet').classList.add('on')}
+function fmtTm(a,b){return a||b?(a+'〜'+b):''}
+function setTm(d,j,v){se(d,j,'tm',v,1);closeSheet();render()}
+function openE(d,j){const e=ent(d,j);tidy(d);const[,m,dd]=d.split('-');const opt=['<option value=""></option>'].concat(Object.entries(TL).map(([k,l])=>`<option value="${k}" ${e.t===k?'selected':''}>${l}</option>`)).join('');
+ $('sheetIn').innerHTML=`<div class="mh"><b>${+m}月${+dd}日</b><button onclick="closeSheet();render()">×</button></div><div class="f"><div><label>区分</label><select style="width:100%;font-size:17px;padding:10px" onchange="se('${d}',${j},'t',this.value,1)">${opt}</select></div><div><label>時間</label><button class="tbtn" style="width:100%;font-size:17px;padding:10px" onclick="openTP('${d}',${j})">${esc(e.tm||'')}&nbsp;</button></div></div><div class="f"><div><label>合計時間</label><input class="num" inputmode="decimal" value="${e.h||''}" onchange="se('${d}',${j},'h',this.value,1)"></div><div><label>金額</label><input class="num" inputmode="numeric" value="${e.pay??''}" onchange="se('${d}',${j},'pay',this.value,1)"></div></div><label>メモ</label><textarea style="width:100%;min-height:180px;font-size:17px;padding:10px" oninput="se('${d}',${j},'note',this.value,1)">${esc(e.note||'')}</textarea><button class="btn" style="width:100%;margin-top:10px" onclick="closeSheet();render()">保存</button>`;$('sheet').classList.add('on')}
+let BK={t:'',tm:'',h:'',pay:'',wd:[1,1,1,1,1,1,1]};
+function openBulk(){const opt=['<option value=""></option>'].concat(Object.entries(TL).map(([k,l])=>`<option value="${k}" ${BK.t===k?'selected':''}>${l}</option>`)).join('');const[a,b]=splitTm(BK.tm);
+ $('sheetIn').innerHTML=`<div class="mh"><b>一括変更</b><button onclick="closeSheet()">×</button></div><div class="f"><div><label>区分</label><select style="width:100%;font-size:17px;padding:10px" onchange="BK.t=this.value">${opt}</select></div><div><label>合計時間</label><input class="num" inputmode="decimal" value="${BK.h}" oninput="BK.h=this.value"></div></div><label>時間</label><div class="f"><div><select id="bkA" style="width:100%;font-size:17px;padding:10px">${tOpts(a,'なし')}</select></div><div><select id="bkB" style="width:100%;font-size:17px;padding:10px">${tOpts(b,'〜なし')}</select></div></div><label>金額</label><input class="num" inputmode="numeric" value="${BK.pay}" oninput="BK.pay=this.value" style="width:100%"><div class="chips" style="margin-top:10px"><button class="chip" onclick="bkW([1,1,1,1,1,1,1])">全部</button><button class="chip" onclick="bkW([0,1,1,1,1,1,0])">平日</button><button class="chip" onclick="bkW([1,0,0,0,0,0,1])">土日</button></div><div class="chips">${'日月火水木金土'.split('').map((c,i)=>`<label style="margin-right:6px"><input type="checkbox" style="width:auto" ${BK.wd[i]?'checked':''} onchange="BK.wd[${i}]=this.checked?1:0">${c}</label>`).join('')}</div><button class="btn" style="width:100%;margin-top:10px" onclick="doBulk()">変更</button>`;$('sheet').classList.add('on')}
+function bkW(a){BK.tm=fmtTm($('bkA').value,$('bkB').value);BK.wd=a;openBulk()}
+function doBulk(){BK.tm=fmtTm($('bkA').value,$('bkB').value);const[y,m]=calYM.split('-').map(Number),n=new Date(y,m,0).getDate();const ds=[];for(let i=1;i<=n;i++)if(BK.wd[new Date(y,m-1,i).getDay()])ds.push(calYM+'-'+pad(i));
+ if(!ds.length||!confirm(`${m}月の${ds.length}日分を変更する？`))return;
+ for(const d of ds){const pr=D.sched[d]||{};const r={t:BK.t};if(BK.tm)r.tm=BK.tm;const h=+BK.h||0;if(h)r.h=h;if(isS(BK.t))r.pay=Math.round(h*D.set.rate);else if(BK.pay!=='')r.pay=+String(BK.pay).replace(/[^\d-]/g,'')||0;if(pr.note)r.note=pr.note;if(pr.x)r.x=pr.x;if(!r.t&&!r.x&&!r.note&&!r.tm)delete D.sched[d];else D.sched[d]=r}
+ save();closeSheet();render()}
 function calShot(){const go=()=>html2canvas($('calbox'),{scale:2,backgroundColor:'#fff',logging:false}).then(cv=>cv.toBlob(async b=>{const name='calendar_'+calYM+'.png';const f=new File([b],name,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e.name==='AbortError')return}const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)},'image/png'));
  if(window.html2canvas)return go();const sc=document.createElement('script');sc.src='../lib/html2canvas.min.js';sc.onload=go;document.head.appendChild(sc)}
 function monthTable(yy){const y=yy||+calYM.slice(0,4);const R=[];for(let m=1;m<=12;m++){const ym=y+'-'+pad(m),w=workMonth(ym);const lg=(D.ledger[ym]||[]).filter(x=>x.imp&&x.i2==='給料収入').reduce((a,x)=>a+(+x.inc||0)-(+x.exp||0),0);if(!(w.sp+w.op)&&lg){w.sp=lg}R.push({m,ym,w,gd:w.sd+w.od,gh:w.sh+w.oh,gp:w.sp+w.op,td:w.sd+w.od+w.kd,th:w.sh+w.oh+w.kh,ti:w.sp+w.op+w.ky})}
@@ -254,7 +274,7 @@ function fuyoInfo(){const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;let earned
  const lim=+D.set.fuyo||0,left=lim-earned,autoM=12-mo+1,months=+D.set.fuyoMonths>0?+D.set.fuyoMonths:autoM,per=Math.max(0,Math.floor(left/months)),hours=D.set.rate?Math.floor(per/D.set.rate):0,proj=earned+plan;return{y,lim,earned,plan,left,months,autoM,per,hours,proj}}
 function fuyoBlock(F){return`<h2 style="margin-top:14px">${F.y}年 扶養</h2>
  <div class="row"><span>上限</span><input class="num" inputmode="numeric" style="width:130px" value="${D.set.fuyo??''}" onchange="D.set.fuyo=+this.value||0;save();render()"></div>
- <div class="row"><span>今年のスタンド給料</span><b>${yen(F.earned)}</b></div>
+ <div class="row"><span>今年のGS給料</span><b>${yen(F.earned)}</b></div>
  <div class="row"><span>上限まで残り</span><b class="${F.left<0?'neg':''}">${yen(F.left)}</b></div>
  <div class="row"><span>残り月数</span><input class="num" inputmode="numeric" style="width:90px" value="${F.months}" onchange="const v=+this.value;D.set.fuyoMonths=v>0&&v!==fuyoInfo().autoM?v:null;save();render()"></div>
  <div class="row"><span>1ヶ月あたり</span><b>${yen(F.per)}</b></div>
@@ -320,8 +340,8 @@ function vSet(){const s=D.set,F=fuyoInfo();
  <div class="card"><h2>固定費<button class="btn sub" style="padding:5px 10px;font-size:13px" onclick="D.fixed.push({id:uid(),i1:'生活費',i2:'生活固定費',i3:'',exp:0});save();render()">＋</button></h2>
  <table>${D.fixed.map((f,i)=>`<tr><td class="l"><input value="${esc(f.i3)}" onchange="D.fixed[${i}].i3=this.value;save()"></td><td>${inp(f.exp,`D.fixed[${i}].exp=+this.value||0;save()`,100)}</td><td><button class="btn del" style="padding:4px 8px" onclick="D.fixed.splice(${i},1);save();render()">×</button></td></tr>`).join('')}</table></div>
  <div class="card"><h2>給料</h2>
- <div class="row"><span>スタンド時給</span>${inp(s.rate,"D.set.rate=+this.value||0;save()")}</div>
- <div class="row"><span>スタンド標準時間</span>${inp(s.stdH,"D.set.stdH=+this.value||0;save()")}</div>
+ <div class="row"><span>GS時給</span>${inp(s.rate,"D.set.rate=+this.value||0;save()")}</div>
+ <div class="row"><span>GS標準時間</span>${inp(s.stdH,"D.set.stdH=+this.value||0;save()")}</div>
  ${fuyoBlock(F)}</div>
  <div class="card"><h2>目標</h2>
  <div class="row"><span>前年最終残高</span>${inp(s.prevEnd,"D.set.prevEnd=this.value===''?null:+this.value;save()")}</div>
