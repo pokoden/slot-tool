@@ -53,7 +53,7 @@ th.fix{background:#f6f7fa;z-index:2}
 .zl b{display:inline-block;min-width:16px;text-align:center;border:1px solid #444;border-radius:3px;padding:0 2px}
 .zl{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-right:10px}.zl i{width:12px;height:12px;border-radius:3px;display:inline-block}.zleg{margin:6px 0}
 .r1{color:#c62828;font-weight:700}td.r1b{background:#e53935;color:#fff;font-weight:700}.ci{display:inline-block;min-width:22px;line-height:20px;padding:0 2px;border:1.5px solid #111;border-radius:12px;text-align:center}.ci.w{border:3px double #111;line-height:17px}table.tt td,table.tt input.mi{font-size:14px}table.tt td{padding-top:2px;padding-bottom:2px}table.tt input.mi{width:62px;padding:0 3px;height:23px;box-sizing:border-box}table.tt input.mi.s{width:40px}table.tt td.pw{width:58px;min-width:58px;max-width:58px}.r2{color:#d4561c;font-weight:600}
-tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
+#avb tr:not(.asp) td{height:28px;box-sizing:border-box;padding-top:0;padding-bottom:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#avb tr.gh td{height:28px}tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
 tr.gh td{background:#20242c;padding:0;text-align:left}
 .bd{position:sticky;left:0;display:flex;gap:6px;width:calc(100vw - 56px);box-sizing:border-box;padding:1px 6px;font-size:11px;line-height:1.35;color:#e9c46a;font-weight:600;cursor:pointer}
 .bd.st{color:#9fd3ff}.bn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bd.open .bn{white-space:normal}.bc{white-space:nowrap;color:#fff;font-weight:400}
@@ -348,7 +348,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  const col=COLS.concat([{k:'v',get:u=>+u.v,best:'lo'}]).find(c=>c.k===an.so&&c.k!=='mk');const NCOL=COLS.length+2;
  const BI={g:B.g.idx,rb:B.rb.idx,gs:B.gs.idx};
  const cmpF=(a,b)=>{if(!col)return 0;let va=col.get(a),vb=col.get(b);const na=va==null,nb=vb==null;if(na||nb)return na&&nb?0:na?1:-1;if(va===vb)return 0;const d=col.best==='lo'?(va<vb?-1:1):(va>vb?-1:1);return an.rev?-d:d};
- const nat=(a,b)=>String(a.k).localeCompare(String(b.k),'ja',{numeric:true})||(+a.v-+b.v);
+ const nat=(a,b)=>ACOL.compare(String(a.k),String(b.k))||(+a.v-+b.v);
  const SO=NC.stKeys(an.ax);
  // 台番の行と状態順の行は1つにまとめて並べ替える（同順位は台番の行が先）
  const tie=(a,b)=>(b.isT-a.isT)||(a.isT?nat(a,b):(SO.indexOf(a.k)-SO.indexOf(b.k)||(+a.v-+b.v)));
@@ -373,9 +373,10 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
    nRow+=A.length;for(const u of A)if(u.on)nOn++;
    const nTs=A.filter(u=>u.isT).length;
    blocks.push({s,g,vv,st,A:sortA(A),full:sShort(s)+'｜'+[...new Set(o.taiL.map(u=>u.m))].join('／'),cnt:`${vv!=null?vLab(an.ax,vv)+' ':''}${nTs}${an.only?'/'+nT:''}台`})}}
- let body='',shown=0;
- for(const bk of blocks){const part=bk.A;shown+=part.length;
-  body+=band(NCOL,(an.s==='*'?sShort(bk.s)+'｜':'')+mShort(bk.g),bk.full,bk.cnt)+part.map(u=>row(u,bk.s,bk.g,bk.st)).join('')}
+ // 行が多いとき（全店舗・全機種・全部の日）に固まらないよう、見えている前後の行だけ描く（スクロールで入れ替え。全行たどれる）
+ const items=[];let shown=0;
+ for(const bk of blocks){shown+=bk.A.length;items.push({bk,u:null});for(const u of bk.A)items.push({bk,u})}
+ AV={items,nc:NCOL,first:-1,html:it=>it.u?row(it.u,it.bk.s,it.bk.g,it.bk.st):band(NCOL,(an.s==='*'?sShort(it.bk.s)+'｜':'')+mShort(it.bk.g),it.bk.full,it.bk.cnt)};
   const sel=(id,L,v,extra='')=>`<select onchange="an.${id}=this.value;${extra}anaPage()">${L.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const th1=[];const th2=[];
  for(let i=0;i<COLS.length;i++){const c=COLS[i];const cls=`s ${an.so===c.k?'on':''}`;
@@ -390,10 +391,18 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['all','全部']].concat(vals),an.val)}</div>
- ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ ${nRow?`<div class="tw"><table id="avt" style="table-layout:fixed;width:${ACW.reduce((a,b)=>a+b,0)}px"><colgroup>${ACW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr></thead><tbody id="avb"></tbody></table></div>`:'<p class="note">データがないよ</p>'}
  <div class="row"><button class="b sub" onclick="an.so='std';an.rev=0;anaPage()">標準並びに戻す</button></div>
 </div>`;
- const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
+ if(nRow)avPaint(true);const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0);avPaint(false)}}
+const ACOL=new Intl.Collator('ja',{numeric:true});const ACW=[34,92,30,40,44,52,52,52,48,56,40,40,40,40,40,40,64,40,40],ARH=28,ABUF=40;let AV=null;
+function avPaint(force){const tb=$('avb'),tbl=$('avt');if(!AV||!tb||!tbl)return;const n=AV.items.length;
+ const top=tbl.getBoundingClientRect().top+(tbl.tHead?tbl.tHead.offsetHeight:0);const step=ABUF/2;
+ let first=Math.max(0,Math.floor((-top/ARH-ABUF)/step)*step);if(first>n)first=Math.max(0,n-ABUF);
+ if(!force&&first===AV.first)return;AV.first=first;const end=Math.min(n,first+Math.ceil(window.innerHeight/ARH)+2*ABUF+step);
+ const sp=h=>h>0?`<tr class="asp"><td colspan="${AV.nc}" style="height:${h}px;padding:0;border:0"></td></tr>`:'';
+ let h=sp(first*ARH);for(let i=first;i<end;i++)h+=AV.html(AV.items[i]);tb.innerHTML=h+sp((n-end)*ARH)}
+let avSc=0;window.addEventListener('scroll',()=>{if(tab!=='ana'||!AV||avSc)return;avSc=requestAnimationFrame(()=>{avSc=0;avPaint(false)})},{passive:true});
 // 期間は analysis.json（S.an.period）に保存。保存ボタンを押すまで確定しない
 function anPer(){const p=S.an&&S.an.period;if(p&&typeof p==='object')return p;return{from:an.from||'',to:an.to||''}}
 window.anPd=(k,v)=>{const p=Object.assign({},anPer());if(k)p[k]=v;else{p.from='';p.to=''}S.an.period=p;anDirty=true;NRC={};anaPage()};
