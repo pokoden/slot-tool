@@ -259,8 +259,8 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;
    const full=(all?sShort(u.s)+'｜':'')+[...new Set(L.map(r=>r.m))].join('／');
    if(!flat&&!(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t))))))body+=band(NCOL,(all?sShort(u.s)+'｜':'')+mShort(g),full,`${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}`);
-   const gst=u.virt?null:{g:{max:Math.max(0,...L.map(r=>r.g))},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))};
-   cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null))}:mm(vs)}
+   const gst=u.virt?null:{g:{max:Math.max(0,...L.map(r=>r.g)),n:L.length},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))};
+   cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null)),n:L.length}:mm(vs)}
    const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
@@ -293,13 +293,13 @@ window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['
 
 // ===== 色づけ（機種ごとの中で比べる）=====
 const fmtI=v=>v==null||!Number.isFinite(v)?'-':String(Math.round(v));
-const mm=a=>{const f=a.filter(x=>x!=null&&Number.isFinite(x));return f.length?{min:Math.min(...f),max:Math.max(...f)}:{min:0,max:0}};
+const mm=a=>{const f=a.filter(x=>x!=null&&Number.isFinite(x));return f.length?{min:Math.min(...f),max:Math.max(...f),n:a.length}:{min:0,max:0,n:a.length}};
 // 回転：セルの中のオレンジの棒（グループ内の最大に対する割合）
-const barSty=(v,st)=>v==null||!(st.max>0)?'':`background:linear-gradient(90deg,rgba(255,152,0,.5) ${Math.max(0,Math.min(100,v/st.max*100)).toFixed(0)}%,transparent 0)`;
+const barSty=(v,st)=>v==null||!st||!(st.max>0)||(st.n!=null&&st.n<2)?'':`background:linear-gradient(90deg,rgba(255,152,0,.5) ${Math.max(0,Math.min(100,v/st.max*100)).toFixed(0)}%,transparent 0)`;
 // 確率：分母が小さいほど緑、大きいほど赤（薄く）。当たり0回=一番赤
-const tintSty=(d,st)=>{if(d==null)return'';let t;if(!Number.isFinite(d))t=1;else if(st.max===st.min)return'';else t=(d-st.min)/(st.max-st.min);return`background:hsla(${(120*(1-t)).toFixed(0)},75%,55%,.25)`};
+const tintSty=(d,st)=>tintGR(d,st);
 // 確率の緑赤（同じ店舗・機種の中で比べる。分母が小さい=良い=緑、大きい=悪い=赤。真ん中から離れるほど濃く）
-const tintGR=(d,st)=>{if(d==null||!st||st.max===st.min)return'';const t=Number.isFinite(d)?(d-st.min)/(st.max-st.min):1;const a=Math.abs(t-.5)*2;return`background:hsla(${t<.5?120:0},80%,50%,${(.12+.5*a).toFixed(2)})`};
+const tintGR=(d,st)=>{if(d==null||!st||st.max===st.min||(st.n!=null&&st.n<2))return'';const t=Number.isFinite(d)?(d-st.min)/(st.max-st.min):1;const a=Math.abs(t-.5)*2;return`background:hsla(${t<.5?120:0},80%,50%,${(.12+.5*a).toFixed(2)})`};
 // 順位：良い順は1位が緑、悪い順は1位が赤（薄く、順位が下がるほど薄く）
 const rankSty=(v,dir,n)=>{if(!v)return'';const a=.3*Math.max(0,1-(v-1)/Math.max(n,2));return`background:hsla(${dir==='y'?120:0},75%,55%,${a.toFixed(2)})`};
 // ===== 分析 =====
@@ -349,7 +349,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  const SO=NC.stKeys(an.ax);
  // 台番の行と状態順の行は1つにまとめて並べ替える（同順位は台番の行が先）
  const tie=(a,b)=>(b.isT-a.isT)||(a.isT?nat(a,b):(SO.indexOf(a.k)-SO.indexOf(b.k)||(+a.v-+b.v)));
- const sortA=L=>L.sort((a,b)=>col?(cmpF(a,b)||tie(a,b)):(an.rev?-1:1)*tie(a,b));
+ const sortA=L=>L.sort((a,b)=>an.so==='std'?((+a.v-+b.v)||tie(a,b)):col?(cmpF(a,b)||tie(a,b)):(an.rev?-1:1)*tie(a,b));
  const LT=lastTai();let nOn=0,nRow=0;
  const vShort=v=>an.ax==='matsu'?v+'末':an.ax==='hi'?v+'日':'日月火水木金土'[+v];
  const blue=(c,u)=>{if(!c.idx)return false;const[x,m]=c.idx;const v=u[x][m];const t=BI[m];return NC.has(t)&&v!=null&&v>=+t&&(B.by==='both'||B.by===x)};
@@ -365,7 +365,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
    if(!T.length&&!X.length)continue;
    for(const u of T){u.isT=true}for(const u of X){u.isT=false}
    let A=T.concat(X);for(const u of A){const man=MK[[s,g,an.ax,u.v,u.k].join('|')];u.on=man==null?!!u.auto:!!man}
-   const st={};for(const c of COLS)if(c.vis)st[c.k]=mm(A.map(c.get));
+   const st={};for(const c of COLS)if(c.vis){st[c.k]=mm(A.map(c.get));st[c.k].n=T.length}
    const nT=T.length;if(an.only)A=A.filter(u=>u.on);if(!A.length)continue;
    nRow+=A.length;for(const u of A)if(u.on)nOn++;
    const nTs=A.filter(u=>u.isT).length;
@@ -388,6 +388,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['all','全部']].concat(vals),an.val)}</div>
  ${nRow?`<div class="tw"><table><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr>${body}</table></div>`:'<p class="note">データがないよ</p>'}
+ <div class="row"><button class="b sub" onclick="an.so='std';an.rev=0;anaPage()">標準並びに戻す</button></div>
 </div>`;
  const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0)}}
 // 期間は analysis.json（S.an.period）に保存。保存ボタンを押すまで確定しない
@@ -566,14 +567,18 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const zval=t=>{if(!zshow)return'';const v=effV(zu.s,date,t,dayR.get(String(t)));if(zshow==='g')return v.g!=null?String(v.g):'';if(v.g>0){const n=zshow==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null);return n>0?NC.fmtP(v.g/n):''}return''};
  const last=new Map();for(const r of SR){const o=last.get(r.t);if(!o||r.d>=o.d)last.set(r.t,r)}
  const groups=[...new Set([...last.values()].map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));const gi=g=>Math.max(0,groups.indexOf(g));
- window._z={Z,NM,last,rk,date,dataDay,editDay,SR,groups,gi,set,zval};
+ const ZST=new Map();for(const[t,r]of last){const g=NC.groupOf(r.m,set);let o=ZST.get(g);if(!o)ZST.set(g,o=[]);o.push(effV(zu.s,date,String(t),dayR.get(String(t))))}
+ for(const[g,a]of ZST){const D=(v,k)=>v.g>0&&(k==='bb'?v.bb:k==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null))!=null?NC.den(v.g,k==='bb'?v.bb:k==='rb'?v.rb:v.bb+v.rb):null;
+  ZST.set(g,{g:{max:Math.max(0,...a.map(v=>v.g||0)),n:a.length},bb:mm(a.map(v=>D(v,'bb'))),rb:mm(a.map(v=>D(v,'rb'))),gs:mm(a.map(v=>D(v,'gs')))})}
+ const zsty=(t,k)=>{const l=last.get(String(t));if(!l)return'';const st=ZST.get(NC.groupOf(l.m,set));if(!st)return'';const v=effV(zu.s,date,String(t),dayR.get(String(t)));if(k==='g')return barSty(v.g,st.g);const n=k==='bb'?v.bb:k==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null);return v.g>0&&n!=null?tintGR(NC.den(v.g,n),st[k]):''};
+ window._z={Z,NM,last,rk,date,dataDay,editDay,SR,groups,gi,set,zval,zsty};
  let imgSrc=Z.img?(S.zimgNew[Z.img]||S.zimg[Z.img]):null;
  if(Z.img&&!imgSrc&&S.files['nerai/'+Z.img]&&zuLoading!==Z.img){zuLoading=Z.img;const nm=Z.img;(async()=>{try{const b=await gh('git/blobs/'+S.files['nerai/'+nm].sha);if(b.ok)S.zimg[nm]=b64dec((await b.json()).content)}catch(e){}zuLoading=null;if(tab==='zu')zuPage()})()}
  const old=$('zw');const sl=old?old.scrollLeft:0,stp=old?old.scrollTop:0;
  const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
  const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
-  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv">${zval(c.t)}</span>`:''}</div>`}).join('');
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
  <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
@@ -581,9 +586,8 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  <div class="row"><button class="b ${edit?'sub':''}" onclick="zu.mode='view';zuPage()">見る</button><button class="b ${edit?'':'sub'}" onclick="zu.mode='edit';zuPage()">編集</button><span style="flex:1"></span><button class="b sub" onclick="zuZoom(-.5)">－</button><span>${G?zu.zg:zu.z}倍</span><button class="b sub" onclick="zuZoom(.5)">＋</button></div>
  ${G?zGridHtml(G,{NM,last,set,gi,zval,zshow}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
  ${Z.img&&!imgSrc?'<p class="note">図の画像を読み込み中…</p>':''}
- <div class="zleg">${G?'':legend}</div>
- <div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>台番タップで表示</h2><div id="zd"></div></div>
- <div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>名前・表示の意味</h2>${zuGloss()}</div>
+ <h2 style="margin-top:10px">台番タップで表示</h2><div class="card" style="box-shadow:none;border:1px solid #ddd"><div id="zd"></div></div>
+ <div class="card" style="box-shadow:none;border:1px solid #ddd"><div class="zleg">${zLegendGrid({last,set})}</div></div>
  ${edit&&G?zGridEdit(G,groups):''}
  ${edit&&!G?`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ 編集</h2>
  <div class="row"><button class="b sub" onclick="zgMake()">マス目の図にする</button></div>
@@ -611,7 +615,7 @@ function zuSelPanels(){const d=$('zd');if(!d||!window._z)return;const{NM,last,rk
  d.innerHTML=`<div><h2>${esc(t)}番台　<small>${l?esc(l.m):'データなし'}</small></h2>
  ${x?`<div class="kv"><span>狙い順</span><b${x.rank===1?' style="color:#c62828"':''}>${x.rank?x.rank+'位':'-'}</b><span>狙い印</span><b>${x.mark||'なし'}</b><span>点数</span><b>${x.score.toFixed(1)}点</b></div>`:''}
  <p class="note" style="margin-top:8px">当日データ（${esc(date)}）</p>
- ${row.g!=null||row.bb!=null||row.rb!=null?`<div class="kv"><span>回転</span><b>${row.g!=null?row.g.toLocaleString():'-'}</b><span>BB / RB</span><b>${row.bb!=null?row.bb:'-'} / ${row.rb!=null?row.rb:'-'}</b><span>BB確率</span><b>${row.g>0&&row.bb!=null?P(row.g,row.bb):'-'}</b><span>RB確率</span><b>${row.g>0&&row.rb!=null?P(row.g,row.rb):'-'}</b><span>合算</span><b>${row.g>0&&row.bb!=null&&row.rb!=null?P(row.g,row.bb+row.rb):'-'}</b></div>`:'<p class="note">データなし</p>'}
+ ${row.g!=null||row.bb!=null||row.rb!=null?`<div class="kv"><span>回転</span><b style="${_z.zsty(t,'g')}">${row.g!=null?row.g.toLocaleString():'-'}</b><span>BB / RB</span><b>${row.bb!=null?row.bb:'-'} / ${row.rb!=null?row.rb:'-'}</b><span>BB確率</span><b style="${_z.zsty(t,'bb')}">${row.g>0&&row.bb!=null?P(row.g,row.bb):'-'}</b><span>RB確率</span><b style="${_z.zsty(t,'rb')}">${row.g>0&&row.rb!=null?P(row.g,row.rb):'-'}</b><span>合算</span><b style="${_z.zsty(t,'gs')}">${row.g>0&&row.bb!=null&&row.rb!=null?P(row.g,row.bb+row.rb):'-'}</b></div>`:'<p class="note">データなし</p>'}
  ${x?`<p class="note" style="margin-top:8px">状態順（良い順／悪い順）</p><div class="tw"><table><tr><th class="l">期間</th>${NC.MET.map(m=>`<th>${m[1]}</th>`).join('')}</tr>${NC.WIN.map(w=>`<tr><td class="l">${w[1]}</td>${NC.MET.map(m=>`<td>${cell(w[0],m[0])}</td>`).join('')}</tr>`).join('')}</table></div>`:''}</div>`}
 function zuGloss(){const x=window._z;const ab=x?(()=>{const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span>${esc(a)}</span><b style="text-align:left">${esc(g)}</b>`).join('')})():'';
  const mk=NC.MARKS.map(m=>`<span><span class="g${MKZ[m]||''}" style="display:inline-flex;width:20px;height:18px">${m}</span></span><b style="text-align:left">狙い印 ${m}</b>`).join('');
@@ -633,9 +637,8 @@ function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=0;let html='';const set=x.s
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
   const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
-  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
- return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*2.4:c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>
- <div class="zleg">${zLegendGrid(x)}</div>`}
+  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
+ return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*2.4:c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
  return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
 window.zuTap=t=>{zu.sel=zu.sel===t?null:t;zuPage()};
@@ -750,7 +753,7 @@ ${kenCal()}
 <p class="note">状態の期間</p>${chip('sw',NC.WIN.map(w=>[w[0],w[1]]))}
 <p class="note">状態の指標</p>${chip('sm',[['g','回転'],['gs','合算']])}
 <p class="note">表示</p><div class="chips">${[['t','状態別無し台番別のみ'],['s','状態別のみ台番別無し']].map(([k,x])=>`<button class="${kn.vw===k?'on':''}" onclick="kn.vw=kn.vw==='${k}'?'':'${k}';kenPage()">${x}</button>`).join('')}</div>
-<p class="note">店舗機種単位</p><div class="chips"><button class="${kn.ag?'on':''}" onclick="kn.ag=kn.ag?0:1;kenPage()">店舗機種全体数値のみ</button></div>
+<p class="note">店舗機種単位</p><div class="chips"><button class="${kn.ag?'on':''}" onclick="kn.ag=kn.ag?0:1;kenPage()">店舗機種合計数値のみ</button></div>
 <div class="row"><label>並び ${sel('so',(kn.so==='def'||kn.so==='t'?[[kn.so,'']]:[]).concat([['d-','日付が新しい順'],['d+','日付が古い順'],['g-','回転が多い順'],['g+','回転が少ない順'],['s+','合算が良い順'],['s-','合算が悪い順']]),kn.so)}</label><button class="b sub" onclick="knSo('def')">標準の並びに戻す</button></div></div>
 <div id="kres"></div>`;kenRes()}
 // 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える
@@ -777,9 +780,9 @@ ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th
 <tr class="sum"><td class="l">平均</td><td></td><td>${t.n?Math.round(t.g/t.n).toLocaleString():''}</td><td>${t.n?(t.bb/t.n).toFixed(1):''}</td><td>${t.n?(t.rb/t.n).toFixed(1):''}</td></tr></table></div>
 ${kn.ag?knAgg(out,set):`<div class="tw" style="margin-top:8px"><table id="kvt" style="table-layout:fixed;width:${cw.reduce((a,b)=>a+b,0)}px"><colgroup>${cw.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix s ${kn.so==='t'?'on':''}" onclick="knSo('t')">台番</th><th class="l s ${kn.so[0]==='d'?'on':''}" onclick="knSo('d')">月日</th><th class="l s ${kn.so==='def'?'on':''}" onclick="knSo('def')">機種</th><th class="s ${kn.so[0]==='g'?'on':''}" onclick="knSo('g')">回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th class="s ${kn.so[0]==='s'?'on':''}" onclick="knSo('s')">合算</th><th class="s ${kn.ok?'on':''}" onclick="knOk()">○</th><th class="l">店舗</th></tr></thead><tbody id="kvb"></tbody></table></div>`}`:'<p class="note">条件に合うデータがないよ</p>'}</div>`;
  if(out.length&&!kn.ag)knPaint(true)}
-function knAgg(out,set){const P=(g,n)=>NC.fmtP(NC.den(g,n));const M=new Map();for(const x of out){if(x.k)continue;const r=x.r;const g=NC.groupOf(r.m,set);const k=r.s+'|'+g;let a=M.get(k);if(!a)M.set(k,a={s:r.s,g,n:0,G:0,bb:0,rb:0});a.n++;a.G+=r.g;a.bb+=r.bb;a.rb+=r.rb}
- const L=[...M.values()].sort((a,b)=>storeCmp(a.s,b.s)||a.g.localeCompare(b.g,'ja'));
- return`<div class="tw" style="margin-top:8px"><table><tr><th class="l fix">機種</th><th class="l">店舗</th><th>件数</th><th>回転</th><th>平均<br>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>${L.map(a=>`<tr><td class="l fix"><span class="mn" title="${esc(a.g)}">${esc(mShort(a.g))}</span></td>${stTd(a.s)}<td>${a.n}</td><td>${a.G.toLocaleString()}</td><td>${Math.round(a.G/a.n).toLocaleString()}</td><td>${a.bb}</td><td>${a.rb}</td><td>${P(a.G,a.bb)}</td><td>${P(a.G,a.rb)}</td><td>${P(a.G,a.bb+a.rb)}</td></tr>`).join('')}</table></div>`}
+function knAgg(out,set){const P=(g,n)=>NC.fmtP(NC.den(g,n));const M=new Map();for(const x of out){if(x.k)continue;const r=x.r;const g=NC.groupOf(r.m,set);const k=r.s+'|'+g+'|'+r.d;let a=M.get(k);if(!a)M.set(k,a={s:r.s,g,d:r.d,n:0,G:0,bb:0,rb:0});a.n++;a.G+=r.g;a.bb+=r.bb;a.rb+=r.rb}
+ const L=[...M.values()].sort((a,b)=>storeCmp(a.s,b.s)||a.g.localeCompare(b.g,'ja')||(a.d<b.d?1:a.d>b.d?-1:0));
+ return`<div class="tw" style="margin-top:8px"><table><tr><th class="l fix">機種</th><th class="l">月日</th><th class="l">店舗</th><th>件数</th><th>回転</th><th>平均<br>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>${L.map(a=>`<tr><td class="l fix"><span class="mn" title="${esc(a.g)}">${esc(mShort(a.g))}</span></td><td class="l">${a.d.slice(5)}</td>${stTd(a.s)}<td>${a.n}</td><td>${a.G.toLocaleString()}</td><td>${Math.round(a.G/a.n).toLocaleString()}</td><td>${a.bb}</td><td>${a.rb}</td><td>${P(a.G,a.bb)}</td><td>${P(a.G,a.rb)}</td><td>${P(a.G,a.bb+a.rb)}</td></tr>`).join('')}</table></div>`}
 window.knOk=()=>{kn.ok=kn.ok?0:1;kenRes()};
 window.knSo=k=>{kn.so=k==='t'||k==='def'?k:(kn.so===k+'-'?k+'+':k+'-');kenRes()};
 window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kenPage()};
