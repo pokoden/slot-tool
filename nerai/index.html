@@ -77,6 +77,7 @@ details summary{font-size:14px;font-weight:600;padding:4px 0}
 <main id="main"><div class="card">読み込み中…</div></main>
 <script src="core.js?v=22"></script>
 <script src="layouts.js?v=1"></script>
+<script src="check.js?v=1"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -143,10 +144,50 @@ function impPage(){$('main').innerHTML=`
 <div class="row"><input type="file" id="f" accept=".tsv,.csv,.txt,text/csv,text/tab-separated-values,text/plain" multiple></div>
 <textarea id="paste" placeholder="2026/10/26	マルハン青森柏	マイジャグラーV	321	3776	15	8"></textarea>
 <div class="row"><button class="b" onclick="readIn()">読み込んで確認</button></div><div id="pv"></div></div>
-<div class="card"><h2>🗂 保存済みデータ</h2>${dataInfo()}<div class="row"><button class="b sub" onclick="reload()">読み直す</button></div></div>`}
+<div class="card"><h2>🗂 保存済みデータ</h2>${dataInfo()}<div class="row"><button class="b sub" onclick="reload()">読み直す</button></div></div>
+<div class="card" id="ckc"><h2>🔍 データチェック</h2><div class="row"><button class="b" onclick="ckAll()">過去のデータを全部チェック</button></div><div id="ckr"></div></div>
+<div class="card" id="edc"><h2>✏️ データ編集</h2><div id="edf"></div><div id="edr"></div><div id="eds" class="st"></div></div>`;ckPaint();edForm();edList()}
+// ===== データチェック・データ編集 =====
+const CKN={g:'回転なし',p:'確率',m:'機種なし',t:'台番なし'};
+window.ckAll=()=>{$('ckr').innerHTML='<p class="st">チェック中…</p>';setTimeout(()=>{S.chk={all:true,list:NCK.check(S.rows,S.rows)};ckPaint()},30)};
+function ckRun(newRows){const keys=[...new Set(newRows.map(r=>r.d+'|'+r.s))];const set=new Set(newRows.map(r=>r.d+'|'+r.s+'|'+r.t));
+ S.chk={all:false,list:NCK.check(S.rows,S.rows.filter(r=>set.has(r.d+'|'+r.s+'|'+r.t)),keys)}}
+const VR=30;
+function vlist(id,items,head,rowF,cols){const el=$(id);if(!el)return;if(!items.length){el.innerHTML='';return}
+ el.innerHTML=`<div class="tw" style="max-height:60vh;overflow:auto" id="${id}w"><table style="table-layout:fixed;width:${cols.reduce((a,b)=>a+b,0)}px"><colgroup>${cols.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr>${head}</tr></thead><tbody id="${id}b"></tbody></table></div>`;
+ const w=$(id+'w');const paint=()=>{const n=items.length,a=Math.max(0,Math.floor(w.scrollTop/VR)-10),b=Math.min(n,a+Math.ceil((w.clientHeight||600)/VR)+20);
+  $(id+'b').innerHTML=(a?`<tr style="height:${a*VR}px"><td colspan="${cols.length}"></td></tr>`:'')+items.slice(a,b).map((x,i)=>rowF(x,a+i)).join('')+(b<n?`<tr style="height:${(n-b)*VR}px"><td colspan="${cols.length}"></td></tr>`:'')};
+ w.onscroll=paint;paint();return paint}
+const vtd='style="height:30px;padding-top:0;padding-bottom:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"';
+function ckPaint(){const el=$('ckr');if(!el||!S.chk)return;const L=S.chk.list;const c={};for(const x of L)c[x.k]=(c[x.k]||0)+1;
+ el.innerHTML=`<div class="st ${L.length?'ng':'ok'}">${S.chk.all?'全データ':'取り込んだデータ'}：${L.length?L.length.toLocaleString()+'件 '+Object.keys(CKN).filter(k=>c[k]).map(k=>CKN[k]+c[k]).join('・'):'異常なし'}</div><div id="ckl"></div>`;
+ vlist('ckl',L,'<th class="l">日付</th><th class="l">店舗</th><th class="l">機種</th><th>台番</th><th>回転</th><th>BB</th><th>RB</th><th class="l">理由</th><th></th>',
+  (x,i)=>{const r=x.r;return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(r.s)}</td><td class="l" ${vtd}>${esc(r.m)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${r.g??''}</td><td ${vtd}>${r.bb??''}</td><td ${vtd}>${r.rb??''}</td><td class="l ng" ${vtd}>${x.why}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="ckOpen(${i})">開く</button></td></tr>`},[50,100,120,44,52,40,40,120,56])}
+window.ckOpen=i=>{const r=S.chk.list[i].r;S.ed={d:r.d,s:r.s,m:r.k==='m'?'':r.m,t:r.t||''};if(S.chk.list[i].k==='m'||S.chk.list[i].k==='t')S.ed.t='';edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})};
+function edForm(){const E=S.ed||(S.ed={d:'',s:'',m:'',t:''});const st=[...new Set(S.rows.map(r=>r.s))].sort(),ms=[...new Set(S.rows.filter(r=>!E.s||r.s===E.s).map(r=>r.m))].sort();
+ $('edf').innerHTML=`<div class="row"><input type="date" value="${E.d}" onchange="edF('d',this.value)"><select onchange="edF('s',this.value)"><option value="">店舗すべて</option>${st.map(x=>`<option ${x===E.s?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
+<div class="row"><select style="flex:1;min-width:0" onchange="edF('m',this.value)"><option value="">機種すべて</option>${ms.map(x=>`<option ${x===E.m?'selected':''}>${esc(x)}</option>`).join('')}</select><input inputmode="numeric" placeholder="台番" value="${esc(E.t)}" style="width:70px" onchange="edF('t',this.value.trim())"></div>
+<datalist id="edml">${[...new Set(S.rows.map(r=>r.m))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`}
+window.edF=(k,v)=>{S.ed[k]=v;if(k==='s'){edForm()}edList()};
+let ED=[];
+function edList(){const E=S.ed;const el=$('edr');if(!el)return;if(!E.d&&!E.s&&!E.m&&!E.t){ED=[];el.innerHTML='';return}
+ ED=S.rows.filter(r=>(!E.d||r.d===E.d)&&(!E.s||r.s===E.s)&&(!E.m||r.m===E.m)&&(!E.t||String(r.t)===E.t)).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.s<b.s?-1:a.s>b.s?1:String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));
+ el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div id="edl"></div>`;
+ const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':'type="number" inputmode="numeric"'} style="width:${w}px;height:24px;padding:0 3px;box-sizing:border-box" value="${esc(v??'')}" onchange="edSet(${i},'${f}',this.value)">`;
+ vlist('edl',ED,'<th class="l">日付</th><th class="l">店舗</th><th class="l">機種</th><th>台番</th><th>回転</th><th>BB</th><th>RB</th><th></th>',
+  (r,i)=>`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(r.s)}</td><td class="l" ${vtd}>${inp(i,'m',r.m,136)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${inp(i,'g',r.g,60)}</td><td ${vtd}>${inp(i,'bb',r.bb,44)}</td><td ${vtd}>${inp(i,'rb',r.rb,44)}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="edDel(${i})">削除</button></td></tr>`,[50,100,142,44,66,50,50,56])}
+let edT=null,edBusy=false,edAgain=false;
+window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else r[f]=v===''?null:+v;edQueue()};
+window.edDel=i=>{const r=ED[i];if(!r||!confirm(`${r.d} ${r.s} ${r.t} を削除する？`))return;S.rows=S.rows.filter(x=>x!==r);edList();edQueue()};
+function edQueue(){clearTimeout(edT);$('eds').className='st';$('eds').textContent='保存待ち…';edT=setTimeout(edSave,1200)}
+async function edSave(){if(edBusy){edAgain=true;return}edBusy=true;const sv=$('eds');
+ try{const out=allFiles(S.rows);NRC={};const n=await saveFiles(out,'設定狙い編集',t=>{if($('eds'))$('eds').textContent=t});refreshAgg(out);const d=new Date();
+  if($('eds')){$('eds').className='st ok';$('eds').textContent='自動保存したよ（'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'）'}}
+ catch(e){if($('eds')){$('eds').className='st ng';$('eds').textContent=e.message}}
+ edBusy=false;if(edAgain){edAgain=false;edSave()}}
 window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const f of fs)txt+='\n'+await f.text();
  if(!txt.trim()){$('pv').innerHTML='<p class="st ng">データが空だよ</p>';return}
- const set=setObj();const p=NC.parseText(txt,set);const m=NC.merge(S.rows,p.rows,set);S.pending=m;
+ const set=setObj();const p=NC.parseText(txt,set);const m=NC.merge(S.rows,p.rows,set);S.pending=m;S.pendNew=p.rows;
  const days={};for(const r of p.rows){const k=r.d+'｜'+r.s;days[k]=(days[k]||0)+1}
  $('pv').innerHTML=`<div class="st">読めた行：${p.rows.length.toLocaleString()}件\n新しく追加：${m.add.toLocaleString()}件\n重複で削除：${m.dup.toLocaleString()}件\n数字が違うので置き換え：${m.rep.toLocaleString()}件${p.errs.length?`\n<span class="ng">読めなかった行：${p.errs.length}件</span>`:''}</div>
  ${p.errs.length?`<div class="tw"><table><tr><th>行</th><th class="l">理由</th><th class="l">内容</th></tr>${p.errs.slice(0,30).map(e=>`<tr><td>${e.line}</td><td class="l">${e.why}</td><td class="l">${esc(e.text)}</td></tr>`).join('')}</table></div>`:''}
@@ -155,7 +196,7 @@ window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const
  <div class="row"><button class="b" ${m.add+m.rep?'':'disabled'} onclick="doSave()">保存する</button><button class="b sub" onclick="S.pending=null;$('pv').innerHTML=''">やめる</button></div><div id="sv" class="st"></div>`};
 window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document.querySelectorAll('#pv button').forEach(b=>b.disabled=true);
  try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));const out=allFiles(m.rows);
-  NRC={};const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;
+  NRC={};const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;try{ckRun(S.pendNew||[]);ckPaint()}catch(e){}
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新）`;$('paste').value='';$('f').value=''}
  catch(e){sv.className='st ng';sv.textContent=e.message}};
 
