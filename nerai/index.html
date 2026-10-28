@@ -295,11 +295,11 @@ window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['
 const fmtI=v=>v==null||!Number.isFinite(v)?'-':String(Math.round(v));
 const mm=a=>{const f=a.filter(x=>x!=null&&Number.isFinite(x));return f.length?{min:Math.min(...f),max:Math.max(...f),n:a.length}:{min:0,max:0,n:a.length}};
 // 回転：セルの中のオレンジの棒（グループ内の最大に対する割合）
-const barSty=(v,st)=>v==null||!st||!(st.max>0)||(st.n!=null&&st.n<2)?'':`background:linear-gradient(90deg,rgba(255,152,0,.5) ${Math.max(0,Math.min(100,v/st.max*100)).toFixed(0)}%,transparent 0)`;
+const barSty=(v,st)=>'';const barSty0=(v,st)=>v==null||!st||!(st.max>0)||(st.n!=null&&st.n<2)?'':`background:linear-gradient(90deg,rgba(255,152,0,.5) ${Math.max(0,Math.min(100,v/st.max*100)).toFixed(0)}%,transparent 0)`;
 // 確率：分母が小さいほど緑、大きいほど赤（薄く）。当たり0回=一番赤
 const tintSty=(d,st)=>tintGR(d,st);
 // 確率の緑赤（同じ店舗・機種の中で比べる。分母が小さい=良い=緑、大きい=悪い=赤。真ん中から離れるほど濃く）
-const tintGR=(d,st)=>{if(d==null||!st||st.max===st.min||(st.n!=null&&st.n<2))return'';const t=Number.isFinite(d)?(d-st.min)/(st.max-st.min):1;const a=Math.abs(t-.5)*2;return`background:hsla(${t<.5?120:0},80%,50%,${(.12+.5*a).toFixed(2)})`};
+const tintGR=(d,st)=>'';const tintGR0=(d,st)=>{if(d==null||!st||st.max===st.min||(st.n!=null&&st.n<2))return'';const t=Number.isFinite(d)?(d-st.min)/(st.max-st.min):1;const a=Math.abs(t-.5)*2;return`background:hsla(${t<.5?120:0},80%,50%,${(.12+.5*a).toFixed(2)})`};
 // 行の集まりから色の基準（回転の最大・確率の幅）を作る
 const grpSt=L=>({g:{max:Math.max(0,...L.map(r=>r.g||0)),n:L.length},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))});
 const gSty=(r,st,k)=>{if(!st)return'';const y=k==='g'?barSty(r.g,st.g):tintGR(NC.den(r.g,k==='bb'?r.bb:k==='rb'?r.rb:r.bb+r.rb),st[k]);return y?` style="${y}"`:''};
@@ -390,9 +390,9 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
- <div class="row">${sel('val',[['all','全部']].concat(vals),an.val)}</div>
- ${nRow?`<div class="tw"><table id="avt" style="table-layout:fixed;width:${ACW.reduce((a,b)=>a+b,0)}px"><colgroup>${ACW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr></thead><tbody id="avb"></tbody></table></div>`:'<p class="note">データがないよ</p>'}
+ <div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[an.ax]||'全部']].concat(vals),an.val)}</div>
  <div class="row"><button class="b sub" onclick="an.so='std';an.rev=0;anaPage()">標準並びに戻す</button></div>
+ ${nRow?`<div class="tw"><table id="avt" style="table-layout:fixed;width:${ACW.reduce((a,b)=>a+b,0)}px"><colgroup>${ACW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr></thead><tbody id="avb"></tbody></table></div>`:'<p class="note">データがないよ</p>'}
 </div>`;
  if(nRow)avPaint(true);const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0);avPaint(false)}}
 const ACOL=new Intl.Collator('ja',{numeric:true});const ACW=[34,92,30,40,44,52,52,52,48,56,40,40,40,40,40,40,64,40,40],ARH=28,ABUF=40;let AV=null;
@@ -576,7 +576,11 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const L=U?U.L.map(x=>Object.assign({},x,{rank:x.srank})):[];const NM=new Map(L.map(x=>[String(x.t),x]));
  const dayR=new Map(dataDay?SR.filter(r=>r.d===dataDay).map(r=>[String(r.t),r]):[]);
  const zshow=S.an.zuShow||'';
- const zval=t=>{if(!zshow)return'';const v=effV(zu.s,date,t,dayR.get(String(t)));if(zshow==='g')return v.g!=null?String(v.g):'';if(v.g>0){const n=zshow==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null);return n>0?NC.fmtP(v.g/n):''}return''};
+ const zval=t=>{if(!zshow)return'';const v=effV(zu.s,date,t,dayR.get(String(t)));
+  if(zshow==='ix'||zshow==='io'||zshow==='ia'){const l=last.get(String(t))||last.get(t);if(!l||!(v.g>0)||v.bb==null||v.rb==null)return'';const x=NC.rowIdx({m:l.m,g:v.g,bb:v.bb,rb:v.rb},set,kenBase());if(!x)return'';
+   const ok=n=>n!=null&&n>=55;const L=[['回','#ef6c00',x.g],['R','#2e7d32',x.rb],['合','#c62828',x.gs]];
+   if(zshow==='ia')return ok(x.g)&&ok(x.rb)&&ok(x.gs)?'<b style="color:#0b57d0">○</b>':'';
+   return L.map(([c,col,n])=>`<span style="color:${col}">${c}</span>`+(zshow==='ix'?(n==null?'-':`<span${ok(n)?' style="color:#0b57d0"':''}>${n}</span>`):(ok(n)?'<span style="color:#0b57d0">○</span>':'×'))).join(' ')}if(zshow==='g')return v.g!=null?String(v.g):'';if(v.g>0){const n=zshow==='rb'?v.rb:(v.bb!=null&&v.rb!=null?v.bb+v.rb:null);return n>0?NC.fmtP(v.g/n):''}return''};
  const last=new Map();for(const r of SR){const o=last.get(r.t);if(!o||r.d>=o.d)last.set(r.t,r)}
  const groups=[...new Set([...last.values()].map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));const gi=g=>Math.max(0,groups.indexOf(g));
  const ZST=new Map();for(const[t,r]of last){const g=NC.groupOf(r.m,set);let o=ZST.get(g);if(!o)ZST.set(g,o=[]);o.push(effV(zu.s,date,String(t),dayR.get(String(t))))}
@@ -594,7 +598,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
  <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
-<div class="chips" style="margin:6px 0">${[['g','回転'],['rb','RB'],['gs','合算'],['','なし']].map(([k,t])=>`<button class="${zshow===k?'on':''}" onclick="zuVal('${k}')">${t}</button>`).join('')}</div>
+<div class="chips" style="margin:6px 0">${[['g','回転'],['rb','RB'],['gs','合算'],['ix','指数数値'],['io','指数○'],['ia','全指数○'],['','なし']].map(([k,t])=>`<button class="${zshow===k?'on':''}" onclick="zuVal('${k}')">${t}</button>`).join('')}</div>
  <div class="row"><button class="b ${edit?'sub':''}" onclick="zu.mode='view';zuPage()">見る</button><button class="b ${edit?'':'sub'}" onclick="zu.mode='edit';zuPage()">編集</button><span style="flex:1"></span><button class="b sub" onclick="zuZoom(-.5)">－</button><span>${G?zu.zg:zu.z}倍</span><button class="b sub" onclick="zuZoom(.5)">＋</button></div>
  ${G?zGridHtml(G,{NM,last,set,gi,zval,zshow}):`<div id="zw" class="zw"><div id="zb" class="zb" style="width:${zu.z*100}%;${imgSrc?'':'aspect-ratio:4/3;background:repeating-linear-gradient(0deg,#f1f1f1 0 19px,#e4e4e4 19px 20px)'}">${imgSrc?`<img src="${imgSrc}" alt="" draggable="false" style="width:100%;display:block;pointer-events:none">`:''}${cards}</div></div>`}
  ${Z.img&&!imgSrc?'<p class="note">図の画像を読み込み中…</p>':''}
@@ -650,7 +654,7 @@ function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=0;let html='';const set=x.s
   const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
   const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
- return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*2.4:c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
+ return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*(x.zshow==='ix'?6.5:x.zshow==='io'?4.2:2.4):c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
  return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
 window.zuTap=t=>{zu.sel=zu.sel===t?null:t;zuPage()};
