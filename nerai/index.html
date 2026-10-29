@@ -481,6 +481,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
  <div class="card"><h2>🔍 集計と分析</h2>
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:14px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
+ <div class="chips" style="margin:4px 0">${[1,2,3,4,5,6].map(n=>`<button onclick="anPm(${n})">直近${n}ヶ月</button>`).join('')}</div>
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
@@ -499,6 +500,7 @@ function avPaint(force){const tb=$('avb'),tbl=$('avt');if(!AV||!tb||!tbl)return;
 let avSc=0;window.addEventListener('scroll',()=>{if(tab!=='ana'||!AV||avSc)return;avSc=requestAnimationFrame(()=>{avSc=0;avPaint(false)})},{passive:true});
 // 期間は analysis.json（S.an.period）に保存。保存ボタンを押すまで確定しない
 function anPer(){const p=S.an&&S.an.period;if(p&&typeof p==='object')return p;return{from:an.from||'',to:an.to||''}}
+window.anPm=n=>{const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');const t=new Date();const y=new Date(t.getFullYear(),t.getMonth(),t.getDate()-1);const f=new Date(t.getFullYear(),t.getMonth()-n,t.getDate());S.an.period={from:ymd(f),to:ymd(y)};anDirty=true;NRC={};anaPage()};
 window.anPd=(k,v)=>{const p=Object.assign({},anPer());if(k)p[k]=v;else{p.from='';p.to=''}S.an.period=p;anDirty=true;NRC={};anaPage()};
 window.anAx=k=>{an.ax=k;an.val=dVal();an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
