@@ -25,7 +25,54 @@ a{color:#2b6fe8;word-break:break-all}.hidden{display:none}
 .pt td.c{font-weight:bold;min-width:56px}.pt .bd{background:#f6f8fc}.pt button.sm{width:30px;height:32px;padding:0}.pt th.g{background:#fff3d6}.mbtn.ytm{border-color:#d62828}.ytb{color:#d62828;font-weight:bold}.pt td.yt input{border:2px solid #2b6fe8}.pt th.yt,.pt td.yt{background:#e6f0ff}.pt th.grp{background:#dde6f5;font-size:.85em}.bx td input{width:80px}
 .big{font-size:1.15em}
 </style>
-<style>.tob{width:auto;margin:0;padding:6px 10px;font-size:.85em;white-space:nowrap;flex:0 0 auto}.tob.on{background:#d62828}.tob.off{background:#e4e8f0;color:#111}table.nt td,table.nt th{padding:3px 2px}table.nt th{font-size:1em;line-height:1.2}</style></head><body>
+<style>.tob{width:auto;margin:0;padding:6px 10px;font-size:.85em;white-space:nowrap;flex:0 0 auto}.tob.on{background:#d62828}.tob.off{background:#e4e8f0;color:#111}table.nt td,table.nt th{padding:3px 2px}table.nt th{font-size:1em;line-height:1.2}</style><style>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([style*="font-size:1"]):not([style*="font-size:2"]),select:not([style*="font-size:1"]):not([style*="font-size:2"]),textarea:not([style*="font-size:1"]):not([style*="font-size:2"]){font-size:16px}
+#r166top{position:sticky;top:0;z-index:1000;padding-top:env(safe-area-inset-top)}
+#r166bar{display:flex;gap:8px;justify-content:flex-end;padding:4px 6px;background:rgba(255,255,255,.95);border-bottom:1px solid #dde}
+#r166bar button{width:auto;margin:0;padding:6px 14px;font-size:16px;border-radius:8px;border:1px solid #1e5bd6;background:#fff;color:#1e5bd6;font-weight:700}
+#r166bar button:disabled{opacity:.35}
+#r166fail{background:#d62828;color:#fff;font-weight:700;font-size:16px;padding:8px 10px;text-align:center}
+body>#r166fail{position:fixed;left:0;right:0;top:0;z-index:1000;padding-top:max(8px,env(safe-area-inset-top))}
+</style><script>/* r166 共通：全角数字→半角／保存失敗の表示／日ごとの控え／戻る・進む */
+(function(){const W=window,L=localStorage;
+const z2h=s=>s==null?s:String(s).replace(/[０-９．－＋，]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));W.z2h=z2h;
+const fx=e=>{const t=e.target;if(!t||t.tagName!=='INPUT'||(t.type!=='text'&&t.type!=='search'&&t.type!=='tel'))return;const v=t.value;if(!/[０-９．－＋，]/.test(v)||!/^[\s0-9０-９.．\-－+＋,，]*$/.test(v))return;t.value=z2h(v)};
+document.addEventListener('input',fx,true);document.addEventListener('change',fx,true);
+const R={};W.R166=R;
+// ---- 上のバー（戻る・進む）と保存失敗の帯 ----
+let top=null,ban=null,ub=null,rb=null;
+function mkTop(){if(top)return top;top=document.createElement('div');top.id='r166top';document.body.insertBefore(top,document.body.firstChild);return top}
+R.fail=m=>{const f=()=>{if(!ban){ban=document.createElement('div');ban.id='r166fail';(R._bar?mkTop():document.body).appendChild(ban)}ban.textContent='⚠ 保存失敗'+(m?'：'+String(m).replace(/^エラー：/,''):'');ban.style.display=''};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.ok=()=>{if(ban)ban.style.display='none'};
+// ---- 戻る・進む ----
+const U={u:[],r:[],cur:null,k:null,t:null,mute:0,cfg:null};
+const snap=s=>{const f=JSON.stringify(s);return{f,c:U.cfg.cmp?U.cfg.cmp(JSON.parse(f)):f}};
+function paint(){if(!ub)return;const on=U.cfg&&U.cfg.get()!=null;ub.disabled=!(on&&U.u.length);rb.disabled=!(on&&U.r.length)}
+R.urInit=cfg=>{U.cfg=cfg;R._bar=1;const f=()=>{const t=mkTop();const b=document.createElement('div');b.id='r166bar';b.innerHTML='<button type="button" id="r166u">↶戻る</button><button type="button" id="r166r">↷進む</button>';t.insertBefore(b,t.firstChild);ub=b.children[0];rb=b.children[1];ub.onclick=()=>R.undo();rb.onclick=()=>R.redo();if(ban&&ban.parentNode!==t)t.appendChild(ban);paint()};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.urNote=()=>{const c=U.cfg;if(!c||U.mute)return;const s=c.get();if(s==null){paint();return}const k=c.key(),n=snap(s);
+ if(k!==U.k||!U.cur){U.k=k;U.u=[];U.r=[];U.cur=n;clearTimeout(U.t);U.t=null;paint();return}
+ if(n.c===U.cur.c){U.cur=n;return}
+ if(!U.t){U.u.push(U.cur);if(U.u.length>50)U.u.shift()}U.r=[];clearTimeout(U.t);U.t=setTimeout(()=>{U.t=null},800);U.cur=n;paint()};
+function apply(x){U.mute++;try{U.cfg.set(JSON.parse(x.f))}finally{U.mute--}const s=U.cfg.get();U.cur=s!=null?snap(s):x;clearTimeout(U.t);U.t=null;paint()}
+R.undo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.u.length||c.get()==null)return;const p=U.u.pop();U.r.push(U.cur);apply(p)};
+R.redo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.r.length||c.get()==null)return;const p=U.r.pop();U.u.push(U.cur);apply(p)};
+// ---- 日ごとの控え（7日分） ----
+const BK='r166bk_',CF={},MAXONE=700000,BUDGET=2500000;
+const dS=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
+const keys=pg=>{const o=[];for(let i=0;i<L.length;i++){const k=L.key(i);if(k&&k.indexOf(BK+(pg?pg+'_':''))===0)o.push(k)}return o};
+R.bkReg=(pg,cfg)=>{CF[pg]=cfg};
+R.bkDaily=pg=>{try{const c=CF[pg];if(!c)return;const k=BK+pg+'_'+dS();if(L.getItem(k)!=null)return;const d=c.get();if(d==null)return;const s=JSON.stringify(d);if(!s||s.length>MAXONE)return;
+  let all=keys(''),tot=all.reduce((a,x)=>a+(L.getItem(x)||'').length,0);all.sort((a,b)=>a.slice(-10)<b.slice(-10)?-1:1);
+  while(tot+s.length>BUDGET&&all.length){const x=all.shift();tot-=(L.getItem(x)||'').length;L.removeItem(x)}
+  if(tot+s.length>BUDGET)return;try{L.setItem(k,s)}catch(e){return}
+  const mine=keys(pg).sort();while(mine.length>7)L.removeItem(mine.shift())}catch(e){}};
+R.bkHtml=pg=>{const ds=keys(pg).map(k=>k.slice(-10)).sort().reverse();return`<select id="r166bk" onchange="R166.bkPick('${pg}',this)" style="width:auto"><option value="">復元</option>${ds.map(d=>`<option value="${d}">${+d.slice(5,7)}/${+d.slice(8)}</option>`).join('')}</select>`};
+R.bkPick=(pg,el)=>{const d=el.value;el.value='';if(!d)return;const c=CF[pg];if(!c)return;let x=null;try{x=JSON.parse(L.getItem(BK+pg+'_'+d))}catch(e){}if(x==null){alert('控えが読めませんでした');return}
+ if(!confirm(+d.slice(5,7)+'/'+(+d.slice(8))+' の状態に戻しますか？'))return;c.restore(x)};
+// 控えを今のデータに上書きする時：控えの項目は更新時刻を今にして勝たせる。控えに無い項目は消す（消せる物だけ）
+R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.id),out=[],seen=new Set();for(const x of bak||[]){if(!x)continue;seen.add(kf(x));out.push(Object.assign({},x,{updatedAt:now}))}
+ if(del)for(const x of cur||[]){if(!x||seen.has(kf(x))||x.deleted)continue;out.push(Object.assign({},x,{deleted:true,updatedAt:now}))}return out};
+})();
+</script></head><body>
 <div id="app"></div>
 <script>
 // r69：店舗名の変更（古い名前→新しい名前）。読み込み時・同期で取得したデータの両方に適用し、古い名前が戻らないようにする
@@ -46,7 +93,7 @@ verCheck();document.addEventListener('visibilitychange',()=>{if(document.visibil
 // ===== 貯玉管理（パチンコ＝貯玉 / スロット＝貯メダル）。データは各ツールの保存記録（localStorage＋同期データ）から計算 =====
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const N=x=>x===''||x==null?null:(isFinite(+x)?+x:null),Z=x=>N(x)??0;
+const N=x=>{x=z2h(x);return x===''||x==null?null:(isFinite(+x)?+x:null)},Z=x=>N(x)??0;
 const sg=x=>(x>0?'+':x<0?'−':'±')+Math.abs(Math.round(x)).toLocaleString(),pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'';
 const TOK='v2_token',TOB='cd_tob',TOB_YEN=6000,REPO='https://api.github.com/repos/pokoden/slot-data/contents/';
 const KIND={p:{hist:'p1_hist',stores:'p1_stores',file:'pachinko.json',l:'パチンコ（貯玉）',u:'玉'},s:{hist:'v2_hist',stores:'v2_stores',file:'data.json',l:'スロット（貯メダル）',u:'枚'}};
@@ -98,7 +145,7 @@ function calendar(){const D=byDay();if(!calM)calM=todayS().slice(0,7);const [y,m
   it.push(['時間',hTxt(th)],['平均時間',nd&&th>0?(th/nd).toFixed(1)+'時間':'-']);if(mode!=='all')it.push(['平均回転数',nd?Math.round(tg/nd).toLocaleString()+(mode==='p'?'回転':'G'):'-']);if(mode==='all')it.push(['日給',nd&&tn?sg(Math.round(ty/nd))+'円':'-',nd&&tn?ty:null]);it.push(['時給',wh==null?'-':sg(wh)+'円',wh]);
   if(mode==='s'){const pr=pin>0?pout/pin*100:null;it.push(['機械割',pr==null?'-':pr.toFixed(1)+'%',pr==null?null:pr-100])}
   return`<div class="tw" style="margin-bottom:8px"><table id="mtot">${it.map(([l,v,c])=>`<tr><th style="text-align:left;width:45%">${l}</th><td${c==null?'':pc(c)} style="font-weight:bold;text-align:right">${v}</td></tr>`).join('')}</table></div>`})()}
- <table id="cal"><tr>${'日月火水木金土'.split('').map((w,i)=>`<th style="color:${i===0?'#d62828':i===6?'#1e5bd6':''}">${w}</th>`).join('')}</tr><tr>${cells}</tr></table><p class="note">パチンコとスロットの保存済み記録の合計（円）と稼働時間。日をタップすると下のその日の行へ。</p></div>`}
+ <table id="cal"><tr>${'日月火水木金土'.split('').map((w,i)=>`<th style="color:${i===0?'#d62828':i===6?'#1e5bd6':''}">${w}</th>`).join('')}</tr><tr>${cells}</tr></table></div>`}
 function dayList(){const D=[...byDay().values()].filter(o=>pIn(o.date)).sort((a,b)=>a.date<b.date?1:-1);if(!D.length)return'<div class="card"><p class="note">保存データがありません</p></div>';
  const W='日月火水木金土';return D.map(o=>{const [y,m,d]=o.date.split('-').map(Number),w=isFinite(y)?W[new Date(y,m-1,d).getDay()]:'';
   return`<div class="card" id="day_${o.date}"><div style="display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:6px;border-bottom:2px solid #eef2fa"><div><b style="font-size:1.2em">${m}/${d}</b> <span style="color:${w==='日'?'#d62828':w==='土'?'#1e5bd6':'#111'}">（${w}）</span><br><small class="note">${o.list.length}台・${hTxt(o.hours)}</small></div><span style="font-size:1.35em"><b${pc(o.yn?o.yen:null)}>${o.yn?yenTxt(o.yen):'-'}</b></span></div>
@@ -257,7 +304,7 @@ function czForm(){const f=czF,E=czEd?evList().find(x=>x.id===czEd):null,seg=(v,l
  return`<div class="card" id="czForm"><h2>${E?'✎ 引き出しを編集中':'💴 引き出し'}（${esc(czS)}）</h2>
  <div class="seg" style="margin:8px 0">${seg('p','パチンコ（玉）')}${seg('s','スロット（メダル）')}</div>
  <div class="row"><label>日付</label><input type="date" id="cz_dt" style="font-size:16px" value="${esc(f.date||todayS())}" onchange="czSetF('date',this.value)"></div>
- <div class="row"><label>下ろした金額（円）</label><input type="number" inputmode="numeric" id="cz_y" style="font-size:16px" value="${E?E.yen??'':''}"></div><div class="row"><label>残った${f.k==='p'?'玉数':'枚数'}</label><input type="number" inputmode="numeric" id="cz_r" style="font-size:16px" value="${E?E.n:''}"></div><button id="cz_wd" onclick="czSave('wd')">${E?'更新':'引き出しを保存'}</button>
+ <div class="row"><label>下ろした金額（円）</label><input type="text" id="cz_y" style="font-size:16px" value="${E?E.yen??'':''}"></div><div class="row"><label>残った${f.k==='p'?'玉数':'枚数'}</label><input type="text" id="cz_r" style="font-size:16px" value="${E?E.n:''}"></div><button id="cz_wd" onclick="czSave('wd')">${E?'更新':'引き出しを保存'}</button>
  ${E?`<button class="sub" onclick="czCancel()">編集をやめる</button><button class="sub" style="color:#d62828" onclick="czDel()">この記録を消す</button>`:''}
  <p class="note">残った数＝その日の新しい累積値になります。</p></div>`}
 function czRow(st,k,d,showSt){const yp=czYp(k,st),u=czU(k),n0=x=>Math.round(x||0).toLocaleString(),L=k==='p'?'差玉':'差枚',md=x=>{const q=x.split('-');return +q[1]+'月'+(+q[2])+'日'},tb=czTob(k,st),Y=n=>yp?`<small>${sg(n*yp)}円</small>`:'';
@@ -266,7 +313,7 @@ function czRow(st,k,d,showSt){const yp=czYp(k,st),u=czU(k),n0=x=>Math.round(x||0
  return`<div class="card czd" data-k="${k}" data-d="${esc(d.date)}" data-s="${esc(st)}" style="padding:8px 10px;${d.tobd?'border-left:5px solid #d62828':''}"><div style="display:flex;gap:8px;align-items:flex-start">
  <div class="czl" style="flex:1;font-size:.86em;line-height:1.45"><b>${md(d.date)}</b> ${showSt?esc(st)+' ':''}<span class="tag" style="margin:0;${k==='p'?'background:#fff3d6;color:#a35a00':''}">${k==='p'?'パチ':'スロ'}</span><br>投資 ${n0(d.inv)}${u} ${Y(d.inv||0)}<br>回収 ${n0(d.out)}${u} ${Y(d.out||0)}<br>${L} <b${pc(d.net)}>${sg(d.net)}${u}</b> <span${pc(d.net*yp)}>${yp?sg(d.net*yp)+'円':''}</span>${d.list.map(ev).join('')}</div>
  <div class="czr2" style="text-align:right;font-size:.86em;line-height:1.45;min-width:104px">累積<br><b style="font-size:1.1em">${d.end.toLocaleString()}</b>${u}<br><b${pc(d.end*yp)}>${yp?sg(d.end*yp)+'円':'レート未設定'}</b></div></div>
- <div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="number" inputmode="numeric" class="czfix" placeholder="累積を直す" value="${fv}" style="flex:1;width:auto;font-size:16px;padding:6px;${fv!==''?'border:2px solid #2b6fe8':''}" onchange="czFix(${j},this.value)"><button class="tob czt ${d.tobd?'on':'off'}" onclick="czTobD(${j})"${tb?'':' disabled'}>${d.tobd?`🚬 タバコあり −${(+d.tobd.n).toLocaleString()}${u}`:'🚬 タバコ'}</button></div></div>`}
+ <div style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="text" class="czfix" placeholder="累積を直す" value="${fv}" style="flex:1;width:auto;font-size:16px;padding:6px;${fv!==''?'border:2px solid #2b6fe8':''}" onchange="czFix(${j},this.value)"><button class="tob czt ${d.tobd?'on':'off'}" onclick="czTobD(${j})"${tb?'':' disabled'}>${d.tobd?`🚬 タバコあり −${(+d.tobd.n).toLocaleString()}${u}`:'🚬 タバコ'}</button></div></div>`}
 function czDays(st,k){return[...czCalc(st,k).days.values()].sort((a,b)=>a.date<b.date?1:-1).map(d=>czRow(st,k,d,false)).join('')||'<p class="note">まだ記録がありません</p>'}
 function czAllDays(){const L=[];for(const st of czStores())for(const k of['p','s'])for(const d of czCalc(st,k).days.values())L.push([st,k,d]);L.sort((a,b)=>a[2].date<b[2].date?1:a[2].date>b[2].date?-1:a[0].localeCompare(b[0],'ja')||(a[1]<b[1]?-1:1));return L.map(([st,k,d])=>czRow(st,k,d,true)).join('')||'<p class="note">まだ記録がありません</p>'}
 function czDetail(){const st=czS,ks=czK==='all'?['p','s']:[czK];
@@ -299,7 +346,7 @@ function render(){czAutoC=null;const K=KIND[tab],c=calcKind(tab),u=K.u,W=tab==='
  ${pg==='sa'?selBar()+cdFilters()+statSecs():''}${pg==='sd'?selBar()+cdFilters(1)+dailyPage():''}
  <div id="pane_cd" class="${pg==='cd'?'':'hidden'}">${pg==='cd'?czPage():''}</div>
  ${pg==='home'?`<details class="card" id="syncCard"><summary style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>⚙ 同期設定</b><small class="note" id="sy" style="text-align:right">${LS.get(TOK,'')?LS.get('cd_sync_msg',''):'未設定（この端末の記録だけで表示中）'}</small></summary><p class="note">記録はスロット版・パチンコ版の同期データ（GitHub）から読みます。ホーム画面から開いた場合は保存領域が別になるので、ここにもトークンを入れてください（スロット版と同じトークン）。</p>
- <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" style="width:170px" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div><button onclick="saveTok()">保存して同期</button><button class="sub" onclick="syncNow()">今すぐ同期</button>
+ <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" style="width:170px" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div><button onclick="saveTok()">保存して同期</button><button class="sub" onclick="syncNow()">今すぐ同期</button>${R166.bkHtml('chodama')}
  </details>`:''}`}
 // ===== r73：画像・エクセル書き出し（export.js をスロ・パチと共用）=====
 const XPJS='../export.js';
@@ -340,8 +387,9 @@ window.syncNow=async()=>{const tok=LS.get(TOK,'');if(!tok)return;if(busy){again=
   for(let i=0;i<4;i++){const g=await ghGet(tok,'chodama.json'),rt=(g.data&&g.data.tobacco)||[],mg=mergeTob(tobList(),rt),rc=(g.data&&g.data.cash)||[],mc=mergeTob(cashList(),rc),re=(g.data&&g.data.ev)||[],me=mergeTob(evList(),re),ro=(g.data&&g.data.ov)||[],mo=mergeTob(ovList(),ro);LS.set(OV,mo);LS.set(TOB,mg);LS.set(CASH,mc);LS.set(EV,me);let tot=null;try{tot=czTotalYen();LS.set('cd_total_yen',{yen:tot,at:new Date().toISOString()})}catch(e){}const rtot=g.data&&g.data.total;
    if((tot!=null&&(!rtot||rtot.yen!==tot))||srt(mg)!==srt(rt)||srt(mc)!==srt(rc)||srt(me)!==srt(re)||srt(mo)!==srt(ro)){const body={message:'chodama sync '+new Date().toISOString(),content:b64e(JSON.stringify({version:1,tobacco:mg,cash:mc,ev:me,ov:mo,total:tot!=null?{yen:tot,at:new Date().toISOString()}:rtot,updatedAt:new Date().toISOString()}))};if(g.sha)body.sha=g.sha;
     const r=await fetch(REPO+'chodama.json',{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status)}break}
-  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);render()}catch(e){msg('エラー：'+(e.message||e))}finally{busy=false;if(again){again=false;syncSoon()}}};
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});
-render();syncNow();
+  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);R166.ok();R166.bkDaily('chodama');render()}catch(e){msg('エラー：'+(e.message||e));R166.fail(e.message||e)}finally{busy=false;if(again){again=false;syncSoon()}}};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});addEventListener('online',()=>syncNow());addEventListener('focus',()=>syncNow());
+R166.bkReg('chodama',{get:()=>({tob:tobList(),cash:cashList(),ev:evList(),ov:ovList()}),restore:d=>{LS.set(TOB,R166.bump(tobList(),d.tob));LS.set(CASH,R166.bump(cashList(),d.cash));LS.set(EV,R166.bump(evList(),d.ev,null,1));LS.set(OV,R166.bump(ovList(),d.ov));const Y=scrollY;render();scrollTo(0,Y);syncNow()}});
+render();syncNow();if(!LS.get(TOK,''))R166.bkDaily('chodama');
 
 </script></body></html>

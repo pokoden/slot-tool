@@ -52,7 +52,7 @@ th.fix{background:#f6f7fa;z-index:2}
 .g.sel{background:#cfe0ff;z-index:2}.g.mo.sel{background:#39ff14}.g.mt.sel{background:#f5ff00}.g.ms.sel{background:#ff9100}.g.mb.sel{background:#00b0ff}.g.mq.sel{background:#b4b4b4}.gt.sel{outline:2px solid #1f5fd6;outline-offset:-2px}
 .zl b{display:inline-block;min-width:16px;text-align:center;border:1px solid #444;border-radius:3px;padding:0 2px}
 .zl{display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-right:10px}.zl i{width:12px;height:12px;border-radius:3px;display:inline-block}.zleg{margin:6px 0}
-.r1{color:#c62828;font-weight:700}td.r1b{background:#e53935;color:#fff;font-weight:700}.ci{display:inline-block;min-width:22px;line-height:20px;padding:0 2px;border:1.5px solid #111;border-radius:12px;text-align:center}.ci.w{border:3px double #111;line-height:17px}table.tt td,table.tt input.mi{font-size:14px}table.tt td{padding-top:2px;padding-bottom:2px}table.tt input.mi{width:62px;padding:0 3px;height:23px;box-sizing:border-box}table.tt input.mi.s{width:40px}table.tt td.pw{width:58px;min-width:58px;max-width:58px}.r2{color:#d4561c;font-weight:600}
+.r1{color:#c62828;font-weight:700}td.r1b{background:#e53935;color:#fff;font-weight:700}.ci{display:inline-block;min-width:22px;line-height:20px;padding:0 2px;border:1.5px solid #111;border-radius:12px;text-align:center}.ci.w{border:3px double #111;line-height:17px}table.tt td{font-size:14px}table.tt input.mi{font-size:16px}table.tt td{padding-top:2px;padding-bottom:2px}table.tt input.mi{width:62px;padding:0 3px;height:27px;box-sizing:border-box}table.tt input.mi.s{width:46px}table.tt td.pw{width:58px;min-width:58px;max-width:58px}.r2{color:#d4561c;font-weight:600}
 #avb tr:not(.asp) td{height:28px;box-sizing:border-box;padding-top:0;padding-bottom:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#avb tr.gh td{height:28px}tr.sum td{background:#fff8e6;font-weight:600}tr.sum td.fix{background:#fff8e6}
 tr.gh td{background:#20242c;padding:0;text-align:left}
 .bd{position:sticky;left:0;display:flex;gap:6px;width:calc(100vw - 56px);box-sizing:border-box;padding:1px 6px;font-size:11px;line-height:1.35;color:#e9c46a;font-weight:600;cursor:pointer}
@@ -70,7 +70,54 @@ td.kst{color:#0b57d0;font-weight:700;font-size:11px;line-height:12px;white-space
 details summary{font-size:14px;font-weight:600;padding:4px 0}
 .mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:2px solid #555!important}.hl{border-left:3px solid #111!important}th.hc{width:1px}.gr{border-right:2px solid #555!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:nowrap!important;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
 </style>
-</head>
+<style>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([style*="font-size:1"]):not([style*="font-size:2"]),select:not([style*="font-size:1"]):not([style*="font-size:2"]),textarea:not([style*="font-size:1"]):not([style*="font-size:2"]){font-size:16px}
+#r166top{position:sticky;top:0;z-index:1000;padding-top:env(safe-area-inset-top)}
+#r166bar{display:flex;gap:8px;justify-content:flex-end;padding:4px 6px;background:rgba(255,255,255,.95);border-bottom:1px solid #dde}
+#r166bar button{width:auto;margin:0;padding:6px 14px;font-size:16px;border-radius:8px;border:1px solid #1e5bd6;background:#fff;color:#1e5bd6;font-weight:700}
+#r166bar button:disabled{opacity:.35}
+#r166fail{background:#d62828;color:#fff;font-weight:700;font-size:16px;padding:8px 10px;text-align:center}
+body>#r166fail{position:fixed;left:0;right:0;top:0;z-index:1000;padding-top:max(8px,env(safe-area-inset-top))}
+</style><script>/* r166 共通：全角数字→半角／保存失敗の表示／日ごとの控え／戻る・進む */
+(function(){const W=window,L=localStorage;
+const z2h=s=>s==null?s:String(s).replace(/[０-９．－＋，]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));W.z2h=z2h;
+const fx=e=>{const t=e.target;if(!t||t.tagName!=='INPUT'||(t.type!=='text'&&t.type!=='search'&&t.type!=='tel'))return;const v=t.value;if(!/[０-９．－＋，]/.test(v)||!/^[\s0-9０-９.．\-－+＋,，]*$/.test(v))return;t.value=z2h(v)};
+document.addEventListener('input',fx,true);document.addEventListener('change',fx,true);
+const R={};W.R166=R;
+// ---- 上のバー（戻る・進む）と保存失敗の帯 ----
+let top=null,ban=null,ub=null,rb=null;
+function mkTop(){if(top)return top;top=document.createElement('div');top.id='r166top';document.body.insertBefore(top,document.body.firstChild);return top}
+R.fail=m=>{const f=()=>{if(!ban){ban=document.createElement('div');ban.id='r166fail';(R._bar?mkTop():document.body).appendChild(ban)}ban.textContent='⚠ 保存失敗'+(m?'：'+String(m).replace(/^エラー：/,''):'');ban.style.display=''};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.ok=()=>{if(ban)ban.style.display='none'};
+// ---- 戻る・進む ----
+const U={u:[],r:[],cur:null,k:null,t:null,mute:0,cfg:null};
+const snap=s=>{const f=JSON.stringify(s);return{f,c:U.cfg.cmp?U.cfg.cmp(JSON.parse(f)):f}};
+function paint(){if(!ub)return;const on=U.cfg&&U.cfg.get()!=null;ub.disabled=!(on&&U.u.length);rb.disabled=!(on&&U.r.length)}
+R.urInit=cfg=>{U.cfg=cfg;R._bar=1;const f=()=>{const t=mkTop();const b=document.createElement('div');b.id='r166bar';b.innerHTML='<button type="button" id="r166u">↶戻る</button><button type="button" id="r166r">↷進む</button>';t.insertBefore(b,t.firstChild);ub=b.children[0];rb=b.children[1];ub.onclick=()=>R.undo();rb.onclick=()=>R.redo();if(ban&&ban.parentNode!==t)t.appendChild(ban);paint()};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.urNote=()=>{const c=U.cfg;if(!c||U.mute)return;const s=c.get();if(s==null){paint();return}const k=c.key(),n=snap(s);
+ if(k!==U.k||!U.cur){U.k=k;U.u=[];U.r=[];U.cur=n;clearTimeout(U.t);U.t=null;paint();return}
+ if(n.c===U.cur.c){U.cur=n;return}
+ if(!U.t){U.u.push(U.cur);if(U.u.length>50)U.u.shift()}U.r=[];clearTimeout(U.t);U.t=setTimeout(()=>{U.t=null},800);U.cur=n;paint()};
+function apply(x){U.mute++;try{U.cfg.set(JSON.parse(x.f))}finally{U.mute--}const s=U.cfg.get();U.cur=s!=null?snap(s):x;clearTimeout(U.t);U.t=null;paint()}
+R.undo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.u.length||c.get()==null)return;const p=U.u.pop();U.r.push(U.cur);apply(p)};
+R.redo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.r.length||c.get()==null)return;const p=U.r.pop();U.u.push(U.cur);apply(p)};
+// ---- 日ごとの控え（7日分） ----
+const BK='r166bk_',CF={},MAXONE=700000,BUDGET=2500000;
+const dS=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
+const keys=pg=>{const o=[];for(let i=0;i<L.length;i++){const k=L.key(i);if(k&&k.indexOf(BK+(pg?pg+'_':''))===0)o.push(k)}return o};
+R.bkReg=(pg,cfg)=>{CF[pg]=cfg};
+R.bkDaily=pg=>{try{const c=CF[pg];if(!c)return;const k=BK+pg+'_'+dS();if(L.getItem(k)!=null)return;const d=c.get();if(d==null)return;const s=JSON.stringify(d);if(!s||s.length>MAXONE)return;
+  let all=keys(''),tot=all.reduce((a,x)=>a+(L.getItem(x)||'').length,0);all.sort((a,b)=>a.slice(-10)<b.slice(-10)?-1:1);
+  while(tot+s.length>BUDGET&&all.length){const x=all.shift();tot-=(L.getItem(x)||'').length;L.removeItem(x)}
+  if(tot+s.length>BUDGET)return;try{L.setItem(k,s)}catch(e){return}
+  const mine=keys(pg).sort();while(mine.length>7)L.removeItem(mine.shift())}catch(e){}};
+R.bkHtml=pg=>{const ds=keys(pg).map(k=>k.slice(-10)).sort().reverse();return`<select id="r166bk" onchange="R166.bkPick('${pg}',this)" style="width:auto"><option value="">復元</option>${ds.map(d=>`<option value="${d}">${+d.slice(5,7)}/${+d.slice(8)}</option>`).join('')}</select>`};
+R.bkPick=(pg,el)=>{const d=el.value;el.value='';if(!d)return;const c=CF[pg];if(!c)return;let x=null;try{x=JSON.parse(L.getItem(BK+pg+'_'+d))}catch(e){}if(x==null){alert('控えが読めませんでした');return}
+ if(!confirm(+d.slice(5,7)+'/'+(+d.slice(8))+' の状態に戻しますか？'))return;c.restore(x)};
+// 控えを今のデータに上書きする時：控えの項目は更新時刻を今にして勝たせる。控えに無い項目は消す（消せる物だけ）
+R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.id),out=[],seen=new Set();for(const x of bak||[]){if(!x)continue;seen.add(kf(x));out.push(Object.assign({},x,{updatedAt:now}))}
+ if(del)for(const x of cur||[]){if(!x||seen.has(kf(x))||x.deleted)continue;out.push(Object.assign({},x,{deleted:true,updatedAt:now}))}return out};
+})();
+</script></head>
 <body>
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
@@ -114,7 +161,8 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
  S.loaded=true}
 // 変わったファイルだけ保存。読み込みに失敗していたら絶対に保存しない
-async function saveFiles(out,msg,prog){if(!S.loaded)throw new Error('読み込みに失敗してるので保存しないよ（データを守るため）');
+async function saveFiles(out,msg,prog){try{const n=await saveFiles0(out,msg,prog);R166.ok();return n}catch(e){R166.fail(e.message);throw e}}
+async function saveFiles0(out,msg,prog){if(!S.loaded)throw new Error('読み込みに失敗してるので保存しないよ（データを守るため）');
  const keys=Object.keys(out).filter(k=>!S.files[k]||S.files[k].txt!==out[k]).sort((a,b)=>(/agg-|settings/.test(a)?1:0)-(/agg-|settings/.test(b)?1:0)||a.localeCompare(b));
  let n=0;for(const k of keys){prog&&prog(`保存中 ${++n}/${keys.length}（${k.slice(6)}）`);
   const body={message:msg+' '+k,content:b64enc(out[k])};if(S.files[k])body.sha=S.files[k].sha;
@@ -222,10 +270,10 @@ function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  S.edPh=(S.edPh||[]).filter(r=>r._ph);
  ED=(md==='none'?[]:S.rows.filter(r=>md==='pick'?pm(r):edMatch(r,E))).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.s<b.s?-1:a.s>b.s?1:String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));ED=S.edPh.concat(ED);
  el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div class="row"><button class="b" onclick="edSave()">一括保存</button></div><div id="edl"></div>`;
- const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'inputmode="numeric"':'type="number" inputmode="numeric"'} style="width:${w}px;height:24px;padding:0 2px;box-sizing:border-box;font-size:13px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
+ const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'':'type="text"'} style="width:${w}px;height:28px;padding:0 2px;box-sizing:border-box;font-size:16px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
-  (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,46)}</td><td ${vtd}>${inp(i,'g',r.g,60)}</td><td ${vtd}>${inp(i,'bb',r.bb,46)}</td><td ${vtd}>${inp(i,'rb',r.rb,46)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
+  (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,52)}</td><td ${vtd}>${inp(i,'g',r.g,64)}</td><td ${vtd}>${inp(i,'bb',r.bb,48)}</td><td ${vtd}>${inp(i,'rb',r.rb,48)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
 window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else if(f==='t'){if(!v)return;if(S.rows.some(x=>x!==r&&x.d===r.d&&x.s===r.s&&String(x.t)===v)){alert('その台番はもうあるよ');return}r.t=v}else r[f]=v===''?null:+v;
  if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);if(edSv.has(r)){edSv.delete(r);const b=$('edb'+i);if(b)b.textContent='保存'}
  const p=edPs(r);['a','b','c'].forEach((c,j)=>{const e=$('edp'+c+i);if(e)e.textContent=p[j]});const s=$('eds');if(s){s.className='st ng';s.textContent='未保存 '+edDirty.size+'件'}};
@@ -358,7 +406,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
-    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input class="mi${w}" type="number" inputmode="numeric" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
+    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
     const pc=(c,k,n)=>`<td data-c="${c}" class="pw"${sty&&V.g>0&&n!=null?sy2(k,NC.den(V.g,n)):''}>${probT(V.g,n==null?null:n)}</td>`;
     return`<tr data-m="${esc(r.m)}"><td class="fix">${esc(r.t)}</td>${ex}<td>${nm?.rank||''}</td><td class="mkc">${mkH(nm?.mark)}</td><td>${nm?nm.score.toFixed(1):''}</td>${inp('g','')}${inp('bb',' s')}${inp('rb',' s')}${pc('pbb','bb',V.bb)}${pc('prb','rb',V.rb)}${pc('pgs','gs',V.bb!=null&&V.rb!=null?V.bb+V.rb:null)}${idxTds(r.m,V)}${cols.map((c,i)=>nmode?ncell(r,c,i):rkCell(x[c.i],c,L.length,i)).join('')}</tr>`};
    if(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t)))))continue;
@@ -480,7 +528,7 @@ function anaPage(){const R=S.rows,set=setObj();const B=bord();
  const oldScroll=document.querySelector('#main .tw');const sl0=oldScroll?oldScroll.scrollLeft:0;const sy0=window.scrollY;
  $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
  <div class="card"><h2>🔍 集計と分析</h2>
- <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:14px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:14px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
+ <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:16px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:16px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
@@ -513,7 +561,7 @@ window.anMachAdd=()=>{const g=$('bm').value;if(!g)return;const B=bord();if(!B.ma
 window.anMachDel=i=>{delete bord().mach[mkeys()[i]];anDirty=true;NRC={};borPage()};
 window.anMachSet=(i,k,v)=>{bord().mach[mkeys()[i]][k]=v;anDirty=true;NRC={};borPage()};
 function borPage(){const B=bord();const set=setObj();
- const inp=(p,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
+ const inp=(p,w)=>`<input type="text" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
  const groups=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());
  const blk=(t,k,extra)=>`<div class="card"><h2>${t}</h2>${extra||''}
  <div class="row"><label>指数 ${inp(k+'.idx')} 以上</label></div>
@@ -528,7 +576,7 @@ function borPage(){const B=bord();const set=setObj();
  ${blk('🟢 合算確率','gs')}
  <div class="card"><h2>🎰 機種ごとの確率ボーダー</h2>
  <div class="row"><select id="bm"><option value="">機種を選ぶ</option>${groups.filter(g=>!(g in B.mach)).map(g=>`<option value="${esc(g)}">${esc(mShort(g))}</option>`).join('')}</select><button class="b sub" onclick="anMachAdd()">追加</button></div>
- ${mk.map((g,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px"><b style="flex:1 1 100%" title="${esc(g)}">${esc(mShort(g))}</b><label>RB <input type="number" inputmode="decimal" step="any" value="${esc(B.mach[g].rb)}" style="width:70px" onchange="anMachSet(${i},'rb',this.value)"> 以下</label><label>合算 <input type="number" inputmode="decimal" step="any" value="${esc(B.mach[g].gs)}" style="width:70px" onchange="anMachSet(${i},'gs',this.value)"> 以下</label><button class="b sub" onclick="anMachDel(${i})">削除</button></div>`).join('')}</div>
+ ${mk.map((g,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px"><b style="flex:1 1 100%" title="${esc(g)}">${esc(mShort(g))}</b><label>RB <input type="text" step="any" value="${esc(B.mach[g].rb)}" style="width:70px" onchange="anMachSet(${i},'rb',this.value)"> 以下</label><label>合算 <input type="text" step="any" value="${esc(B.mach[g].gs)}" style="width:70px" onchange="anMachSet(${i},'gs',this.value)"> 以下</label><button class="b sub" onclick="anMachDel(${i})">削除</button></div>`).join('')}</div>
  <div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">ボーダーを保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`}
 
 // ===== 狙いリスト =====
@@ -617,7 +665,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="11" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
   +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===10?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,60);
- const num=(path,v,w)=>`<input type="number" inputmode="decimal" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
+ const num=(path,v,w)=>`<input type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
  const stat=asBar();
  const comboTbl=`<table><tr><th class="l">組み合わせ</th><th>印</th></tr>${combos.map(c=>{const cur=NC.comboMark(c,cfg);return`<tr><td class="l">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>COMBO_L[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)" style="padding:4px 2px">${cur?'':'<option value="" disabled selected hidden></option>'}${NC.MARKS.map(k=>`<option value="${k}" ${cur===k?'selected':''}>${k}</option>`).join('')}</select></td></tr>`}).join('')}</table>`;
@@ -633,7 +681,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="row"><label><input type="checkbox" ${cfg.seatMerge?'checked':''} onchange="nrSeatM(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 着席台番被りを考慮する</label></div></div>
 <div class="card"><h2>🏆 狙いリスト</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
- <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:14px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
+ <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
  ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
 </div>`}
 window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nerPage()};
@@ -774,7 +822,7 @@ function zGridEdit(G,groups){const inG=new Set(G.cards.map(k=>String(k[0])));con
  const gs=[...new Set([..._z.last.values()].map(r=>NC.groupOf(r.m,_z.set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  return`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ マス目の編集</h2><div id="ze"></div>
  <details><summary>台番をまとめて追加（縦に並べる）</summary>
- <div class="row"><label>行 <input id="gbr" type="number" value="1" style="width:60px"></label><label>列 <input id="gbc" type="number" value="2" style="width:60px"></label><select id="gbd"><option value="R">右に印</option><option value="L">左に印</option></select></div>
+ <div class="row"><label>行 <input id="gbr" type="text" value="1" style="width:60px"></label><label>列 <input id="gbc" type="text" value="2" style="width:60px"></label><select id="gbd"><option value="R">右に印</option><option value="L">左に印</option></select></div>
  <textarea id="gbt" placeholder="401-420" style="height:60px"></textarea><div class="row"><button class="b" onclick="zgAddBlock()">追加</button></div></details>
  <details><summary>機種の略称</summary>${gs.map(g=>`<div class="row"><span style="flex:1;font-size:13px">${esc(g)}</span><input value="${esc(zAbbr(g))}" maxlength="2" style="width:50px" onchange="zgAbbr('${esc(g).replace(/'/g,'')}',this.value)"></div>`).join('')}</details>
  <p class="note">最新日の履歴にあって、図にない台番：${miss.length?esc(rngs.map(x=>x.s===x.e?x.t:x.s+'-'+x.e).join('、')):'なし'}</p>
@@ -844,7 +892,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  const sel=(id,L,v)=>`<select onchange="kn.${id}=this.value;kenPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${kn[id].includes(k)?'on':''}" onclick="knTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
- const num=(id,ph,w=70)=>`<input type="number" inputmode="decimal" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
+ const num=(id,ph,w=70)=>`<input type="text" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const txt=(id,ph,w=140)=>`<input value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const per=kenPer();
  const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間']].map(([n,t])=>`<button class="${kn.from===per[n][0]&&kn.to===per[n][1]?'on':''}" onclick="knPer('${n}')">${t}</button>`).join('');
@@ -908,7 +956,7 @@ window.knReset=()=>{kn=KN0();kenPage()};
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
  const al=Object.entries(set.alias).map(([a,b])=>a+'='+b).join('\n');
  $('main').innerHTML=`<div class="card"><h2>⚙️ 機種のタイプとまとめ</h2>
- <div class="tw"><table><tr><th class="l fix">機種</th><th>タイプ</th><th class="l">まとめ名</th></tr>${ms.map((m,i)=>`<tr><td class="l fix" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(m)}</td><td><select data-m="${i}" class="ty"><option value="N" ${NC.typeOf(m,set)==='N'?'selected':''}>ノーマル</option><option value="AT" ${NC.typeOf(m,set)==='AT'?'selected':''}>AT</option></select></td><td><input data-m="${i}" class="gr" value="${esc(NC.groupOf(m,set))}" style="width:150px;font-size:14px"></td></tr>`).join('')}</table></div>
+ <div class="tw"><table><tr><th class="l fix">機種</th><th>タイプ</th><th class="l">まとめ名</th></tr>${ms.map((m,i)=>`<tr><td class="l fix" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(m)}</td><td><select data-m="${i}" class="ty"><option value="N" ${NC.typeOf(m,set)==='N'?'selected':''}>ノーマル</option><option value="AT" ${NC.typeOf(m,set)==='AT'?'selected':''}>AT</option></select></td><td><input data-m="${i}" class="gr" value="${esc(NC.groupOf(m,set))}" style="width:150px;font-size:16px"></td></tr>`).join('')}</table></div>
  <h2 style="margin-top:12px">機種名の言いかえ</h2>
  <textarea id="al">${esc(al)}</textarea>
  <div class="row"><button class="b" onclick="saveSet()">保存して計算し直す</button></div><div id="sv" class="st"></div></div>${tokCard()}`;

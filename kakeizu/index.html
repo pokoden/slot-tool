@@ -25,7 +25,54 @@
 #modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px}#modal>div{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:360px}
 #empty{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:#777}
 #sy{position:fixed;bottom:6px;left:8px;font-size:11px;color:#998;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
-@media(max-width:400px){#top h1 span{display:none}}</style></head><body>
+@media(max-width:400px){#top h1 span{display:none}}</style><style>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([style*="font-size:1"]):not([style*="font-size:2"]),select:not([style*="font-size:1"]):not([style*="font-size:2"]),textarea:not([style*="font-size:1"]):not([style*="font-size:2"]){font-size:16px}
+#r166top{position:sticky;top:0;z-index:1000;padding-top:env(safe-area-inset-top)}
+#r166bar{display:flex;gap:8px;justify-content:flex-end;padding:4px 6px;background:rgba(255,255,255,.95);border-bottom:1px solid #dde}
+#r166bar button{width:auto;margin:0;padding:6px 14px;font-size:16px;border-radius:8px;border:1px solid #1e5bd6;background:#fff;color:#1e5bd6;font-weight:700}
+#r166bar button:disabled{opacity:.35}
+#r166fail{background:#d62828;color:#fff;font-weight:700;font-size:16px;padding:8px 10px;text-align:center}
+body>#r166fail{position:fixed;left:0;right:0;top:0;z-index:1000;padding-top:max(8px,env(safe-area-inset-top))}
+</style><script>/* r166 共通：全角数字→半角／保存失敗の表示／日ごとの控え／戻る・進む */
+(function(){const W=window,L=localStorage;
+const z2h=s=>s==null?s:String(s).replace(/[０-９．－＋，]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));W.z2h=z2h;
+const fx=e=>{const t=e.target;if(!t||t.tagName!=='INPUT'||(t.type!=='text'&&t.type!=='search'&&t.type!=='tel'))return;const v=t.value;if(!/[０-９．－＋，]/.test(v)||!/^[\s0-9０-９.．\-－+＋,，]*$/.test(v))return;t.value=z2h(v)};
+document.addEventListener('input',fx,true);document.addEventListener('change',fx,true);
+const R={};W.R166=R;
+// ---- 上のバー（戻る・進む）と保存失敗の帯 ----
+let top=null,ban=null,ub=null,rb=null;
+function mkTop(){if(top)return top;top=document.createElement('div');top.id='r166top';document.body.insertBefore(top,document.body.firstChild);return top}
+R.fail=m=>{const f=()=>{if(!ban){ban=document.createElement('div');ban.id='r166fail';(R._bar?mkTop():document.body).appendChild(ban)}ban.textContent='⚠ 保存失敗'+(m?'：'+String(m).replace(/^エラー：/,''):'');ban.style.display=''};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.ok=()=>{if(ban)ban.style.display='none'};
+// ---- 戻る・進む ----
+const U={u:[],r:[],cur:null,k:null,t:null,mute:0,cfg:null};
+const snap=s=>{const f=JSON.stringify(s);return{f,c:U.cfg.cmp?U.cfg.cmp(JSON.parse(f)):f}};
+function paint(){if(!ub)return;const on=U.cfg&&U.cfg.get()!=null;ub.disabled=!(on&&U.u.length);rb.disabled=!(on&&U.r.length)}
+R.urInit=cfg=>{U.cfg=cfg;R._bar=1;const f=()=>{const t=mkTop();const b=document.createElement('div');b.id='r166bar';b.innerHTML='<button type="button" id="r166u">↶戻る</button><button type="button" id="r166r">↷進む</button>';t.insertBefore(b,t.firstChild);ub=b.children[0];rb=b.children[1];ub.onclick=()=>R.undo();rb.onclick=()=>R.redo();if(ban&&ban.parentNode!==t)t.appendChild(ban);paint()};document.body?f():addEventListener('DOMContentLoaded',f)};
+R.urNote=()=>{const c=U.cfg;if(!c||U.mute)return;const s=c.get();if(s==null){paint();return}const k=c.key(),n=snap(s);
+ if(k!==U.k||!U.cur){U.k=k;U.u=[];U.r=[];U.cur=n;clearTimeout(U.t);U.t=null;paint();return}
+ if(n.c===U.cur.c){U.cur=n;return}
+ if(!U.t){U.u.push(U.cur);if(U.u.length>50)U.u.shift()}U.r=[];clearTimeout(U.t);U.t=setTimeout(()=>{U.t=null},800);U.cur=n;paint()};
+function apply(x){U.mute++;try{U.cfg.set(JSON.parse(x.f))}finally{U.mute--}const s=U.cfg.get();U.cur=s!=null?snap(s):x;clearTimeout(U.t);U.t=null;paint()}
+R.undo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.u.length||c.get()==null)return;const p=U.u.pop();U.r.push(U.cur);apply(p)};
+R.redo=()=>{const c=U.cfg;if(!c)return;c.flush&&c.flush();clearTimeout(U.t);U.t=null;if(!U.r.length||c.get()==null)return;const p=U.r.pop();U.u.push(U.cur);apply(p)};
+// ---- 日ごとの控え（7日分） ----
+const BK='r166bk_',CF={},MAXONE=700000,BUDGET=2500000;
+const dS=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
+const keys=pg=>{const o=[];for(let i=0;i<L.length;i++){const k=L.key(i);if(k&&k.indexOf(BK+(pg?pg+'_':''))===0)o.push(k)}return o};
+R.bkReg=(pg,cfg)=>{CF[pg]=cfg};
+R.bkDaily=pg=>{try{const c=CF[pg];if(!c)return;const k=BK+pg+'_'+dS();if(L.getItem(k)!=null)return;const d=c.get();if(d==null)return;const s=JSON.stringify(d);if(!s||s.length>MAXONE)return;
+  let all=keys(''),tot=all.reduce((a,x)=>a+(L.getItem(x)||'').length,0);all.sort((a,b)=>a.slice(-10)<b.slice(-10)?-1:1);
+  while(tot+s.length>BUDGET&&all.length){const x=all.shift();tot-=(L.getItem(x)||'').length;L.removeItem(x)}
+  if(tot+s.length>BUDGET)return;try{L.setItem(k,s)}catch(e){return}
+  const mine=keys(pg).sort();while(mine.length>7)L.removeItem(mine.shift())}catch(e){}};
+R.bkHtml=pg=>{const ds=keys(pg).map(k=>k.slice(-10)).sort().reverse();return`<select id="r166bk" onchange="R166.bkPick('${pg}',this)" style="width:auto"><option value="">復元</option>${ds.map(d=>`<option value="${d}">${+d.slice(5,7)}/${+d.slice(8)}</option>`).join('')}</select>`};
+R.bkPick=(pg,el)=>{const d=el.value;el.value='';if(!d)return;const c=CF[pg];if(!c)return;let x=null;try{x=JSON.parse(L.getItem(BK+pg+'_'+d))}catch(e){}if(x==null){alert('控えが読めませんでした');return}
+ if(!confirm(+d.slice(5,7)+'/'+(+d.slice(8))+' の状態に戻しますか？'))return;c.restore(x)};
+// 控えを今のデータに上書きする時：控えの項目は更新時刻を今にして勝たせる。控えに無い項目は消す（消せる物だけ）
+R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.id),out=[],seen=new Set();for(const x of bak||[]){if(!x)continue;seen.add(kf(x));out.push(Object.assign({},x,{updatedAt:now}))}
+ if(del)for(const x of cur||[]){if(!x||seen.has(kf(x))||x.deleted)continue;out.push(Object.assign({},x,{deleted:true,updatedAt:now}))}return out};
+})();
+</script></head><body>
 <div id="top"><h1>🌳<span> 家系図</span></h1><input id="q" type="search" placeholder="名前で検索" autocomplete="off"><button class="ib" onclick="openList()">一覧</button><button class="ib" onclick="fitAll()">全体</button><button class="ib" onclick="centerFam()">🏠</button><button class="ib" onclick="openSet()">⚙</button></div>
 <div id="res"></div><div id="wrap"><svg id="svg"><g id="vp"></g></svg></div><div id="empty" style="display:none"></div>
 <div id="sheet"></div><div id="list"></div><div id="modal"></div><div id="sy"></div>
@@ -157,14 +204,14 @@ window.fitAll=()=>{const xs=[...POS.values(),...GH];if(!xs.length)return;const x
 window.openList=()=>{idx();const l=P().sort((a,b)=>String(a.kana||nm(a)).localeCompare(String(b.kana||nm(b)),'ja'));$('list').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:4px 0">名前の一覧（${l.length}人）</h2><button class="ib" onclick="$('list').style.display='none'">閉じる</button></div>`+l.map(p=>`<div class="it" onclick="$('list').style.display='none';jump('${p.id}')"><b>${p.death?'✝ ':''}${esc(nm(p))}</b> <small style="color:#888">${esc(p.kana||'')} ${esc(relOf(p.id))}</small></div>`).join('');$('list').style.display='block'};
 // ---- 詳しい欄 ----
 let cur=null;const lk=id=>byId.has(id)?`<a class="lk" onclick="jump('${id}');openP('${id}')">${esc(nm(byId.get(id)))}</a>`:'';
-function openP(id){idx();const p=byId.get(id);if(!p)return;cur=id;const a=ageAt(p.birth,p.death),r=relOf(id),F=(k,l,t)=>`<div class="f"><label>${l}</label><input type="${t||'text'}" value="${esc(p[k]||'')}" onchange="setF('${k}',this.value)"${t==='tel'?' inputmode="tel"':''}>${p[k]?`<button class="ib" onclick="setF('${k}','',1)">消す</button>`:''}</div>`;
+function openP(id){idx();const p=byId.get(id);if(!p)return;cur=id;const a=ageAt(p.birth,p.death),r=relOf(id),F=(k,l,t)=>`<div class="f"><label>${l}</label><input type="${t||'text'}" value="${esc(p[k]||'')}" onchange="setF('${k}',this.value)">${p[k]?`<button class="ib" onclick="setF('${k}','',1)">消す</button>`:''}</div>`;
  $('sheet').innerHTML=`<div class="hd">${p.photo?`<img class="ph" src="${p.photo}">`:'<div class="ph">👤</div>'}<div style="flex:1;min-width:0"><div style="font-size:1.25em;font-weight:bold">${p.death?'✝ ':''}${esc(nm(p))}</div><div style="color:#888;font-size:.85em">${esc(p.kana||'')}</div>${r?`<span class="rel">${esc(r)}</span>`:''}</div><button class="ib" onclick="closeSheet()">✕</button></div>
  ${conn(p)}
  <div class="f"><label>生まれた順</label><select onchange="setF('bo',this.value,1)"><option value="">未入力（誕生日順）</option>${[1,2,3,4,5,6,7,8,9,10].map(i=>`<option value="${i}"${String(p.bo)===String(i)?' selected':''}>${BO[i]}${p.sex==='f'?'女':p.sex==='m'?'男':'子'}</option>`).join('')}<option value="last"${p.bo==='last'?' selected':''}>末っ子</option><option value="only"${p.bo==='only'?' selected':''}>一人っ子</option><option value="unk"${p.bo==='unk'?' selected':''}>不明</option></select></div>
  <div class="f"><label>続柄</label><input id="f_rel" value="${esc(p.relOv&&p.relOvSelf===D.meta.self?p.relOv:'')}" placeholder="自動：${esc(relAuto(id)||'—')}" onchange="setRel(this.value)">${p.relOv&&p.relOvSelf===D.meta.self?'<button class="ib" onclick="setRel(\'\')">自動に戻す</button>':''}</div>
  ${F('name','名前')}${F('kana','ふりがな')}<div class="f"><label>性別</label><select onchange="setF('sex',this.value,1)"><option value="">不明</option><option value="m"${p.sex==='m'?' selected':''}>男</option><option value="f"${p.sex==='f'?' selected':''}>女</option></select></div>
  ${DF(p,'birth','誕生日')}<div class="age" id="age_birth">${ageTxt(p,'birth')}</div><div class="f"><label>亡くなっている</label><input type="checkbox" id="f_dead" style="flex:none;width:24px;height:24px"${isDead(p)?' checked':''} onchange="setDead(this.checked)"><small style="color:#888">日付が分からなくてもチェックできます</small></div><div id="deathBox" style="${isDead(p)?'':'display:none'}">${DF(p,'death','亡くなった日')}<div class="age" id="age_death">${ageTxt(p,'death')}</div></div>
- ${F('oldName','旧姓')}${F('addr','住所')}${F('tel','電話','tel')}${p.tel?`<div class="age"><a href="tel:${esc(p.tel)}">📞 電話をかける</a></div>`:''}<div class="f"><label>メモ</label><textarea onchange="setF('memo',this.value)" onblur="setF('memo',this.value)">${esc(p.memo||'')}</textarea></div>
+ ${F('oldName','旧姓')}${F('addr','住所')}${F('tel','電話')}${p.tel?`<div class="age"><a href="tel:${esc(p.tel)}">📞 電話をかける</a></div>`:''}<div class="f"><label>メモ</label><textarea onchange="setF('memo',this.value)" onblur="setF('memo',this.value)">${esc(p.memo||'')}</textarea></div>
  <div class="f"><label>写真</label><input type="file" accept="image/*" onchange="setPhoto(this)">${p.photo?'<button class="ib" onclick="setF(\'photo\',\'\',1)">消す</button>':''}</div>
  <div class="btns"><button class="btn" onclick="addRel('parent')">＋ 親</button><button class="btn" onclick="addRel('child')">＋ 子</button><button class="btn" onclick="addRel('spouse')">＋ 配偶者</button><button class="btn" onclick="addRel('sib')">＋ 兄弟姉妹</button>
  <button class="btn p" onclick="setSelf()">${D.meta.self===id?'★ 自分（設定済み）':'☆ この人を「自分」にする'}</button><button class="btn d" onclick="delP()">この人を消す</button></div>`;$('sheet').classList.add('on');drawAdd()}
@@ -196,7 +243,7 @@ window.setF=(k,v,rebuild)=>{const p=byId.get(cur);if(!p)return;if((p[k]||'')===(
 function ageTxt(p,k){const a=ageAt(p.birth,p.death);if(k==='birth')return p.birth&&!isDead(p)&&a!=null?`今 ${a}歳`:'';return p.death&&a!=null?`亡くなったとき ${a}歳`:''}
 function refreshHead(){const p=byId.get(cur);if(!p)return;const h=$('sheet').querySelector('.hd div div');if(h)h.textContent=(isDead(p)?'✝ ':'')+nm(p);for(const k of['birth','death']){const e=$('age_'+k);if(e)e.textContent=ageTxt(p,k)}}
 function DF(p,k,l){const x=pp(p[k])||{},full=pd(p[k]),E=eraOf(p[k+'E']),yy=x.y?(E?x.y-E[1]+1:x.y):'';return`<div class="f"><label>${l}</label><input type="date" id="d_${k}" value="${esc(full?p[k]:'')}" onchange="dateNative('${k}',this.value,'${p.id}')" onblur="dateNative('${k}',this.value,'${p.id}')">${p[k]?`<button class="ib" onclick="dateClear('${k}')">消す</button>`:''}</div>
- <div class="f"><label></label><select id="e_${k}" style="flex:0 0 68px;padding:7px 2px" onchange="dateYMD('${k}',1,'${p.id}')"><option value="">西暦</option>${ERA.map(e=>`<option${E&&E[0]===e[0]?' selected':''}>${e[0]}</option>`).join('')}</select><input type="text" inputmode="numeric" id="y_${k}" placeholder="${E?'年(元年は1)':'年'}" value="${yy===1&&E?'元':yy}" style="flex:1.2" onchange="dateYMD('${k}',0,'${p.id}')"><input type="number" inputmode="numeric" id="m_${k}" placeholder="月" value="${x.m||''}" min="1" max="12" onchange="dateYMD('${k}',0,'${p.id}')"><input type="number" inputmode="numeric" id="dd_${k}" placeholder="日" value="${x.d||''}" min="1" max="31" onchange="dateYMD('${k}',0,'${p.id}')"></div>
+ <div class="f"><label></label><select id="e_${k}" style="flex:0 0 68px;padding:7px 2px" onchange="dateYMD('${k}',1,'${p.id}')"><option value="">西暦</option>${ERA.map(e=>`<option${E&&E[0]===e[0]?' selected':''}>${e[0]}</option>`).join('')}</select><input type="text" id="y_${k}" placeholder="${E?'年(元年は1)':'年'}" value="${yy===1&&E?'元':yy}" style="flex:1.2" onchange="dateYMD('${k}',0,'${p.id}')"><input type="text" id="m_${k}" placeholder="月" value="${x.m||''}" min="1" max="12" onchange="dateYMD('${k}',0,'${p.id}')"><input type="text" id="dd_${k}" placeholder="日" value="${x.d||''}" min="1" max="31" onchange="dateYMD('${k}',0,'${p.id}')"></div>
  <div class="age" id="fd_${k}">${fmtD(p,k)}</div><div class="age" id="er_${k}" style="color:#d62828"></div>`}
 const p2=n=>String(n).padStart(2,'0');
 window.dateNative=(k,v,id)=>{if(id&&id!==cur)return;const x=pd(v);if(x){const e=$('e_'+k);if(e)e.value='';$('y_'+k).value=x.y;$('m_'+k).value=x.m;$('dd_'+k).value=x.d}if(v===''||x){const p=byId.get(cur)||{},had=!!p[k];if(x&&p[k+'E']){p[k+'E']='';touch(p);save()}setF(k,v||'',had!==!!v);dateShow(k)}};
@@ -231,7 +278,7 @@ window.addRel=t=>{const p=byId.get(cur);if(!p)return;
   ask(`${nm(p)} の子`,{extra},o=>{const other=o.ex?byId.get(o.ex):null,mf=x=>x&&x.sex==='f'?'mother':'father';const c={name:o.name,sex:o.sex};if(p.sex==='f'){c.mother=p.id;if(other)c.father=other.id}else{c.father=p.id;if(other)c.mother=other.id}if(p.sex===''&&other&&other.sex==='m'){c.mother=p.id;c.father=other.id}mk(c);save();draw();openP(cur)});return}
  if(t==='sib'){ask(`${nm(p)} の兄弟姉妹`,{},o=>{if(!parents(p).length){const f=mk({name:'不明',sex:'m'});p.father=f.id;touch(p)}mk({name:o.name,sex:o.sex,father:p.father,mother:p.mother});save();draw();openP(cur)})}};
 // ---- 設定・同期（トークンは画面にもログにも出さない） ----
-window.openSet=()=>{const m=$('modal');m.innerHTML=`<div><h3 style="margin:0 0 6px">⚙ 同期</h3><p style="font-size:.82em;color:#666">データは非公開の保存場所（slot-data の kakeizu.json）にだけ保存します。スロット版と同じトークンを使います。</p><div class="f"><label>トークン</label><input id="s_t" type="password" autocomplete="off" placeholder="${hasTok()?'保存済み（変更時のみ）':'github_pat_…'}"></div><div class="f"><label>中心の家</label><input id="s_c" value="${esc(D.meta.center||'傳法')}" placeholder="傳法"></div><p style="font-size:.75em;color:#888;margin:-2px 0 6px">この姓の人がいちばん多い家の枝を真ん中に出し、ほかの家を左右に置きます。</p><p style="font-size:.8em;color:#888" id="s_m">${esc(LS.get('kz_msg',''))}</p><div class="btns"><button class="btn" onclick="$('modal').style.display='none'">閉じる</button><button class="btn p" onclick="saveTok()">保存して同期</button></div></div>`;m.style.display='flex'};
+window.openSet=()=>{const m=$('modal');m.innerHTML=`<div><h3 style="margin:0 0 6px">⚙ 同期</h3><p style="font-size:.82em;color:#666">データは非公開の保存場所（slot-data の kakeizu.json）にだけ保存します。スロット版と同じトークンを使います。</p><div class="f"><label>トークン</label><input id="s_t" type="password" autocomplete="off" placeholder="${hasTok()?'保存済み（変更時のみ）':'github_pat_…'}"></div><div class="f"><label>中心の家</label><input id="s_c" value="${esc(D.meta.center||'傳法')}" placeholder="傳法"></div><p style="font-size:.75em;color:#888;margin:-2px 0 6px">この姓の人がいちばん多い家の枝を真ん中に出し、ほかの家を左右に置きます。</p><p style="font-size:.8em;color:#888" id="s_m">${esc(LS.get('kz_msg',''))}</p><div class="f"><label>復元</label>${R166.bkHtml('kakeizu')}</div><div class="btns"><button class="btn" onclick="$('modal').style.display='none'">閉じる</button><button class="btn p" onclick="saveTok()">保存して同期</button></div></div>`;m.style.display='flex'};
 window.saveTok=()=>{const v=$('s_t').value.trim();if(v)LS.set(TOK,v);const c=$('s_c').value.trim()||'傳法';if(c!==(D.meta.center||'傳法')){D.meta.center=c;D.meta.selfAt=now();LS.set(DK,D)}setTimeout(centerFam,50);$('modal').style.display='none';draw();syncNow()};
 const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
 const H_=t=>({Authorization:'Bearer '+t,Accept:'application/vnd.github+json'});
@@ -245,8 +292,9 @@ async function syncNow(){const t=LS.get(TOK,'');if(!t||LOCAL)return;if(busy){aga
  try{for(let i=0;i<4;i++){const g=await ghGet(t),R=g.data||{version:1,people:[],unions:[],meta:{}};R.meta=R.meta||{};const M={version:1,people:mrg(D.people,R.people),unions:mrg(D.unions,R.unions),meta:String(D.meta.selfAt||'')>=String(R.meta.selfAt||'')?{...R.meta,...D.meta}:{...D.meta,...R.meta}};
   D=M;LS.set(DK,D);if(g.sha&&sig(M)===sig(R))break;const body={message:'kakeizu sync',content:b64e(JSON.stringify({...M,updatedAt:now()}))};if(g.sha)body.sha=g.sha;
   const r=await fetch(REPO,{method:'PUT',headers:{...H_(t),'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status);break}
-  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);draw();if(cur){const ae=document.activeElement;if(ae&&$('sheet').contains(ae)&&ae.tagName!=='BUTTON')refreshHead();else openP(cur)}}catch(e){msg('同期エラー：'+(e.message||e))}finally{busy=false;if(again){again=false;syncSoon()}}}
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});
+  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);R166.ok();R166.bkDaily('kakeizu');draw();if(cur){const ae=document.activeElement;if(ae&&$('sheet').contains(ae)&&ae.tagName!=='BUTTON')refreshHead();else openP(cur)}}catch(e){msg('同期エラー：'+(e.message||e));R166.fail(e.message||e)}finally{busy=false;if(again){again=false;syncSoon()}}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});addEventListener('online',()=>syncNow());addEventListener('focus',()=>syncNow());
+R166.bkReg('kakeizu',{get:()=>D,restore:d=>{const t=now();D={...D,people:R166.bump(D.people,d.people,null,1),unions:R166.bump(D.unions,d.unions,null,1),meta:{...(d.meta||D.meta),selfAt:t}};LS.set(DK,D);$('modal').style.display='none';draw();syncNow()}});
 // トークンが無い端末ではデータを出さない（この端末の保存分も表示しない）
 draw();if(hasTok()){centerFam();syncNow()}
 </script></body></html>
