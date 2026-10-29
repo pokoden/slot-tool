@@ -270,7 +270,7 @@ function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  S.edPh=(S.edPh||[]).filter(r=>r._ph);
  ED=(md==='none'?[]:S.rows.filter(r=>md==='pick'?pm(r):edMatch(r,E))).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.s<b.s?-1:a.s>b.s?1:String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));ED=S.edPh.concat(ED);
  el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div class="row"><button class="b" onclick="edSave()">一括保存</button></div><div id="edl"></div>`;
- const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'':'type="text"'} style="width:${w}px;height:28px;padding:0 2px;box-sizing:border-box;font-size:16px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
+ const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'inputmode="numeric"':'type="text" inputmode="numeric"'} style="width:${w}px;height:28px;padding:0 2px;box-sizing:border-box;font-size:16px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
   (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,52)}</td><td ${vtd}>${inp(i,'g',r.g,64)}</td><td ${vtd}>${inp(i,'bb',r.bb,48)}</td><td ${vtd}>${inp(i,'rb',r.rb,48)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
@@ -406,7 +406,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
-    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
+    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input inputmode="numeric" class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)"></td>`;
     const pc=(c,k,n)=>`<td data-c="${c}" class="pw"${sty&&V.g>0&&n!=null?sy2(k,NC.den(V.g,n)):''}>${probT(V.g,n==null?null:n)}</td>`;
     return`<tr data-m="${esc(r.m)}"><td class="fix">${esc(r.t)}</td>${ex}<td>${nm?.rank||''}</td><td class="mkc">${mkH(nm?.mark)}</td><td>${nm?nm.score.toFixed(1):''}</td>${inp('g','')}${inp('bb',' s')}${inp('rb',' s')}${pc('pbb','bb',V.bb)}${pc('prb','rb',V.rb)}${pc('pgs','gs',V.bb!=null&&V.rb!=null?V.bb+V.rb:null)}${idxTds(r.m,V)}${cols.map((c,i)=>nmode?ncell(r,c,i):rkCell(x[c.i],c,L.length,i)).join('')}</tr>`};
    if(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t)))))continue;
@@ -561,7 +561,7 @@ window.anMachAdd=()=>{const g=$('bm').value;if(!g)return;const B=bord();if(!B.ma
 window.anMachDel=i=>{delete bord().mach[mkeys()[i]];anDirty=true;NRC={};borPage()};
 window.anMachSet=(i,k,v)=>{bord().mach[mkeys()[i]][k]=v;anDirty=true;NRC={};borPage()};
 function borPage(){const B=bord();const set=setObj();
- const inp=(p,w)=>`<input type="text" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
+ const inp=(p,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
  const groups=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());
  const blk=(t,k,extra)=>`<div class="card"><h2>${t}</h2>${extra||''}
  <div class="row"><label>指数 ${inp(k+'.idx')} 以上</label></div>
@@ -576,7 +576,7 @@ function borPage(){const B=bord();const set=setObj();
  ${blk('🟢 合算確率','gs')}
  <div class="card"><h2>🎰 機種ごとの確率ボーダー</h2>
  <div class="row"><select id="bm"><option value="">機種を選ぶ</option>${groups.filter(g=>!(g in B.mach)).map(g=>`<option value="${esc(g)}">${esc(mShort(g))}</option>`).join('')}</select><button class="b sub" onclick="anMachAdd()">追加</button></div>
- ${mk.map((g,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px"><b style="flex:1 1 100%" title="${esc(g)}">${esc(mShort(g))}</b><label>RB <input type="text" step="any" value="${esc(B.mach[g].rb)}" style="width:70px" onchange="anMachSet(${i},'rb',this.value)"> 以下</label><label>合算 <input type="text" step="any" value="${esc(B.mach[g].gs)}" style="width:70px" onchange="anMachSet(${i},'gs',this.value)"> 以下</label><button class="b sub" onclick="anMachDel(${i})">削除</button></div>`).join('')}</div>
+ ${mk.map((g,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px"><b style="flex:1 1 100%" title="${esc(g)}">${esc(mShort(g))}</b><label>RB <input inputmode="decimal" type="text" step="any" value="${esc(B.mach[g].rb)}" style="width:70px" onchange="anMachSet(${i},'rb',this.value)"> 以下</label><label>合算 <input inputmode="decimal" type="text" step="any" value="${esc(B.mach[g].gs)}" style="width:70px" onchange="anMachSet(${i},'gs',this.value)"> 以下</label><button class="b sub" onclick="anMachDel(${i})">削除</button></div>`).join('')}</div>
  <div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">ボーダーを保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>`}
 
 // ===== 狙いリスト =====
@@ -665,7 +665,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="11" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
   +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===10?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,60);
- const num=(path,v,w)=>`<input type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
+ const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
  const stat=asBar();
  const comboTbl=`<table><tr><th class="l">組み合わせ</th><th>印</th></tr>${combos.map(c=>{const cur=NC.comboMark(c,cfg);return`<tr><td class="l">${NC.SEGS.filter((sg,i)=>c[i]==='1').map(sg=>COMBO_L[sg]).join('＋')}</td><td><select onchange="nrSet('combo.${c}',this.value)" style="padding:4px 2px">${cur?'':'<option value="" disabled selected hidden></option>'}${NC.MARKS.map(k=>`<option value="${k}" ${cur===k?'selected':''}>${k}</option>`).join('')}</select></td></tr>`}).join('')}</table>`;
@@ -822,7 +822,7 @@ function zGridEdit(G,groups){const inG=new Set(G.cards.map(k=>String(k[0])));con
  const gs=[...new Set([..._z.last.values()].map(r=>NC.groupOf(r.m,_z.set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  return`<div class="card" style="box-shadow:none;border:1px solid #ddd"><h2>✏️ マス目の編集</h2><div id="ze"></div>
  <details><summary>台番をまとめて追加（縦に並べる）</summary>
- <div class="row"><label>行 <input id="gbr" type="text" value="1" style="width:60px"></label><label>列 <input id="gbc" type="text" value="2" style="width:60px"></label><select id="gbd"><option value="R">右に印</option><option value="L">左に印</option></select></div>
+ <div class="row"><label>行 <input inputmode="decimal" id="gbr" type="text" value="1" style="width:60px"></label><label>列 <input inputmode="decimal" id="gbc" type="text" value="2" style="width:60px"></label><select id="gbd"><option value="R">右に印</option><option value="L">左に印</option></select></div>
  <textarea id="gbt" placeholder="401-420" style="height:60px"></textarea><div class="row"><button class="b" onclick="zgAddBlock()">追加</button></div></details>
  <details><summary>機種の略称</summary>${gs.map(g=>`<div class="row"><span style="flex:1;font-size:13px">${esc(g)}</span><input value="${esc(zAbbr(g))}" maxlength="2" style="width:50px" onchange="zgAbbr('${esc(g).replace(/'/g,'')}',this.value)"></div>`).join('')}</details>
  <p class="note">最新日の履歴にあって、図にない台番：${miss.length?esc(rngs.map(x=>x.s===x.e?x.t:x.s+'-'+x.e).join('、')):'なし'}</p>
@@ -892,7 +892,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
  const sel=(id,L,v)=>`<select onchange="kn.${id}=this.value;kenPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${kn[id].includes(k)?'on':''}" onclick="knTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
- const num=(id,ph,w=70)=>`<input type="text" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
+ const num=(id,ph,w=70)=>`<input inputmode="decimal" type="text" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const txt=(id,ph,w=140)=>`<input value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const per=kenPer();
  const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間']].map(([n,t])=>`<button class="${kn.from===per[n][0]&&kn.to===per[n][1]?'on':''}" onclick="knPer('${n}')">${t}</button>`).join('');
