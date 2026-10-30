@@ -139,7 +139,8 @@ let anDirty=false,zuDirty=false;
 let NRC={};
 const S={an:{v:1,border:{},marks:{}},loaded:false,loadErr:'',files:{},rows:[],set:{groups:{},types:{},alias:null},agg:{},pending:null};
 let KNOWN=null,KNOWN_R=null;const knownM=()=>{if(KNOWN_R!==S.rows){const k=new Set();for(const r of S.rows||[])k.add(r.m);const a=S.set.alias||NC.DEF_ALIAS;for(const x in a)if(a[x])k.add(a[x]);KNOWN=[...k];KNOWN_R=S.rows}return KNOWN};
-const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS,known:knownM()});
+let KST=null,KST_R=null;const knownS=()=>{if(KST_R!==S.rows){KST=[...new Set((S.rows||[]).map(r=>r.s))];KST_R=S.rows}return KST};
+const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS,known:knownM(),stores:knownS()});
 
 async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
 function b64dec(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
@@ -288,13 +289,36 @@ async function edSave(undo){if(edBusy)return;edBusy=true;const sv=$('eds');
 window.edSave=edSave;
 window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const f of fs)txt+='\n'+await f.text();
  if(!txt.trim()){$('pv').innerHTML='<p class="st ng">データが空だよ</p>';return}
- const set=setObj();const p=NC.parseText(txt,set);const m=NC.merge(S.rows,p.rows,set);S.pending=m;S.pendNew=p.rows;
+ const set=setObj();const p=NC.parseText(txt,set);
+ if(p.grok&&(Object.keys(p.unk.s).length||Object.keys(p.unk.m).length||p.q.length)&&!S.grokSkip){S.grokP=p;grokFix(p,set);return}S.grokSkip=0;
+ const m=NC.merge(S.rows,p.rows.filter(r=>!r._u),set);S.pending=m;S.pendNew=p.rows;
  const days={};for(const r of p.rows){const k=r.d+'｜'+r.s;days[k]=(days[k]||0)+1}
  $('pv').innerHTML=`<div class="st">読めた行：${p.rows.length.toLocaleString()}件\n新しく追加：${m.add.toLocaleString()}件\n重複で削除：${m.dup.toLocaleString()}件\n数字が違うので置き換え：${m.rep.toLocaleString()}件${p.errs.length?`\n<span class="ng">読めなかった行：${p.errs.length}件</span>`:''}</div>
  ${p.errs.length?`<div class="tw"><table><tr><th>行</th><th class="l">理由</th><th class="l">内容</th></tr>${p.errs.slice(0,30).map(e=>`<tr><td>${e.line}</td><td class="l">${e.why}</td><td class="l">${esc(e.text)}</td></tr>`).join('')}</table></div>`:''}
  ${m.repl.length?`<div class="tw"><table><tr><th class="l">日付</th><th class="l">店舗</th><th>台番</th><th>前</th><th>後</th></tr>${m.repl.map(x=>`<tr><td class="l">${x.neu.d}</td><td class="l">${esc(x.neu.s)}</td><td>${esc(x.neu.t)}</td><td>${x.old.g}G ${x.old.bb}/${x.old.rb}</td><td>${x.neu.g}G ${x.neu.bb}/${x.neu.rb}</td></tr>`).join('')}</table></div>`:''}
  <div class="tw"><table><tr><th class="l">日付｜店舗</th><th>行数</th></tr>${Object.entries(days).sort().map(([k,n])=>`<tr><td class="l">${esc(k)}</td><td>${n}</td></tr>`).join('')}</table></div>
  <div class="row"><button class="b" ${m.add+m.rep?'':'disabled'} onclick="doSave()">保存する</button><button class="b sub" onclick="S.pending=null;$('pv').innerHTML=''">やめる</button></div><div id="sv" class="st"></div>`};
+
+// ===== Grok TSV：名前が合わない・?がある時の確認 =====
+function grokFix(p,set){const opt=(L,c)=>`<option value="">選ぶ</option>${c.length?`<optgroup label="候補">${c.map(x=>`<option>${esc(x)}</option>`).join('')}</optgroup>`:''}${L.slice().sort((a,b)=>a.localeCompare(b,'ja')).map(x=>`<option>${esc(x)}</option>`).join('')}`;
+ const sel=(k,n,c,L)=>`<tr><td class="l">${esc(n)}</td><td class="l"><select class="gk" data-k="${k}" data-n="${esc(n)}">${opt(L,c)}</select></td></tr>`;
+ const us=Object.entries(p.unk.s),um=Object.entries(p.unk.m);const F=['s','d','m','t','g','bb','rb'],FL={s:'店名',d:'日付',m:'機種名',t:'台番',g:'G',bb:'BB',rb:'RB'};
+ $('pv').innerHTML=`${us.length+um.length?`<div class="tw"><table><tr><th class="l">読んだ名前</th><th class="l">登録名</th></tr>${us.map(([n,c])=>sel('s',n,c,set.stores)).join('')}${um.map(([n,c])=>sel('m',n,c,set.known)).join('')}</table></div>`:''}
+ ${p.q.length?`<div class="st ng">「?」がある行：${p.q.length}件</div><div class="tw"><table><tr><th>行</th>${F.map(f=>`<th>${FL[f]}</th>`).join('')}</tr>${p.q.map((x,i)=>`<tr data-q="${i}"><td>${x.line}</td>${F.map(f=>`<td><input class="gq" data-f="${f}" value="${esc(x.raw[f])}" ${['t','g','bb','rb'].includes(f)?'inputmode="numeric" pattern="[0-9]*" ':''}style="font-size:16px;width:${['s','m','d'].includes(f)?'8em':'4em'}"></td>`).join('')}</tr>`).join('')}</table></div>`:''}
+ <div class="row"><button class="b" onclick="grokGo()">決定して読み直す</button><button class="b sub" onclick="S.grokP=null;$('pv').innerHTML=''">やめる</button></div>`;
+ document.querySelectorAll('#pv select').forEach(e=>e.style.fontSize='16px')}
+window.grokGo=()=>{const p=S.grokP;if(!p)return;const a=Object.assign({},S.set.alias||NC.DEF_ALIAS);let miss=0;
+ document.querySelectorAll('.gk').forEach(e=>{if(!e.value){miss++;return}a[(e.dataset.k==='s'?'店:':'')+NC.nz(e.dataset.n)]=e.value});
+ if(miss&&!confirm(`登録名を選んでない名前が${miss}件あるよ。その行は取り込まないで進める？`))return;
+ S.set=Object.assign({},S.set,{alias:a});
+ // ?を直した行は本文に足す。?が残る行は取り込まない
+ const lines=$('paste').value.split(/\r?\n/);const add=[];
+ document.querySelectorAll('#pv tr[data-q]').forEach(tr=>{const v={};tr.querySelectorAll('.gq').forEach(i=>v[i.dataset.f]=i.value.trim());
+  const ln=p.q[+tr.dataset.q].line;if(Object.values(v).some(x=>!x||/[?？]/.test(x)))return;add.push([ln,ord(v)])});
+ const ix=NC.grokHead(lines.find(x=>x.trim())||'');const ord=r=>{const a=[];for(const k in ix)a[ix[k]]=r[k];return Array.from(a,x=>x==null?'':x).join('\t')};
+ const qset=new Set(p.q.map(x=>x.line));const keep=lines.filter((x,i)=>!qset.has(i+1));
+ if(add.length){$('paste').value=keep.join('\n')+'\n'+add.map(x=>x[1]).join('\n')}else $('paste').value=keep.join('\n');
+ S.grokSkip=1;S.grokP=null;readIn()};
 window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document.querySelectorAll('#pv button').forEach(b=>b.disabled=true);
  try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));const out=allFiles(m.rows);
   NRC={};const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;try{ckRun(S.pendNew||[]);ckPaint()}catch(e){}
@@ -971,10 +995,10 @@ function kbGroups(out,set,base,keyF){const M=new Map();
   const ix=w?{g:ig/w,rb:irb/w,gs:igs/w}:null;
   L.push({k:a.k,n:a.n,aG:a.G/a.n,pb:NC.den(a.G,a.bb),pr:NC.den(a.G,a.rb),ps:NC.den(a.G,a.bb+a.rb),ig:ix&&ix.g,irb:ix&&ix.rb,igs:ix&&ix.gs,ok:a.ok/a.n})}
  return L}
-const KBT=[['y','年別',r=>r.d.slice(0,4),k=>k+'年'],['ymd','年月日別',r=>r.d,k=>k.replace(/-/g,'/')],['m','月別',r=>String(+r.d.slice(5,7)),k=>k+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
+const KBT=[['y','年別',r=>r.d.slice(0,4),k=>k+'年'],['ym','年月別',r=>r.d.slice(0,7),k=>k.replace('-','年')+'月'],['m','月別',r=>String(+r.d.slice(5,7)),k=>k+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
 const KBCOL=[['k','項目'],['n','台数'],['aG','平均G'],['pb','BB確率'],['pr','RB確率'],['ps','合算確率'],['ig','回転指数'],['irb','RB指数'],['igs','合算指数'],['ok','合格率']];
-function kbSort(L,id,ty){const o=kb.so[id];const c=o?o.c:'k',up=o?o.up:(ty==='ymd'?0:1);
- const v=x=>c==='k'?(ty==='ymd'||ty==='y'?x.k:+x.k):x[c];
+function kbSort(L,id,ty){const o=kb.so[id];const c=o?o.c:'k',up=o?o.up:(ty==='ym'?0:1);
+ const v=x=>c==='k'?(ty==='ym'||ty==='y'?x.k:+x.k):x[c];
  L.sort((a,b)=>{const x=v(a),y=v(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return-1;return(x<y?-1:x>y?1:0)*(up?1:-1)});return{c,up}}
 window.kbSoT=(id,c)=>{const o=kb.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';kb.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_kb',kb);const y=scrollY;kbRes();scrollTo(0,y)};
 window.kbTgl=id=>{kbMore.has(id)?kbMore.delete(id):kbMore.add(id);const y=scrollY;kbRes();scrollTo(0,y)};

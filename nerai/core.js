@@ -44,8 +44,47 @@ function dateLast1(q){q=q.slice();while(q.length&&q[q.length-1]==='')q.pop();con
  if(!d)return null;const st=q[L-2];
  for(let i=1;i+3<L-2;i++)if(isNumT(q[i])&&isNumT(q[i+1])&&isNumT(q[i+2])&&isNumT(q[i+3]))return[d,st,q.slice(0,i).join(' '),q[i],q[i+1],q[i+2],q[i+3]];
  return null}
+// ===== Grokの動画読み取りTSV（見出しあり）と名前合わせ =====
+const GH={'店名':'s','店舗':'s','店舗名':'s','日付':'d','年月日':'d','機種名':'m','機種':'m','台番':'t','台番号':'t','BB':'bb','RB':'rb','G':'g','回転':'g','G数':'g','ゲーム数':'g'};
+function grokHead(line){const p=line.split('\t').map(x=>nz(x).toUpperCase().replace(/^Ｇ$/,'G'));if(p.length<7)return null;const ix={};
+ p.forEach((x,i)=>{const k=GH[x]||GH[nz(x)];if(k&&ix[k]==null)ix[k]=i});return['s','d','m','t','g','bb','rb'].every(k=>ix[k]!=null)?ix:null}
+const trunc=s=>/(\.{2,}|…|‥)$/.test(nz(s));
+const cutDots=s=>nz(s).replace(/(\.{2,}|…|‥)+$/,'').trim();
+const stKey=s=>nz(s).replace(/店$/,'').replace(/^マルハン\s*/,'').replace(/\s+/g,'');
+// 店名を登録済みの店に合わせる。返り値 {v:決まった名前|null, c:候補}
+function matchStore(raw,set){const a=set&&set.alias||{},n=nz(raw);const ak=a['店:'+n]||a['店:'+normStore(n)];if(ak)return{v:ak,c:[ak]};
+ const L=set&&set.stores||[];if(L.includes(normStore(n)))return{v:normStore(n),c:[normStore(n)]};const k=stKey(cutDots(n));if(!k)return{v:null,c:[]};
+ let c=L.filter(x=>stKey(x)===k);if(!c.length)c=L.filter(x=>stKey(x).includes(k)||k.includes(stKey(x)));
+ if(c.length>1){const e=c.filter(x=>stKey(x).includes(k));if(e.length)c=e}
+ if(c.length>1){const best=Math.min(...c.map(x=>Math.abs(stKey(x).length-k.length)));const b=c.filter(x=>Math.abs(stKey(x).length-k.length)===best);if(b.length===1&&stKey(b[0])===k)c=b}
+ return{v:c.length===1?c[0]:null,c}}
+// 機種名を登録済みの機種に合わせる（頭のS・全角半角・末尾の…・末尾の記号KK/KDなどを外して比べる）
+function matchMachine(raw,set){const a=set&&set.alias||{},n=nz(raw);if(a[n]!=null&&a[n]!=='')return{v:nz(a[n]),c:[nz(a[n])]};
+ const L=set&&set.known||[];if(L.includes(n))return{v:n,c:[n]};if(FIXN[n])return{v:FIXN[n],c:[FIXN[n]]};
+ const tr=trunc(n),b=mKey(cutDots(n)).replace(/^S/,'');if(!b)return{v:null,c:[]};
+ const forms=[b];const s1=b.replace(/[A-Z]{2}$/,'');if(!tr&&s1!==b&&s1)forms.push(s1);
+ const K=L.map(x=>[x,mKey(x)]);
+ for(const f of forms){const c=K.filter(([,k])=>k===f).map(x=>x[0]);if(c.length)return{v:c.length===1?c[0]:null,c}}
+ if(tr){const c=K.filter(([,k])=>k.startsWith(b)).map(x=>x[0]);return{v:c.length===1?c[0]:null,c}}
+ // 読めた名前が登録名＋余分な記号のとき（VとVIのように、より長く一致する方だけ残す）
+ let c=K.filter(([,k])=>k.length>=3&&b.startsWith(k));if(c.length){const mx=Math.max(...c.map(x=>x[1].length));c=c.filter(x=>x[1].length===mx);
+  const rest=b.slice(mx);if(/^[A-Z]{0,3}$/.test(rest))return{v:c.length===1?c[0][0]:null,c:c.map(x=>x[0])}}
+ c=K.filter(([,k])=>k.startsWith(b)).map(x=>x[0]);return{v:c.length===1?c[0]:null,c}}
+function parseGrok(lines,ix,set){const rows=[],errs=[],q=[],unk={s:{},m:{}};
+ lines.forEach((line,i)=>{if(i===0||!line.trim()||grokHead(line))return;const p=line.split('\t').map(nz);const g=k=>p[ix[k]]==null?'':p[ix[k]];
+  const raw={s:g('s'),d:g('d'),m:g('m'),t:g('t').replace(/番台?$/,'').replace(/^0+(?=\d)/,''),g:g('g'),bb:g('bb'),rb:g('rb')};
+  if(Object.values(raw).some(v=>v.includes('?')||v.includes('？'))){q.push({line:i+1,raw});return}
+  const d=normDate(raw.d);if(!d){errs.push({line:i+1,text:line.slice(0,80),why:'日付が読めない'});return}
+  const ms=matchStore(raw.s,set),mm=matchMachine(raw.m,set);
+  if(!ms.v)unk.s[raw.s]=ms.c;if(!mm.v)unk.m[raw.m]=mm.c;
+  const r={d,s:ms.v||normStore(raw.s),m:mm.v||nz(raw.m),t:raw.t,g:num(raw.g),bb:num(raw.bb),rb:num(raw.rb)};
+  if(!r.s||!r.m||!r.t){errs.push({line:i+1,text:line.slice(0,80),why:'店舗・機種・台番が空'});return}
+  if([r.g,r.bb,r.rb].some(Number.isNaN)){errs.push({line:i+1,text:line.slice(0,80),why:'数字が読めない'});return}
+  if(!ms.v||!mm.v)r._u=1;rows.push(r)});
+ return{rows,errs,q,unk,grok:1}}
 // TSV/CSV → 行。列：日付・店舗・機種・台番・回転・BB・RB
 function parseText(text,set){const rows=[],errs=[];text=String(text||'').replace(/^\uFEFF/,'');
+ {const L=text.split(/\r?\n/);const h=L.findIndex(x=>x.trim());if(h>=0){const ix=grokHead(L[h]);if(ix)return parseGrok(L.slice(h),ix,set)}}
  text.split(/\r?\n/).forEach((line,i)=>{if(!line.trim())return;const sep=line.includes('\t')?'\t':',';let p=splitLine(line,sep).map(nz);
   // 機種名・台番号・G数・BB・RB・(確率)・店舗名・年月日 の並びも読む（日付が最後の列。確率の列は空・なしでもよい）
   {const sh=splitHead(p);if(sh)p=sh}
@@ -240,6 +279,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:baseOf(cfg,mk),score:baseOf(cfg,mk)+sub/10000,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
