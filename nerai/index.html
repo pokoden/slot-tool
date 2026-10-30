@@ -193,7 +193,7 @@ function impPage(){$('main').innerHTML=`
 <div class="card"><h2>📥 データ取り込み</h2>
 <div class="row"><input type="file" id="f" accept=".tsv,.csv,.txt,text/csv,text/tab-separated-values,text/plain" multiple></div>
 <textarea id="paste" placeholder="2026/10/26	マルハン青森柏	マイジャグラーV	321	3776	15	8"></textarea>
-<div class="row"><button class="b" onclick="readIn()">読み込んで確認</button></div><div id="pv"></div></div>
+<div class="row"><button class="b" onclick="readIn()">読み込んで確認</button></div><div id="gpc" style="border:1px solid #ccc;border-radius:8px;padding:8px;margin:6px 0;font-size:15px"><div style="font-weight:600;margin-bottom:4px">スクショ・動画整形指示文</div><div id="gpd" style="display:flex;flex-wrap:wrap;gap:4px"></div><textarea id="gpt" readonly rows="2" style="width:100%;box-sizing:border-box;font-size:16px;height:3.2em;resize:none;margin-top:6px"></textarea><button class="b" id="gpb" onclick="gpCopy()">コピー</button></div><div id="pv"></div></div>
 <div class="card"><h2>🗂 保存済みデータ</h2>${dataInfo()}<div class="row"><button class="b sub" onclick="reload()">読み直す</button></div></div>
 <div class="card" id="ckc"><h2>🔍 データチェック</h2><div class="row"><button class="b" onclick="ckAll()">過去のデータを全部チェック</button></div><div id="ckr"></div></div>
 <div class="card" id="edc"><h2>✏️ データ編集</h2><div id="edf"></div><div id="edr"></div><div id="eds" class="st"></div></div>`;ckPaint();edForm();edList()}
@@ -1062,6 +1062,40 @@ window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups=
 
 window.addEventListener('beforeunload',e=>{if(anDirty||zuDirty){e.preventDefault();e.returnValue=''}});
 reload();
+
+(function(){const T=`添付の動画またはスクショは、パチスロのデータサイトの画面です。画面に出てくる台のデータを読み取って、表にしてください。
+
+【読み取る日】今日は{TODAY}です。店名の横の「当日」「〇日前」の表示を見て、次の日の画面だけ読み取る。それ以外の日の画面は無視する。日付の列には、その画面の日付を書く。
+{DAYS}
+
+【読み取る項目】
+・日付：上の対応表の日付（YYYY-MM-DD）
+・店名：画面左上の店名
+・機種名：画面上部のタイトル。「…」で切れていたら読めたところまで
+・台番：「0451番台」なら451
+・G：「通常中スタート」の数字
+・BB、RB：数字そのまま
+
+【ルール】
+・ART、合成確率は書かない
+・同じ日・同じ機種・同じ台番は1行だけ（スクロールで重なった台は1回）
+・「20円スロット」の台だけ書く。「ライトスロット」など他の区分は書かない
+・読めない数字は推測せず「?」
+・説明や前置き、まとめは一切書かない
+
+【出力形式】
+・タブ区切り（TSV）。カンマは使わない
+・全体を1つのコードブロックに入れて、そのままコピーできるようにする
+・1行目は見出し：日付\t店名\t機種名\t台番\tG\tBB\tRB
+・数字に「,」や単位を付けない
+・長くて1回で出し切れない時は、行の途中で切らずキリのいい行で止めて最後に「続く」とだけ書く。「続き」と言われたら見出しなしで次の行から出す`;
+let sel;try{sel=JSON.parse(localStorage.getItem('gpDays'))}catch(e){}if(!Array.isArray(sel))sel=[1];
+const lb=o=>o?o+'日前':'当日',p2=n=>String(n).padStart(2,'0');
+function render(){const d=document.getElementById('gpd');if(!d)return;d.innerHTML='';for(let o=0;o<7;o++){const b=document.createElement('button');b.textContent=lb(o);const on=sel.includes(o);b.style.cssText='font-size:15px;padding:6px 8px;border-radius:8px;border:1px solid #1f5fd6;'+(on?'background:#1f5fd6;color:#fff':'background:#fff;color:#1f5fd6');b.onclick=()=>{sel=on?sel.filter(x=>x!==o):[...sel,o].sort((a,b)=>a-b);localStorage.setItem('gpDays',JSON.stringify(sel));render()};d.appendChild(b)}
+const n=new Date(),td=n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'日';const days=sel.map(o=>{const x=new Date(n.getFullYear(),n.getMonth(),n.getDate()-o);return '・'+lb(o)+'＝'+x.getFullYear()+'-'+p2(x.getMonth()+1)+'-'+p2(x.getDate())}).join('\n');
+document.getElementById('gpt').value=T.replace('{TODAY}',td).replace('{DAYS}',days)}
+window.gpCopy=async()=>{const t=document.getElementById('gpt'),b=document.getElementById('gpb');render();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(e){}if(!ok){t.focus();t.select();t.setSelectionRange(0,t.value.length);try{ok=document.execCommand('copy')}catch(e){}}if(ok){b.textContent='コピー済';setTimeout(()=>b.textContent='コピー',1500)}};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render()})();
 </script>
 </body>
 </html>
