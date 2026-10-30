@@ -196,7 +196,7 @@ function impPage(){$('main').innerHTML=`
 <div class="row"><button class="b" onclick="readIn()">読み込んで確認</button></div><div id="gpc" style="border:1px solid #ccc;border-radius:8px;padding:8px;margin:6px 0;font-size:15px"><div style="font-weight:600;margin-bottom:4px">スクショ・動画整形指示文</div><div id="gpd" style="display:flex;flex-wrap:wrap;gap:4px"></div><textarea id="gpt" readonly rows="2" style="width:100%;box-sizing:border-box;font-size:16px;height:3.2em;resize:none;margin-top:6px"></textarea><button class="b" id="gpb" onclick="gpCopy()">コピー</button></div><div id="pv"></div></div>
 <div class="card"><h2>🗂 保存済みデータ</h2>${dataInfo()}<div class="row"><button class="b sub" onclick="reload()">読み直す</button></div></div>
 <div class="card" id="ckc"><h2>🔍 データチェック</h2><div class="row"><button class="b" onclick="ckAll()">過去のデータを全部チェック</button></div><div id="ckr"></div></div>
-<div class="card" id="edc"><h2>✏️ データ編集</h2><div id="edf"></div><div id="edr"></div><div id="eds" class="st"></div></div>`;ckPaint();edForm();edList()}
+<div class="card" id="edc"><h2>✏️ データ編集</h2><div id="edf"></div><div id="edr"></div><div id="eds" class="st"></div></div>`;if(window.gpRender)gpRender();ckPaint();edForm();edList()}
 // ===== データチェック・データ編集 =====
 const CKN={g:'回転なし',p:'確率',m:'機種なし',t:'台番なし'};
 const ckKey=x=>{const r=x.r;return[x.k,r.d,r.s,r.t,r.m,r.g??'',r.bb??'',r.rb??''].join('|')};
@@ -1089,9 +1089,9 @@ reload();
 ・1行目は見出し：日付\t店名\t機種名\t台番\tG\tBB\tRB
 ・数字に「,」や単位を付けない
 ・長くて1回で出し切れない時は、行の途中で切らずキリのいい行で止めて最後に「続く」とだけ書く。「続き」と言われたら見出しなしで次の行から出す`;
-let sel;try{sel=JSON.parse(localStorage.getItem('gpDays'))}catch(e){}if(!Array.isArray(sel))sel=[1];
+let sel;try{sel=JSON.parse(localStorage.getItem('gpDays'))}catch(e){}if(!Array.isArray(sel))sel=[];sel=sel.filter(x=>Number.isInteger(x)&&x>=0&&x<7);if(!sel.length)sel=[1];
 const lb=o=>o?o+'日前':'当日',p2=n=>String(n).padStart(2,'0');
-function render(){const d=document.getElementById('gpd');if(!d)return;d.innerHTML='';for(let o=0;o<7;o++){const b=document.createElement('button');b.textContent=lb(o);const on=sel.includes(o);b.style.cssText='font-size:15px;padding:6px 8px;border-radius:8px;border:1px solid #1f5fd6;'+(on?'background:#1f5fd6;color:#fff':'background:#fff;color:#1f5fd6');b.onclick=()=>{sel=on?sel.filter(x=>x!==o):[...sel,o].sort((a,b)=>a-b);localStorage.setItem('gpDays',JSON.stringify(sel));render()};d.appendChild(b)}
+window.gpRender=render;function render(){const d=document.getElementById('gpd');if(!d)return;d.innerHTML='';for(let o=0;o<7;o++){const b=document.createElement('button');b.textContent=lb(o);const on=sel.includes(o);b.style.cssText='font-size:15px;padding:6px 8px;border-radius:8px;border:1px solid #1f5fd6;'+(on?'background:#1f5fd6;color:#fff':'background:#fff;color:#1f5fd6');b.onclick=()=>{sel=on?sel.filter(x=>x!==o):[...sel,o].sort((a,b)=>a-b);localStorage.setItem('gpDays',JSON.stringify(sel));render()};d.appendChild(b)}
 const n=new Date(),td=n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'日';const days=sel.map(o=>{const x=new Date(n.getFullYear(),n.getMonth(),n.getDate()-o);return '・'+lb(o)+'＝'+x.getFullYear()+'-'+p2(x.getMonth()+1)+'-'+p2(x.getDate())}).join('\n');
 document.getElementById('gpt').value=T.replace('{TODAY}',td).replace('{DAYS}',days)}
 window.gpCopy=async()=>{const t=document.getElementById('gpt'),b=document.getElementById('gpb');render();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(e){}if(!ok){t.focus();t.select();t.setSelectionRange(0,t.value.length);try{ok=document.execCommand('copy')}catch(e){}}if(ok){b.textContent='コピー済';setTimeout(()=>b.textContent='コピー',1500)}};
