@@ -164,7 +164,7 @@ const has=v=>v!==''&&v!=null&&!isNaN(+v);
 // 分析の軸（日末尾・日・曜日）。状態順は前日〜6日間＋その軸の「前回」だけ、回転と合算の悪い順だけ
 const AXES=['matsu','hi','you'];
 const AXWIN={matsu:'matsu',hi:'dou',you:'you'};
-const stKeys=ax=>['zen','d2','d3','d6',AXWIN[ax]].flatMap(w=>['g','gs'].map(m=>w+'_'+m+'_w'));
+const stKeys=ax=>['zen','d2','d3','d6'].flatMap(w=>['g','gs'].map(m=>w+'_'+m+'_w'));
 // 標準指数の母集団：登録初日〜期間の最終日の全データ（1台1日を1件）
 function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<=to);
  for(const r of L)rot[typeOf(r.m,set)].push(r.g);const rs={N:stat(rot.N),AT:stat(rot.AT)};
