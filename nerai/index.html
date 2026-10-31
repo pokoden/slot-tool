@@ -682,9 +682,9 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const shown=V.map(o=>o.x);
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
  const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();const HG=new Map();for(const r of HD.values()){const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
- const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(10);
+ const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(12)+'<td class="gr"></td>';
   const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=55?' class="ib"':''}>${n==null?'':n}</td>`;
-  const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc gr" style="white-space:nowrap">${mkH(x.mark||'×')}${x.r3?` ①${x.r3[0]} ②${x.r3[1]} ③${x.r3[2]}`:''}</td>`};
+  const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc">${mkH(x.mark||'×')}</td>${x.r3?`<td>${x.r3[0]}</td><td>${x.r3[1]}</td><td class="gr">${x.r3[2]}</td>`:'<td></td><td></td><td class="gr"></td>'}`};
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
@@ -696,8 +696,8 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')
   +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
-  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="11" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
-  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===10?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
+  +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="14" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
+  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印','全店舗','店舗内','店舗機種'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===13?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,60);
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  const combos=[...Array(8).keys()].map(i=>i.toString(2).padStart(3,'0')).reverse().filter(c=>c!=='000');
@@ -1003,8 +1003,9 @@ function kbGroups(out,set,base,keyF){const M=new Map();
  const L=[];for(const a of M.values()){let ig=0,irb=0,igs=0,w=0,bad=false;
   if(base)for(const b of a.gm.values()){const x=NC.rowIdx({m:b.m,g:b.g/b.n,bb:b.bb/b.n,rb:b.rb/b.n},set,base);if(x.g==null||x.rb==null||x.gs==null){bad=true;continue}ig+=x.g*b.n;irb+=x.rb*b.n;igs+=x.gs*b.n;w+=b.n}
   const ix=w?{g:ig/w,rb:irb/w,gs:igs/w}:null;
-  L.push({k:a.k,n:a.n,aG:a.G/a.n,pb:NC.den(a.G,a.bb),pr:NC.den(a.G,a.rb),ps:NC.den(a.G,a.bb+a.rb),ig:ix&&ix.g,irb:ix&&ix.rb,igs:ix&&ix.gs,ok:a.ok/a.n})}
+  L.push({k:a.k,n:a.n,aG:a.G/a.n,pb:NC.den(a.G,a.bb),pr:NC.den(a.G,a.rb),ps:NC.den(a.G,a.bb+a.rb),ig:ix&&ix.g,irb:ix&&ix.rb,igs:ix&&ix.gs,ok:a.ok/a.n,lb:wilsonLo(a.ok,a.n)})}
  return L}
+function wilsonLo(k,n,z=1.645){if(!n)return 0;const p=k/n,z2=z*z;return Math.max(0,(p+z2/(2*n)-z*Math.sqrt(p*(1-p)/n+z2/(4*n*n)))/(1+z2/n))}
 const KBT=[['y','年別',r=>r.d.slice(0,4),k=>k+'年'],['ym','年月別',r=>r.d.slice(0,7),k=>k.replace('-','年')+'月'],['m','月別',r=>String(+r.d.slice(5,7)),k=>k+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
 const KBCOL=[['k','項目'],['n','台数'],['aG','平均G'],['pb','BB確率'],['pr','RB確率'],['ps','合算確率'],['ig','回転指数'],['irb','RB指数'],['igs','合算指数'],['ok','合格率']];
 function kbSort(L,id,ty,so0){const o=(so0||kb.so)[id];const c=o?o.c:'k',up=o?o.up:(ty==='ym'?0:1);
@@ -1013,10 +1014,10 @@ function kbSort(L,id,ty,so0){const o=(so0||kb.so)[id];const c=o?o.c:'k',up=o?o.u
 window.kbSoT=(id,c)=>{const o=kb.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';kb.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_kb',kb);const y=scrollY;kbRes();scrollTo(0,y)};
 window.kbTgl=id=>{kbMore.has(id)?kbMore.delete(id):kbMore.add(id);const y=scrollY;kbRes();scrollTo(0,y)};
 const kbF=(x,d=0)=>x==null||!isFinite(x)?'':(+x).toFixed(d);
-function kbTable(T,out,set,base,px){const[id,title,kf,lab]=T;const L=kbGroups(out,set,base,kf);const SO=px?pc.so:kb.so,MR=px?pcMore:kbMore,fs=px?'pcSoT':'kbSoT',ft=px?'pcTgl':'kbTgl';const so=kbSort(L,id,id,SO);const all=MR.has(id);const show=all?L:L.slice(0,10);
+function kbTable(T,out,set,base,px){const[id,title,kf,lab]=T;const L=kbGroups(out,set,base,kf);const SO=px?pc.so:kb.so,MR=px?pcMore:kbMore,fs=px?'pcSoT':'kbSoT',ft=px?'pcTgl':'kbTgl';const so=kbSort(L,id,id,SO);const COL=px?KBCOL.concat([['lb','下限']]):KBCOL;const all=MR.has(id);const show=all?L:L.slice(0,10);
  const ic=v=>v!=null&&v>=55?` style="background:${IB}"`:'';
- return`<div class="card"><h2>${title} ${L.length}件</h2><div class="tw"><table><tr>${KBCOL.map(([c,t])=>`<th class="${c==='k'?'l fix ':''}s ${so.c===c?'on':''}" onclick="${fs}('${id}','${c}')">${t}${so.c===c?(so.up?'▲':'▼'):''}</th>`).join('')}</tr>
-${show.map(x=>`<tr><td class="l fix">${esc(lab(x.k))}</td><td>${x.n.toLocaleString()}</td><td>${Math.round(x.aG).toLocaleString()}</td><td>${NC.fmtP(x.pb)}</td><td>${NC.fmtP(x.pr)}</td><td>${NC.fmtP(x.ps)}</td><td${ic(x.ig)}>${kbF(x.ig,0)}</td><td${ic(x.irb)}>${kbF(x.irb,0)}</td><td${ic(x.igs)}>${kbF(x.igs,0)}</td><td>${(x.ok*100).toFixed(0)}%</td></tr>`).join('')}</table></div>
+ return`<div class="card"><h2>${title} ${L.length}件</h2><div class="tw"><table><tr>${COL.map(([c,t])=>`<th class="${c==='k'?'l fix ':''}s ${so.c===c?'on':''}" onclick="${fs}('${id}','${c}')">${t}${so.c===c?(so.up?'▲':'▼'):''}</th>`).join('')}</tr>
+${show.map(x=>`<tr><td class="l fix">${esc(lab(x.k))}</td><td>${x.n.toLocaleString()}</td><td>${Math.round(x.aG).toLocaleString()}</td><td>${NC.fmtP(x.pb)}</td><td>${NC.fmtP(x.pr)}</td><td>${NC.fmtP(x.ps)}</td><td${ic(x.ig)}>${kbF(x.ig,0)}</td><td${ic(x.irb)}>${kbF(x.irb,0)}</td><td${ic(x.igs)}>${kbF(x.igs,0)}</td><td>${(x.ok*100).toFixed(0)}%</td>${px?`<td>${(x.lb*100).toFixed(0)}%</td>`:''}</tr>`).join('')}</table></div>
 ${L.length>10?`<button class="b sub" onclick="${ft}('${id}')">${all?'閉じる':'もっと見る（全'+L.length+'件）'}</button>`:''}</div>`}
 function kbRun(){const sv=kn;kn=Object.assign(KN0(),{st:kb.st,g:kb.g,ty:kb.ty,from:kb.from,to:kb.to,mt:kb.mt,yo:kb.yo,hi:kb.hi,tai:kb.tai,gmin:kb.gmin,gmax:kb.gmax,sw:kb.sw,sm:kb.sm});
  try{let{out}=kenRun();if(kb.vw==='s')out=out.filter(x=>x.k);else if(kb.vw==='t')out=out.filter(x=>!x.k);return out}finally{kn=sv}}
@@ -1051,7 +1052,7 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
 
 
 // ===== 精度チェック：月ごとに分析期間をずらして（チェックする月の直前）狙いを出し、狙い順ちょうどN位の着席台番のその日の結果を集計 =====
-const PC0=()=>({from:'',to:'',s:'',g:'',ty:1,rk:1,so:{}});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};if(![1,2,3].includes(+pc.rk))pc.rk=1;const pcMore=new Set();
+const PC0=()=>({from:'',to:'',s:'',g:'',ty:1,rk:1,so:{}});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};if(!Array.isArray(pc.rks)||!pc.rks.length)pc.rks=[1];const pcMore=new Set();
 window.pcSoT=(id,c)=>{const o=pc.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';pc.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_pc',pc);const y=scrollY;pcRes();scrollTo(0,y)};
 window.pcTgl=id=>{pcMore.has(id)?pcMore.delete(id):pcMore.add(id);const y=scrollY;pcRes();scrollTo(0,y)};
 const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
@@ -1074,12 +1075,13 @@ function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(
 function pcRun(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
  let lo='9',hi='0';for(const r of R){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}const from=pc.from||lo,to=pc.to||hi;
  const days=[...new Set(R.filter(r=>r.d>=from&&r.d<=to).map(r=>r.d))].filter(d=>d.slice(0,7)>lo.slice(0,7)).sort();
- const ix=(+pc.ty||1)-1,N=+pc.rk||1;const out=[];
- for(const d of days){const D=pcDay(d,stores,R,set,lo);for(const x of D.T){if(x.r3[ix]!==N)continue;if(pc.s&&x.s!==pc.s)continue;if(pc.g&&x.g!==pc.g)continue;const r=D.HD.get(x.s+'|'+x.seat);if(r)out.push({r})}}
+ const ix=(+pc.ty||1)-1,NS=new Set(pc.rks.map(Number));const out=[];
+ for(const d of days){const D=pcDay(d,stores,R,set,lo);for(const x of D.T){if(!NS.has(x.r3[ix]))continue;if(pc.s&&x.s!==pc.s)continue;if(pc.g&&x.g!==pc.g)continue;const r=D.HD.get(x.s+'|'+x.seat);if(r)out.push({r})}}
  return out}
 function pcRes(){LS.set('nr_pc',pc);const el=$('pcres');if(!el)return;const set=setObj();const out=pcRun();
  if(!out.length){el.innerHTML='<div class="card"><h2>データなし</h2></div>';return}const base=kenBase();
  el.innerHTML=kbTable(['all','合計',()=>'合計',k=>k],out,set,base,1)+KBT.map(T=>kbTable(T,out,set,base,1)).join('')}
+window.pcRk=k=>{const i=pc.rks.indexOf(k);if(i>=0){if(pc.rks.length>1)pc.rks.splice(i,1)}else{pc.rks.push(k);pc.rks.sort((a,b)=>a-b)}pcPage()};
 window.pcPer=n=>{if(n==='a'){pc.from='';pc.to=''}else{const p=mPer(+n);pc.from=p[0];pc.to=p[1]}pcPage()};
 window.pcMon=ym=>{if(ym){pc.from=ym+'-01';pc.to=mEnd(ym)}pcPage()};
 function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(pc.s&&!stores.includes(pc.s))pc.s='';
@@ -1094,7 +1096,7 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div class="row"><select onchange="pcMon(this.value)"><option value="" ${curM?'':'selected'}>何月</option>${yms.map(ym=>`<option value="${ym}" ${ym===curM?'selected':''}>${+ym.slice(0,4)}年${+ym.slice(5)}月</option>`).join('')}</select></div>
 <div class="row">${sel('s',[['','全店舗']].concat(stores.map(x=>[x,stShort(x)])),pc.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),pc.g)}</div>
 <div class="chips">${[[1,'①全店舗全機種'],[2,'②店舗内'],[3,'③店舗機種内']].map(([k,t])=>`<button class="${+pc.ty===k?'on':''}" onclick="pc.ty=${k};pcPage()">${t}</button>`).join('')}</div>
-<div class="chips">${[1,2,3].map(k=>`<button class="${+pc.rk===k?'on':''}" onclick="pc.rk=${k};pcPage()">${k}位</button>`).join('')}</div></div>
+<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div></div>
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
