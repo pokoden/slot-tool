@@ -122,7 +122,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=28"></script>
+<script src="core.js?v=29"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -567,12 +567,13 @@ function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:16px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:16px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
  <div class="chips">${[1,2,3,4,6].map(n=>{const p=mPer(n);return`<button class="${from===p[0]&&to===p[1]?'on':''}" onclick="anPm(${n})">${n}ヶ月${n>1?'間':''}</button>`}).join('')}</div>
   <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
+ ${borHtml()}
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[an.ax]||'全部']].concat(vals),an.val)}</div>
  <div class="row"><button class="b sub" onclick="an.so='std';an.rev=0;anaPage()">標準並びに戻す</button><button class="b sub" onclick="an.s='*';an.g='';an.val='all';anaPage()">条件リセット</button></div>
  ${nRow?`<div class="tw"><table id="avt" style="table-layout:fixed;width:${ACW.reduce((a,b)=>a+b,0)}px"><colgroup>${ACW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr></thead><tbody id="avb"></tbody></table></div>`:'<p class="note">データがないよ</p>'}
-</div>${borHtml()}`;
+</div>`;
  if(nRow)avPaint(true);const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0);avPaint(false)}}
 const ACOL=new Intl.Collator('ja',{numeric:true});const ACW=[34,92,30,40,44,52,52,52,48,56,40,40,40,40,40,40,64,40,40],ARH=28,ABUF=40;let AV=null;
 function avPaint(force){const tb=$('avb'),tbl=$('avt');if(!AV||!tb||!tbl)return;const n=AV.items.length;
@@ -686,7 +687,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  let V=nr.only?T.filter(rk):T.slice();
  V=V.map(x=>({x,v:sv(x)}));
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
- const shown=V.map(o=>o.x);
+ const NF=NPV();const shown=V.map(o=>o.x).filter(x=>NF.nrF===''||(x.r3&&x.r3[+NF.nrF]<=NF.nrN));
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
  const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();const HG=new Map();for(const r of HD.values()){const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
  const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(12)+'<td class="gr"></td>';
@@ -1098,9 +1099,9 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 
 // ===== 各種数値設定（analysis.json の np に保存）=====
-const NPD={devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50};
+const NPD={nrN:3,devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50};
 const PASS0=[{n:'合格',g:55,rb:55,gs:55,by:'hy'}];
-let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];
+let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue','wRb','wRot','wTk','nrN'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];v.nrF=['0','1','2'].includes(String(o.nrF))?String(o.nrF):'';
  const ps=(Array.isArray(o.pass)?o.pass:[]).filter(p=>p&&p.on!==false).map(p=>({n:p.n||'',g:isFinite(+p.g)&&p.g!==''?+p.g:55,rb:isFinite(+p.rb)&&p.rb!==''?+p.rb:55,gs:isFinite(+p.gs)&&p.gs!==''?+p.gs:55,by:'hy'}));v.pass=ps.length?ps:PASS0;NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
@@ -1117,8 +1118,9 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
   return`<tr><td>${i?`<input type="checkbox" ${on?'checked':''} onchange="npPass(${i},'on',this.checked)" style="width:20px;height:20px">`:''}</td><td>ライン${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('');
  $('main').innerHTML=`${asBar()}
 <div class="card"><h2>共通指数合格ライン</h2><div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th></tr>${pr}</table></div>${row('青色ライン','blue')}</div>
-<div class="card"><h2>分析</h2>${row('状態順 何位まで','stMax')}</div>
+<div class="card"><h2>分析</h2>${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
 <div class="card"><h2>狙い</h2>
+<div class="card"><h2>🏆 狙いリストの表示</h2><div class="row"><label>絞る順位 <select onchange="npObj().nrF=this.value;anDirty=true;autoSave();npPage()">${[['','全'],['0','全店舗'],['1','店舗内'],['2','店舗機種']].map(([k,t])=>`<option value="${k}" ${v.nrF===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('何位まで','nrN')}</div>
 <div class="card"><h2>🎖 ○の点数</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr></table></div></div>
 <div class="card"><h2>🧮 サブ評価</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg]??0)} %</td>`).join('')}</tr></table></div>
 <div class="row"><label>使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転指数'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('サブ評価の割り算','subDiv',90)}</div>
