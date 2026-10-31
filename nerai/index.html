@@ -122,7 +122,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=22"></script>
+<script src="core.js?v=23"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=1"></script>
 <script>
@@ -132,7 +132,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['pc','精度チェック'],['bor','ボーダー'],['ana','分析'],['set','設定']];
+const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['bor','ボーダー'],['ana','分析'],['pc','精度チェック'],['set','設定']];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
 let anDirty=false,zuDirty=false;
@@ -361,6 +361,12 @@ const stTd=(s,cls='l')=>{const b=stBg(s);return`<td class="${cls}"${b?` style="b
 const MKC={'★':'ms','◎':'mb','○':'a','△':'t','□':'mq','×':'x'};const mkH=m=>m&&MKC[m]?`<span class="mk ${MKC[m]}">${m}</span>`:'';
 const MKZ={'★':' ms','◎':' mb','○':' mo','△':' mt','□':' mq','×':' mx'};
 let NRG={nrc:null,m:{}};
+// 狙い順：印が付いて×じゃない行を点数順に。同じ店舗で着席台番が同じ行は一番上だけ。r3=[全店舗全機種,店舗内,店舗機種内]
+function rankT(T){const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
+ const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1);
+ T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
+ for(const x of T){if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}R.set(x,++nn);c2[x.s]=(c2[x.s]||0)+1;const k3=x.s+'|'+x.g;c3[k3]=(c3[k3]||0)+1;x.r3=[nn,c2[x.s],c3[k3]]}
+ return R}
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
@@ -374,8 +380,7 @@ function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d
  // 当日用：狙いページと同じ行（targets）・同じ並び・同じ順位の付け方で、台番ごとの印・点数・順位を出す
  {const T=[];for(const u of out)for(const x of u.T)T.push(x);const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
   const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||SK.indexOf(a.k)-SK.indexOf(b.k)):a.kind==='t'?-1:1);
-  T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
-  for(const x of T){if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}R.set(x,++nn);c2[x.s]=(c2[x.s]||0)+1;const k3=x.s+'|'+x.g;c3[k3]=(c3[k3]||0)+1;x.r3=[nn,c2[x.s],c3[k3]]}
+  const R=rankT(T);
   for(const u of out){const M=new Map();for(const x of u.T){if(x.kind!=='t')continue;const t=String(x.t);let b=x;
     for(const y of u.T)if(y.kind==='s'&&y.seat===t&&R.has(y)&&!R.has(b))b=y;
     M.set(t,Object.assign({},b,{t,rank:R.get(b)||''}))}u.TM=M}}
@@ -1045,33 +1050,52 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
 <div id="kbres"></div>`;kbRes()}
 
 
-// ===== 精度チェック：期間の各日に、その日の朝の狙い（分析・狙いの設定で前日までのデータから）を出し、狙い順の範囲に入った着席台番のその日の結果を集計 =====
-const PC0=()=>({p:3,s:'',g:'',ty:1,lo:'1',hi:'3',so:{}});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};const pcMore=new Set();
+// ===== 精度チェック：月ごとに分析期間をずらして（チェックする月の直前）狙いを出し、狙い順ちょうどN位の着席台番のその日の結果を集計 =====
+const PC0=()=>({from:'',to:'',s:'',g:'',ty:1,rk:1,so:{}});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};if(![1,2,3].includes(+pc.rk))pc.rk=1;const pcMore=new Set();
 window.pcSoT=(id,c)=>{const o=pc.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';pc.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_pc',pc);const y=scrollY;pcRes();scrollTo(0,y)};
 window.pcTgl=id=>{pcMore.has(id)?pcMore.delete(id):pcMore.add(id);const y=scrollY;pcRes();scrollTo(0,y)};
-let PCC=null;function pcRun(){const ck=[pc.p,pc.s,pc.g,pc.ty,pc.lo,pc.hi,S.rows.length].join('|');if(PCC&&PCC.k===ck&&PCC.r===S.rows&&PCC.n===NRC)return PCC.v;const v=pcRun0();PCC={k:ck,r:S.rows,n:NRC,v};return v}
-function pcRun0(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
- let lo='9',hi='0';for(const r of R){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}let from=lo,to=hi;if(pc.p!=='a'){const p=mPer(+pc.p);from=p[0];to=p[1]}
- const days=[...new Set(R.filter(r=>r.d>=from&&r.d<=to&&r.d>lo).map(r=>r.d))].sort();
- const a=Math.max(1,+pc.lo||1),b=Math.max(a,+pc.hi||a),ix=(+pc.ty||1)-1;const out=[];
- for(const d of days){const U=unitsAll(d,stores,R,set);const HD=new Map();for(const u of U)if(!u.virt)for(const r of u.day)HD.set(u.s+'|'+r.t,r);
-  for(const u of U){if(u.virt)continue;if(pc.s&&u.s!==pc.s)continue;for(const x of u.T){if(!x.r3||x.seat==null)continue;if(pc.g&&x.g!==pc.g)continue;const n=x.r3[ix];if(n<a||n>b)continue;const r=HD.get(x.s+'|'+x.seat);if(r)out.push({r})}}}
+const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
+const mEnd=ym=>{const[y,m]=ym.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)};
+// チェックする月 ym の分析期間。分析が「1日〜月末」ならその月数、手入力の日付ならその日数、全期間なら前月末までの全部
+function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);const[y,m]=ym.split('-').map(Number);
+ if(!P.from&&!P.to)return[first,pv];
+ const f=P.from||first,t=P.to||pv;
+ if(/-01$/.test(f)&&t===mEnd(t.slice(0,7))){const n=(+t.slice(0,4)*12+ +t.slice(5,7))-(+f.slice(0,4)*12+ +f.slice(5,7))+1;return[ymOf(y,m-1-n)+'-01',pv]}
+ const len=Math.round((Date.parse(t)-Date.parse(f))/864e5)+1;return[NC.addDay(st,-len),pv]}
+const PCD=new Map();// 日ごとの狙い（分析期間・設定が同じなら使い回す）
+function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(ym,first);const B=bord(),cfg=nerCfg();
+ const key=[d,from,to,JSON.stringify(B),JSON.stringify(cfg),JSON.stringify(S.an.marks||{}),R.length].join('~');let v=PCD.get(key);if(v)return v;
+ const base=NC.stdBaseAt(R,set,to);const T=[],HD=new Map();
+ for(const s of stores){const day=NC.storeHas(R,s,d)?R.filter(r=>r.s===s&&r.d===d):null;if(!day)continue;
+  let f=from;if(f<'1')f=first;const rk=((S.agg[ym]||{}).ranks||{})[d]||{};
+  const L=NC.neraiList(R,set,base,allRanks(),{store:s,date:d,members:day,tRanks:rk,from:f,to,border:B,marks:S.an.marks||{},cfg,hasPrev:NC.storeHas(R,s,NC.addDay(d,-1)),memo:true});
+  for(const x of L.targets||[])T.push(x);for(const r of day)HD.set(s+'|'+r.t,r)}
+ rankT(T);v={T:T.filter(x=>x.r3&&x.seat!=null).map(x=>({s:x.s,g:x.g,seat:x.seat,r3:x.r3})),HD};if(PCD.size>400)PCD.clear();PCD.set(key,v);return v}
+function pcRun(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
+ let lo='9',hi='0';for(const r of R){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}const from=pc.from||lo,to=pc.to||hi;
+ const days=[...new Set(R.filter(r=>r.d>=from&&r.d<=to).map(r=>r.d))].filter(d=>d.slice(0,7)>lo.slice(0,7)).sort();
+ const ix=(+pc.ty||1)-1,N=+pc.rk||1;const out=[];
+ for(const d of days){const D=pcDay(d,stores,R,set,lo);for(const x of D.T){if(x.r3[ix]!==N)continue;if(pc.s&&x.s!==pc.s)continue;if(pc.g&&x.g!==pc.g)continue;const r=D.HD.get(x.s+'|'+x.seat);if(r)out.push({r})}}
  return out}
 function pcRes(){LS.set('nr_pc',pc);const el=$('pcres');if(!el)return;const set=setObj();const out=pcRun();
  if(!out.length){el.innerHTML='<div class="card"><h2>データなし</h2></div>';return}const base=kenBase();
  el.innerHTML=kbTable(['all','合計',()=>'合計',k=>k],out,set,base,1)+KBT.map(T=>kbTable(T,out,set,base,1)).join('')}
+window.pcPer=n=>{if(n==='a'){pc.from='';pc.to=''}else{const p=mPer(+n);pc.from=p[0];pc.to=p[1]}pcPage()};
+window.pcMon=ym=>{if(ym){pc.from=ym+'-01';pc.to=mEnd(ym)}pcPage()};
 function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(pc.s&&!stores.includes(pc.s))pc.s='';
  const groups=[...new Set(R.filter(r=>!pc.s||r.s===pc.s).map(r=>NC.groupOf(r.m,set)))];if(pc.g&&!groups.includes(pc.g))pc.g='';
+ const yms=[...new Set(R.map(r=>r.d.slice(0,7)))].sort().reverse();const curM=pc.from&&pc.to&&/-01$/.test(pc.from)&&pc.to===mEnd(pc.from.slice(0,7))?pc.from.slice(0,7):'';
  const sel=(id,L,v)=>`<select onchange="pc.${id}=this.value;pcPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
- const num=id=>`<input inputmode="numeric" type="text" value="${esc(pc[id])}" style="width:56px;font-size:16px" onchange="pc.${id}=this.value;pcRes()">`;
  const PB=[['0','当月'],['1','1ヶ月'],['2','2ヶ月間'],['3','3ヶ月間'],['4','4ヶ月間'],['6','6ヶ月間'],['a','全期間']];
+ const pon=k=>k==='a'?!pc.from&&!pc.to:(()=>{const p=mPer(+k);return pc.from===p[0]&&pc.to===p[1]})();
  $('main').innerHTML=`<div class="card"><h2>🎯 精度チェック</h2>
-<div class="chips">${PB.map(([k,t])=>`<button class="${String(pc.p)===k?'on':''}" onclick="pc.p='${k}';pcPage()">${t}</button>`).join('')}</div>
+<div class="row"><input type="date" value="${esc(pc.from)}" onchange="pc.from=this.value;pcPage()" style="width:136px;font-size:16px">〜<input type="date" value="${esc(pc.to)}" onchange="pc.to=this.value;pcPage()" style="width:136px;font-size:16px"></div>
+<div class="chips">${PB.map(([k,t])=>`<button class="${pon(k)?'on':''}" onclick="pcPer('${k}')">${t}</button>`).join('')}</div>
+<div class="row"><select onchange="pcMon(this.value)"><option value="" ${curM?'':'selected'}>何月</option>${yms.map(ym=>`<option value="${ym}" ${ym===curM?'selected':''}>${+ym.slice(0,4)}年${+ym.slice(5)}月</option>`).join('')}</select></div>
 <div class="row">${sel('s',[['','全店舗']].concat(stores.map(x=>[x,stShort(x)])),pc.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),pc.g)}</div>
 <div class="chips">${[[1,'①全店舗全機種'],[2,'②店舗内'],[3,'③店舗機種内']].map(([k,t])=>`<button class="${+pc.ty===k?'on':''}" onclick="pc.ty=${k};pcPage()">${t}</button>`).join('')}</div>
-<div class="row">${num('lo')}位〜${num('hi')}位</div></div>
+<div class="chips">${[1,2,3].map(k=>`<button class="${+pc.rk===k?'on':''}" onclick="pc.rk=${k};pcPage()">${k}位</button>`).join('')}</div></div>
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
-
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
  const al=Object.entries(set.alias).map(([a,b])=>a+'='+b).join('\n');

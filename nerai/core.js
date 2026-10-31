@@ -205,7 +205,10 @@ function finalize(G,B,base){
     if(inP.has(u)){u.sp={};u.dp={};for(const m in val){u.sp[m]=sp[m](val[m](u));u.dp[m]=dp[m].get(u.v)(val[m](u))}}else{u.sp=null;u.dp=null}
     u.auto=judge(u,B,o.g)}}}
  return G}
-function analysisFor(rows,set,ranks,store,axis,from,to,B,base){return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base)}
+const AFM=new WeakMap();
+// memo=true のときだけ base ごとに結果を覚える（精度チェック用）
+function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
+ let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);m.set(k,v)}return v}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
 function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;any=true;return f(+v)};
@@ -245,7 +248,7 @@ function prevStd(rows,set,store,date){const pv=addDay(date,-1);const m=new Map()
 // 戻り値：台番ごとの行（図面・当日用。台番の○＋その日1位になる状態順の○を合わせた点数）
 //   と、.targets＝狙いタブ用の「1狙い1行」（台番の○だけの行／状態順の○だけの行）
 function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.marks||{};const out=[],tg=[];
- const A={};for(const sg of SEGS)A[sg]=analysisFor(rows,set,ranks,o.store,sg,o.from,o.to,B,base);
+ const A={};for(const sg of SEGS)A[sg]=analysisFor(rows,set,ranks,o.store,sg,o.from,o.to,B,base,o.memo);
  const groups=[...new Set(o.members.map(r=>groupOf(r.m,set)))];const by=B.by||'hy';
  const PS=prevStd(rows,set,o.store,o.date);const useP=cfg.prevX!==false;const prevO=t=>{const v=PS.get(String(t));return v!=null&&v>=PREV_BORDER};
  const metricOf=u=>{if(!u)return null;const ix=by==='tk'?u.tk:u.hy;return cfg.sub.metric==='tt'?u.tt:ix[cfg.sub.metric]};
