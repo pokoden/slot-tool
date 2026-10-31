@@ -122,7 +122,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 <header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
-<script src="core.js?v=27"></script>
+<script src="core.js?v=28"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -498,9 +498,8 @@ let ANC=null,anKeep=false;
 function anaCalc(sl,from,to,B){const key=[an.ax,from,to,JSON.stringify(B),S.rows.length,sl.join(',')].join('~');if(ANC&&ANC.key===key&&ANC.r===S.rows)return ANC.v;
  const set=setObj(),ranks=allRanks(),base=NC.stdBase(S.rows,set,to);const v={};for(const s of sl)v[s]=NC.analysisFor(S.rows,set,ranks,s,an.ax,from,to,B,base);ANC={key,r:S.rows,v};return v}
 const stLab=k=>NC.stName(k);
-// 分析の自動○に使う線：空＝ボーダー、数字＝合格ライン
-function bordEff(){const B=bord();const i=S.an.anPass;if(i===''||i==null)return B;const p=NPV().pass[+i];if(!p)return B;const f=(o,v)=>Object.assign({},o,{idx:v,tki:v});return Object.assign({},B,{by:p.by,g:f(B.g,p.g),rb:f(B.rb,p.rb),gs:f(B.gs,p.gs)})}
-window.anPP=v=>{S.an.anPass=v;anDirty=true;NRC={};anaPage()};
+// 分析の自動○はボーダーの線
+function bordEff(){return bord()}
 function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  const stores=[...new Set(R.map(r=>r.s))].sort();if(an.s!=='*'&&!stores.includes(an.s))an.s='*';
  let first='9',last='0';const lastD={};for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d;if(!lastD[r.s]||r.d>lastD[r.s])lastD[r.s]=r.d}
@@ -567,14 +566,13 @@ function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  <div class="card"><h2>🔍 検索期間</h2>
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:16px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:16px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
  <div class="chips">${[1,2,3,4,6].map(n=>{const p=mPer(n);return`<button class="${from===p[0]&&to===p[1]?'on':''}" onclick="anPm(${n})">${n}ヶ月${n>1?'間':''}</button>`}).join('')}</div>
-  <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div>
-  <div class="row"><label>合格ライン <select onchange="anPP(this.value)"><option value="" ${S.an.anPass==null||S.an.anPass===''?'selected':''}>ボーダー</option>${NPV().pass.map((p,i)=>`<option value="${i}" ${String(S.an.anPass)===String(i)?'selected':''}>${esc(p.n||('ライン'+(i+1)))}</option>`).join('')}</select></label></div></div>
+  <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),an.s,"an.g='';")}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),an.g)}</div>
  <div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[an.ax]||'全部']].concat(vals),an.val)}</div>
  <div class="row"><button class="b sub" onclick="an.so='std';an.rev=0;anaPage()">標準並びに戻す</button><button class="b sub" onclick="an.s='*';an.g='';an.val='all';anaPage()">条件リセット</button></div>
  ${nRow?`<div class="tw"><table id="avt" style="table-layout:fixed;width:${ACW.reduce((a,b)=>a+b,0)}px"><colgroup>${ACW.map(w=>`<col style="width:${w}px">`).join('')}</colgroup><thead><tr><th class="fix f1 s ${an.so==='v'?'on':''}" rowspan="2" onclick="anSo('v')">指定日</th><th class="fix f2 s ${an.so==='t'?'on':''}" rowspan="2" onclick="anSo('t')">台番</th>${th1.join('')}</tr><tr>${th2.join('')}</tr></thead><tbody id="avb"></tbody></table></div>`:'<p class="note">データがないよ</p>'}
-</div>`;
+</div>${borHtml()}`;
  if(nRow)avPaint(true);const nw=document.querySelector('#main .tw');if(nw)nw.scrollLeft=sl0;if(anKeep){anKeep=false;window.scrollTo(0,sy0);avPaint(false)}}
 const ACOL=new Intl.Collator('ja',{numeric:true});const ACW=[34,92,30,40,44,52,52,52,48,56,40,40,40,40,40,40,64,40,40],ARH=28,ABUF=40;let AV=null;
 function avPaint(force){const tb=$('avb'),tbl=$('avt');if(!AV||!tb||!tbl)return;const n=AV.items.length;
@@ -598,11 +596,11 @@ window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else del
 window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);anKeep=true;render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
 // ===== ボーダー =====
 const bGet=p=>{let o=bord();for(const k of p.split('.')){if(o==null)return'';o=o[k]}return o==null?'':o};
-window.anB=(p,v)=>{const B=bord();const a=p.split('.');let o=B;for(let i=0;i<a.length-1;i++){if(o[a[i]]==null||typeof o[a[i]]!=='object')o[a[i]]={};o=o[a[i]]}o[a[a.length-1]]=v;anDirty=true;NRC={};autoSave();npPage()};
+window.anB=(p,v)=>{const B=bord();const a=p.split('.');let o=B;for(let i=0;i<a.length-1;i++){if(o[a[i]]==null||typeof o[a[i]]!=='object')o[a[i]]={};o=o[a[i]]}o[a[a.length-1]]=v;anDirty=true;NRC={};autoSave();anKeep=true;anaPage()};
 const mkeys=()=>Object.keys(bord().mach);
-window.anMachAdd=()=>{const g=$('bm').value;if(!g)return;const B=bord();if(!B.mach[g])B.mach[g]={rb:'',gs:''};anDirty=true;NRC={};autoSave();npPage()};
-window.anMachDel=i=>{delete bord().mach[mkeys()[i]];anDirty=true;NRC={};autoSave();npPage()};
-window.anMachSet=(i,k,v)=>{bord().mach[mkeys()[i]][k]=v;anDirty=true;NRC={};autoSave();npPage()};
+window.anMachAdd=()=>{const g=$('bm').value;if(!g)return;const B=bord();if(!B.mach[g])B.mach[g]={rb:'',gs:''};anDirty=true;NRC={};autoSave();anKeep=true;anaPage()};
+window.anMachDel=i=>{delete bord().mach[mkeys()[i]];anDirty=true;NRC={};autoSave();anKeep=true;anaPage()};
+window.anMachSet=(i,k,v)=>{bord().mach[mkeys()[i]][k]=v;anDirty=true;NRC={};autoSave();anKeep=true;anaPage()};
 function borHtml(){const B=bord();const set=setObj();
  const inp=(p,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(bGet(p))}" placeholder="なし" style="width:${w||70}px" onchange="anB('${p}',this.value)">`;
  const groups=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());
@@ -931,7 +929,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  $('main').innerHTML=`<div class="card"><h2>🔎 データ検索 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="knReset()">条件をリセット</button></h2>
 <p class="note">店舗</p>${chip('st',stores.map(s=>[s,stShort(s)]))}
 <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
-<div class="row"><label>合格ライン <select onchange="kn.pp=+this.value;kenPage()">${NPV().pass.map((p,i)=>`<option value="${i}" ${(+kn.pp||0)===i?'selected':''}>${esc(p.n||('ライン'+(i+1)))}</option>`).join('')}</select></label></div>
+<div class="row"><label>合格ライン <select onchange="kn.pp=+this.value;kenPage()">${NPV().pass.map((p,i)=>`<option value="${i}" ${(+kn.pp||0)===i?'selected':''}>${esc('ライン'+(i+1)+'（'+p.g+'/'+p.rb+'/'+p.gs+'）')}</option>`).join('')}</select></label></div>
 <p class="note">期間</p><div class="chips">${pb}<button class="${!kn.from&&!kn.to?'on':''}" onclick="knAllP()">全期間</button></div>
 ${kenCal()}
 <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
@@ -1013,7 +1011,7 @@ function kbSort(L,id,ty,so0){const o=(so0||kb.so)[id];const c=o?o.c:'k',up=o?o.u
 window.kbSoT=(id,c)=>{const o=kb.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';kb.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_kb',kb);const y=scrollY;kbRes();scrollTo(0,y)};
 window.kbTgl=id=>{kbMore.has(id)?kbMore.delete(id):kbMore.add(id);const y=scrollY;kbRes();scrollTo(0,y)};
 const kbF=(x,d=0)=>x==null||!isFinite(x)?'':(+x).toFixed(d);
-let KBPP=0;function kbTable(T,out,set,base,px){const[id,title,kf,lab]=T;KBPP=+(px?pc.pp:kb.pp)||0;const L=kbGroups(out,set,base,kf);const SO=px?pc.so:kb.so,MR=px?pcMore:kbMore,fs=px?'pcSoT':'kbSoT',ft=px?'pcTgl':'kbTgl';const so=kbSort(L,id,id,SO);const COL=px?KBCOL.concat([['lb','下限']]):KBCOL;const all=MR.has(id);const show=all?L:L.slice(0,NPV().topN);
+let KBPP=0;function kbTable(T,out,set,base,px){const[id,title,kf,lab]=T;KBPP=px?0:(+kb.pp||0);const L=kbGroups(out,set,base,kf);const SO=px?pc.so:kb.so,MR=px?pcMore:kbMore,fs=px?'pcSoT':'kbSoT',ft=px?'pcTgl':'kbTgl';const so=kbSort(L,id,id,SO);const COL=px?KBCOL.concat([['lb','下限']]):KBCOL;const all=MR.has(id);const show=all?L:L.slice(0,NPV().topN);
  const ic=v=>v!=null&&v>=NPV().blue?` style="background:${IB}"`:'';
  return`<div class="card"><h2>${title} ${L.length}件</h2><div class="tw"><table><tr>${COL.map(([c,t])=>`<th class="${c==='k'?'l fix ':''}s ${so.c===c?'on':''}" onclick="${fs}('${id}','${c}')">${t}${so.c===c?(so.up?'▲':'▼'):''}</th>`).join('')}</tr>
 ${show.map(x=>`<tr><td class="l fix">${esc(lab(x.k))}</td><td>${x.n.toLocaleString()}</td><td>${Math.round(x.aG).toLocaleString()}</td><td>${NC.fmtP(x.pb)}</td><td>${NC.fmtP(x.pr)}</td><td>${NC.fmtP(x.ps)}</td><td${ic(x.ig)}>${kbF(x.ig,0)}</td><td${ic(x.irb)}>${kbF(x.irb,0)}</td><td${ic(x.igs)}>${kbF(x.igs,0)}</td><td>${(x.ok*100).toFixed(0)}%</td>${px?`<td>${(x.lb*100).toFixed(0)}%</td>`:''}</tr>`).join('')}</table></div>
@@ -1037,7 +1035,7 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
  $('main').innerHTML=`<div class="card"><h2>📊 項目別集計 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="kbReset()">条件をリセット</button></h2>
 <p class="note">店舗</p>${chip('st',stores.map(s=>[s,stShort(s)]))}
 <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),kb.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kb.ty)}</div>
-<div class="row"><label>合格ライン <select onchange="kb.pp=+this.value;kbPage()">${NPV().pass.map((p,i)=>`<option value="${i}" ${(+kb.pp||0)===i?'selected':''}>${esc(p.n||('ライン'+(i+1)))}</option>`).join('')}</select></label></div>
+<div class="row"><label>合格ライン <select onchange="kb.pp=+this.value;kbPage()">${NPV().pass.map((p,i)=>`<option value="${i}" ${(+kb.pp||0)===i?'selected':''}>${esc('ライン'+(i+1)+'（'+p.g+'/'+p.rb+'/'+p.gs+'）')}</option>`).join('')}</select></label></div>
 <p class="note">期間</p><div class="chips">${pb}<button class="${!kb.from&&!kb.to?'on':''}" onclick="kb.from='';kb.to='';kbPage()">全期間</button></div>
 <div class="row"><input type="date" value="${esc(kb.from)}" onchange="kb.from=this.value;kbPage()" style="width:136px">〜<input type="date" value="${esc(kb.to)}" onchange="kb.to=this.value;kbPage()" style="width:136px"></div>
 <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
@@ -1096,14 +1094,14 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div class="row"><select onchange="pcMon(this.value)"><option value="" ${curM?'':'selected'}>何月</option>${yms.map(ym=>`<option value="${ym}" ${ym===curM?'selected':''}>${+ym.slice(0,4)}年${+ym.slice(5)}月</option>`).join('')}</select></div>
 <div class="row">${sel('s',[['','全店舗']].concat(stores.map(x=>[x,stShort(x)])),pc.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),pc.g)}</div>
 <div class="chips">${[[1,'①全店舗全機種'],[2,'②店舗内'],[3,'③店舗機種内']].map(([k,t])=>`<button class="${+pc.ty===k?'on':''}" onclick="pc.ty=${k};pcPage()">${t}</button>`).join('')}</div>
-<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div><div class="row"><label>合格ライン <select onchange="pc.pp=+this.value;pcPage()">${NPV().pass.map((p,i)=>`<option value="${i}" ${(+pc.pp||0)===i?'selected':''}>${esc(p.n||('ライン'+(i+1)))}</option>`).join('')}</select></label></div></div>
+<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div></div>
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 
 // ===== 各種数値設定（analysis.json の np に保存）=====
 const NPD={devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50};
 const PASS0=[{n:'合格',g:55,rb:55,gs:55,by:'hy'}];
-let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k in NPD)if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];
- const ps=(Array.isArray(o.pass)?o.pass:[]).filter(p=>p&&p.on!==false).map(p=>({n:p.n||'',g:isFinite(+p.g)&&p.g!==''?+p.g:55,rb:isFinite(+p.rb)&&p.rb!==''?+p.rb:55,gs:isFinite(+p.gs)&&p.gs!==''?+p.gs:55,by:p.by==='tk'?'tk':'hy'}));v.pass=ps.length?ps:PASS0;NPC={sig,v};return v}
+let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];
+ const ps=(Array.isArray(o.pass)?o.pass:[]).filter(p=>p&&p.on!==false).map(p=>({n:p.n||'',g:isFinite(+p.g)&&p.g!==''?+p.g:55,rb:isFinite(+p.rb)&&p.rb!==''?+p.rb:55,gs:isFinite(+p.gs)&&p.gs!==''?+p.gs:55,by:'hy'}));v.pass=ps.length?ps:PASS0;NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
 window.npSet=(k,v)=>{v=String(v).trim();const o=npObj();if(v===''||!isFinite(+v))delete o[k];else o[k]=+v;anDirty=true;npApply();autoSave();npPage()};
@@ -1116,23 +1114,19 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
  const num=(path,val,w)=>`<input inputmode="decimal" type="text" value="${esc(val)}" style="width:${w||60}px;font-size:16px" onchange="nrSet('${path}',this.value)">`;
  const P0=Array.isArray(o.pass)?o.pass:PASS0;const pr=[0,1,2].map(i=>{const p=P0[i]||{n:'',g:'',rb:'',gs:'',by:'hy',on:false};const on=i===0||p.on!==false&&P0[i]!=null;
   const pi=(k)=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" placeholder="55" style="width:52px;font-size:16px" onchange="npPass(${i},'${k}',this.value)">`;
-  return`<tr><td>${i?`<input type="checkbox" ${on?'checked':''} onchange="npPass(${i},'on',this.checked)" style="width:20px;height:20px">`:''}</td><td><input value="${esc(p.n||'')}" placeholder="ライン${i+1}" style="width:80px;font-size:16px" onchange="npPass(${i},'n',this.value)"></td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td><td><select onchange="npPass(${i},'by',this.value)"><option value="hy" ${p.by!=='tk'?'selected':''}>標準</option><option value="tk" ${p.by==='tk'?'selected':''}>店舗機種</option></select></td></tr>`}).join('');
+  return`<tr><td>${i?`<input type="checkbox" ${on?'checked':''} onchange="npPass(${i},'on',this.checked)" style="width:20px;height:20px">`:''}</td><td>ライン${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('');
  $('main').innerHTML=`${asBar()}
-<div class="card"><h2>分析</h2>${row('指数の中心','devM')}${row('指数の幅','devS')}${row('確率の比較相手 標準 回転指数','cmpHy')}${row('確率の比較相手 店舗機種 回転指数','cmpTk')}
-${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
+<div class="card"><h2>共通指数合格ライン</h2><div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th></tr>${pr}</table></div>${row('青色ライン','blue')}</div>
+<div class="card"><h2>分析</h2>${row('状態順 何位まで','stMax')}</div>
 <div class="card"><h2>狙い</h2>
 <div class="card"><h2>🎖 ○の点数</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr></table></div></div>
 <div class="card"><h2>🧮 サブ評価</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg]??0)} %</td>`).join('')}</tr></table></div>
 <div class="row"><label>使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転指数'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('サブ評価の割り算','subDiv',90)}</div>
 <div class="card"><h2>🧩 その他考慮</h2>
 <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○を×にする</label></div>${row('前日○の指数','prev')}
-<div class="row"><label><input type="checkbox" ${cfg.seatMerge?'checked':''} onchange="nrSeatM(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 着席台番被りを考慮する</label></div>${row('狙い日 最終日から何日先まで','nrMax')}</div>
-${borHtml()}</div>
-<div class="card"><h2>精度チェック</h2>${row('下限の z','z')}</div>
-<div class="card"><h2>項目別集計・日別集計</h2><div class="tw"><table><tr><th></th><th>名前</th><th>回転</th><th>RB</th><th>合算</th><th>指数</th></tr>${pr}</table></div>${row('表の表示件数','topN')}${row('台番の範囲入力 最大','taiMax')}</div>
-<div class="card"><h2>当日</h2>${row('青色ライン','blue')}</div>
-<div class="card"><h2>取り込み</h2>${row('異常の判定 p値','ckTH',110)}${row('取り込み忘れ 見る日数','ckWin')}${row('取り込み忘れ 割合','ckMin')}${row('判定する機種の総回転','ckG',90)}${row('判定に使う期待回数','ckExp')}${row('ばらつき補正','ckDisp')}</div>
-<div class="card"><h2>共通</h2>${row('自動保存の待ち ミリ秒','asMs')}${row('元に戻す 回数','undo')}</div>`}
+<div class="row"><label><input type="checkbox" ${cfg.seatMerge?'checked':''} onchange="nrSeatM(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 着席台番被りを考慮する</label></div></div>
+</div>
+<div class="card"><h2>精度チェック</h2>${row('下限の z','z')}</div>`}
 
 // ===== 設定 =====
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
