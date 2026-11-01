@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=38"></script>
+<script src="core.js?v=39"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -752,8 +752,8 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const dataDay=U&&!U.virt?date:null,mem=U?U.day:[],rk=U?U.rk:{};
  const editDay=dataDay||SR.reduce((a,r)=>r.d>a?r.d:a,'');
  LS.set('nr_zu',zu);
- // 狙いリストの表示（絞る順位・何位まで）に残る台番だけ○と番号。番号は絞る順位の順位（全なら全店舗の通し順位）
- const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!isRk(x))continue;if(NF.nrF!==''&&!(x.r3[+NF.nrF]<=NF.nrN))continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[NF.nrF===''?0:+NF.nrF];const o=ZR.get(t);if(o==null||n<o)ZR.set(t,n)}}
+ // 狙いリストの表示（絞る順位・何位まで）に残る台番だけ○と番号。番号はいつも店舗内の狙い順
+ const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!isRk(x))continue;if(NF.nrF!==''&&!(x.r3[+NF.nrF]<=NF.nrN))continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[1];const o=ZR.get(t);if(o==null||n<o)ZR.set(t,n)}}
  const L=U?U.L.filter(x=>ZR.has(String(x.t))).map(x=>Object.assign({},x,{rank:ZR.get(String(x.t))})):[];const NM=new Map(L.map(x=>[String(x.t),x]));
  const dayR=new Map(dataDay?SR.filter(r=>r.d===dataDay).map(r=>[String(r.t),r]):[]);
  const zshow=S.an.zuShow||'';
