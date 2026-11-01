@@ -1115,12 +1115,10 @@ function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);c
  const len=Math.round((Date.parse(t)-Date.parse(f))/864e5)+1;return[NC.addDay(st,-len),pv]}
 const PCD=new Map();// 日ごとの狙い（分析期間・設定が同じなら使い回す）
 
-// 精度チェックから集計した的中率キャッシュ（種類・○数・順位帯）
-let PC_RATES={type:{},combo:{},rank:{}};
-function updatePcRates(out){
-  // 簡易集計：実際の精度チェック結果から的中率を更新する場所
-  // out は精度チェックで集まった台のデータ
-  // ここでは構造だけ用意（本格集計は pcRun 後に呼び出す）
+// 精度チェック結果から的中率を集計（○が付く条件を設定から使う）
+function computePcRates(){
+  // 本格集計は pcRun の結果を使って PC_RATES を更新する
+  // 現在は構造のみ。実際の集計は精度チェック実行時に行う
 }
 function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(ym,first);const B=bordEff(),cfg=nerCfg();
  const key=[d,from,to,JSON.stringify(B),JSON.stringify(cfg),JSON.stringify(S.an.marks||{}),R.length].join('~');let v=PCD.get(key);if(v)return v;
