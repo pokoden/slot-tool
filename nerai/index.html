@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=41"></script>
+<script src="core.js?v=42"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -594,11 +594,11 @@ function avPaint(force){const tb=$('avb'),tbl=$('avt');if(!AV||!tb||!tbl)return;
 let avSc=0;window.addEventListener('scroll',()=>{if(tab!=='ana'||!AV||avSc)return;avSc=requestAnimationFrame(()=>{avSc=0;avPaint(false)})},{passive:true});
 // 期間は analysis.json（S.an.period）に保存。保存ボタンを押すまで確定しない
 function anPer(){const p=S.an&&S.an.period;if(p&&typeof p==='object'){if(p.rel)return{from:'',to:''};return p}return{from:an.from||'',to:an.to||''}}
-window.anPd=(k,v)=>{const p=Object.assign({},anPer());delete p.rel;if(k)p[k]=v;else{p.from='';p.to=''}S.an.period=p;anDirty=true;NRC={};anaPage()};
+window.anPd=(k,v)=>{const p=Object.assign({},anPer());delete p.rel;delete p.m;if(k)p[k]=v;else{p.from='';p.to=''}S.an.period=p;anDirty=true;NRC={};anaPage()};
 // 当月を抜いた過去nヶ月（n=0は当月の1日〜今日）
 function mPer(n){const t=new Date();const y=t.getFullYear(),m=t.getMonth();const p2=x=>String(x).padStart(2,'0');const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
  if(!n)return[ymd(new Date(y,m,1)),ymd(t)];return[ymd(new Date(y,m-n,1)),ymd(new Date(y,m,0))]}
-window.anPm=n=>{const p=mPer(n);const o=Object.assign({},anPer());delete o.rel;o.from=p[0];o.to=p[1];S.an.period=o;anDirty=true;NRC={};anaPage()};
+window.anPm=n=>{const p=mPer(n);const o=Object.assign({},anPer());delete o.rel;o.from=p[0];o.to=p[1];o.m=n;S.an.period=o;anDirty=true;NRC={};anaPage()};
 window.anAx=k=>{if(!an.vs)an.vs={};an.vs[an.ax]=an.val;an.ax=k;an.val=an.vs[k]!=null?an.vs[k]:'all';an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
@@ -632,7 +632,9 @@ function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.D
 // 分析タブの期間を使う。終わりは狙う日の前日まで
 function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
  let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
- const PD=anPer();const from=PD.from||first;let to=PD.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
+ const PD=anPer();let from=PD.from||first;let to=PD.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
+ // Nヶ月ボタンで選んだときは、狙う日の前の月までのNヶ月（例：3ヶ月・10/16→7/1〜9/30）
+ if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);from=ymOf(y,m-1-(+PD.m))+'-01';to=NC.addDay(date.slice(0,7)+'-01',-1)}
  const base=NC.stdBase(S.rows,set,to);
  const hasPrev=NC.storeHas(S.rows,store,pv);const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:bordEff(),marks:S.an.marks||{},cfg:nerCfg(),hasPrev});L.from=from;L.to=to;return NRC[k]=L}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
@@ -719,7 +721,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
- ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
+ ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}${(()=>{const u=units.find(u=>u.L&&u.L.from);if(!u)return'';const md=d=>+d.slice(5,7)+'/'+ +d.slice(8,10);return`<div class="row">分析期間 ${md(u.L.from)}〜${md(u.L.to)}</div>`})()}
 </div>`}
 window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nrRe()};
 window.nrPrevX=v=>{nerCfg().prevX=!!v;anDirty=true;NRC={};autoSave();nrRe()};
@@ -1066,6 +1068,7 @@ const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slic
 const mEnd=ym=>{const[y,m]=ym.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)};
 // チェックする月 ym の分析期間。分析が「1日〜月末」ならその月数、手入力の日付ならその日数、全期間なら前月末までの全部
 function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);const[y,m]=ym.split('-').map(Number);
+ if(+P.m>0)return[ymOf(y,m-1-(+P.m))+'-01',pv];
  if(!P.from&&!P.to)return[first,pv];
  const f=P.from||first,t=P.to||pv;
  if(/-01$/.test(f)&&t===mEnd(t.slice(0,7))){const n=(+t.slice(0,4)*12+ +t.slice(5,7))-(+f.slice(0,4)*12+ +f.slice(5,7))+1;return[ymOf(y,m-1-n)+'-01',pv]}
