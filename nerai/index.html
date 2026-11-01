@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=39"></script>
+<script src="core.js?v=40"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -705,11 +705,11 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  window._ml=[];const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td class="mkc">${mkH(x.mark||'×')}</td><td style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')
-  +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
+  +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th><th rowspan="2">目印</th>`
   +NC.SEGS.map(sg=>TH('o_'+sg,SEGN[sg]+'<br>○×','ox3','rowspan="2"')).join('')+TH('prev','前日<br>○×','ox3','rowspan="2"')+TH('score','点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="14" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
   +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印','全店舗','店舗内','店舗機種'].map((t,i)=>`<th class="${i===0?'gl hl':''}${i===13?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,NPV().nrMax);
@@ -753,8 +753,8 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const editDay=dataDay||SR.reduce((a,r)=>r.d>a?r.d:a,'');
  LS.set('nr_zu',zu);
  // 狙いリストの表示（絞る順位・何位まで）に残る台番だけ○と番号。番号はいつも店舗内の狙い順
- const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!isRk(x))continue;if(NF.nrF!==''&&!(x.r3[+NF.nrF]<=NF.nrN))continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[1];const o=ZR.get(t);if(o==null||n<o)ZR.set(t,n)}}
- const L=U?U.L.filter(x=>ZR.has(String(x.t))).map(x=>Object.assign({},x,{rank:ZR.get(String(x.t))})):[];const NM=new Map(L.map(x=>[String(x.t),x]));
+ const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!isRk(x))continue;if(NF.nrF!==''&&!(x.r3[+NF.nrF]<=NF.nrN))continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[1];const o=ZR.get(t);if(o==null||n<o.n)ZR.set(t,{n,j:mjOf(x)})}}
+ const L=U?U.L.filter(x=>ZR.has(String(x.t))).map(x=>{const z=ZR.get(String(x.t));return Object.assign({},x,{rank:z.n,mj:z.j})}):[];const NM=new Map(L.map(x=>[String(x.t),x]));
  const dayR=new Map(dataDay?SR.filter(r=>r.d===dataDay).map(r=>[String(r.t),r]):[]);
  const zshow=S.an.zuShow||'';
  const zval=t=>{if(!zshow)return'';const v=effV(zu.s,date,t,dayR.get(String(t)));
@@ -775,7 +775,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
  const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
-  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank+esc(x.mj||''):'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
  <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
@@ -834,7 +834,7 @@ function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=0;let html='';const set=x.s
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
   const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
-  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank:'')}
+  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank+esc(nm.mj||''):'')}
  return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*(x.zshow==='ix'?6.5:x.zshow==='io'?4.2:2.4):c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
  return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
@@ -1121,6 +1121,12 @@ const npTbl=(a,nm)=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return[0,1,
  const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npL('${a}',${i},'${k}',this.value)">`;
  return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('')};
 const npT=(a1,a2)=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th></tr>${npTbl(a1,'店舗機種')}${npTbl(a2,'標準')}</table></div>`;
+// 目印：上から順に、選んだ軸がぜんぶ○の行の文字（1台1つ）
+const mjL=()=>Array.isArray(npObj().mj)?npObj().mj:[];
+const mjOf=x=>{if(!x||!x.seg)return'';for(const m of mjL()){const A=NC.SEGS.filter(sg=>m&&m.ax&&m.ax[sg]);if(A.length&&A.every(sg=>x.seg[sg]&&x.seg[sg].o))return String(m.t||'')}return''};
+window.mjSet=(i,k,v)=>{const o=npObj();if(!Array.isArray(o.mj))o.mj=[];const m=o.mj[i];if(!m)return;if(k==='t')m.t=String(v);else{m.ax=Object.assign({},m.ax);m.ax[k]=v?1:0}anDirty=true;autoSave();npPage()};
+window.mjAdd=()=>{const o=npObj();if(!Array.isArray(o.mj))o.mj=[];o.mj.push({ax:{},t:''});anDirty=true;autoSave();npPage()};
+window.mjDel=i=>{const o=npObj();if(!Array.isArray(o.mj))return;o.mj.splice(i,1);anDirty=true;autoSave();npPage()};
 const nrRe=()=>tab==='np'?npPage():nerPage();
 function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
  const ni=(k,w=70)=>`<input inputmode="decimal" type="text" value="${esc(o[k]!=null?o[k]:'')}" placeholder="${esc(String(NPD[k]))}" style="width:${w}px;font-size:16px" onchange="npSet('${k}',this.value)">`;
@@ -1134,6 +1140,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="card"><h2>分析</h2><div class="row"><label>全 指数合格ライン</label></div>${npT('anTk','anHy')}${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
 <div class="card"><h2>狙い</h2>
 <div class="card"><h2>🏆 狙いリストの表示</h2><div class="row"><label>絞る順位 <select onchange="npObj().nrF=this.value;anDirty=true;autoSave();npPage()">${[['','全'],['0','全店舗'],['1','店舗内'],['2','店舗機種']].map(([k,t])=>`<option value="${k}" ${v.nrF===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('何位まで','nrN')}</div>
+<div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}<th>目印</th><th></th></tr>${mjL().map((m,i)=>`<tr>${NC.SEGS.map(sg=>`<td style="text-align:center"><input type="checkbox" ${m&&m.ax&&m.ax[sg]?'checked':''} onchange="mjSet(${i},'${sg}',this.checked)" style="width:20px;height:20px"></td>`).join('')}<td><input type="text" value="${esc(m&&m.t||'')}" style="width:52px;font-size:16px" onchange="mjSet(${i},'t',this.value)"></td><td><button class="b sub" onclick="mjDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="mjAdd()">追加</button></div></div>
 <div class="card"><h2>🎖 ○の点数</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr></table></div></div>
 <div class="card"><h2>🧮 サブ評価</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg]??0)} %</td>`).join('')}</tr></table></div>
 <div class="row"><label>使う数字 <select onchange="nrSet('sub.metric',this.value)">${[['g','回転指数'],['p','確率指数'],['t','総合指数'],['tt','総合トータル指数']].map(([k,t])=>`<option value="${k}" ${cfg.sub.metric===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('サブ評価の割り算','subDiv',90)}</div>
