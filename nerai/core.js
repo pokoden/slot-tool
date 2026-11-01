@@ -210,7 +210,7 @@ function finalize(G,B,base){
  return G}
 let AFM=new WeakMap();
 // memo=true のときだけ base ごとに結果を覚える（精度チェック用）
-function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&B.allL&&axis!=='all'){B=Object.assign({},B);delete B.allL}if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
+function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
  let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);m.set(k,v)}return v}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
