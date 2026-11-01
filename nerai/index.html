@@ -695,7 +695,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  let V=nr.only?T.filter(x=>mjOf(x)):T.slice();
  V=V.map(x=>({x,v:sv(x)}));
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
- const NF=NPV();const shown=V.map(o=>o.x).filter(x=>NF.nrF===''||(x.r3&&x.r3[+NF.nrF]<=NF.nrN));
+ const NF=NPV();const shown=V.map(o=>o.x).filter(x=>{if(!x.r3)return false;if(NF.nr0!=null&&x.r3[0]>NF.nr0)return false;if(NF.nr1!=null&&x.r3[1]>NF.nr1)return false;if(NF.nr2!=null&&x.r3[2]>NF.nr2)return false;return true;});
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
  const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();const HG=new Map();for(const r of HD.values()){const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
  const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(12)+'<td class="gr"></td>';
@@ -755,7 +755,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const editDay=dataDay||SR.reduce((a,r)=>r.d>a?r.d:a,'');
  LS.set('nr_zu',zu);
  // 狙いリストの表示（絞る順位・何位まで）に残る台番だけ○と番号。番号はいつも店舗内の狙い順
- const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!mjOf(x))continue;if(NF.nrF!==''&&!(x.r3[+NF.nrF]<=NF.nrN))continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[1];const o=ZR.get(t);if(o==null||n<o.n)ZR.set(t,{n,j:mjOf(x)})}}
+ const ZR=new Map();if(U){const NF=NPV();for(const x of U.T){if(!x.r3||!mjOf(x))continue;if(NF.nr0!=null&&x.r3[0]>NF.nr0)continue;if(NF.nr1!=null&&x.r3[1]>NF.nr1)continue;if(NF.nr2!=null&&x.r3[2]>NF.nr2)continue;const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null)continue;const n=x.r3[1];const o=ZR.get(t);if(o==null||n<o.n)ZR.set(t,{n,j:mjOf(x)})}}
  const L=U?U.L.filter(x=>ZR.has(String(x.t))).map(x=>{const z=ZR.get(String(x.t));return Object.assign({},x,{rank:z.n,mj:z.j})}):[];const NM=new Map(L.map(x=>[String(x.t),x]));
  const dayR=new Map(dataDay?SR.filter(r=>r.d===dataDay).map(r=>[String(r.t),r]):[]);
  const zshow=S.an.zuShow||'';
@@ -1112,7 +1112,10 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 // ===== 各種数値設定（analysis.json の np に保存）=====
 const NPD={nrN:3,devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50};
 const PASS0=[{n:'合格',g:55,rb:55,gs:55,by:'hy'}];
-let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue','wRb','wRot','wTk','nrN'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];v.nrF=['0','1','2'].includes(String(o.nrF))?String(o.nrF):'';
+let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue','wRb','wRot','wTk'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];
+ v.nr0=(o.nr0!==''&&o.nr0!=null&&isFinite(+o.nr0))?+o.nr0:null;
+ v.nr1=(o.nr1!==''&&o.nr1!=null&&isFinite(+o.nr1))?+o.nr1:null;
+ v.nr2=(o.nr2!==''&&o.nr2!=null&&isFinite(+o.nr2))?+o.nr2:null;
  const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:0;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0?p.on!==false:(p.on===true||(by==='hy'&&p.on!==false))).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),by}))};const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));{const q=(Array.isArray(o.pass)&&o.pass[0])||{};v.std1={g:nv(q.g),rb:nv(q.rb),gs:nv(q.gs)}}v.pass=ps.length?ps:[Object.assign({n:'標準ライン1',by:'hy'},v.std1)];NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
@@ -1142,7 +1145,11 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="card"><h2>共通指数合格ライン</h2>${npT('passTk','pass')}${row('青色ライン','blue')}</div>
 <div class="card"><h2>分析</h2><div class="row"><label>全 指数合格ライン</label></div>${npT('anTk','anHy')}${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
 <div class="card"><h2>狙い</h2>
-<div class="card"><h2>🏆 狙いリストの表示</h2><div class="row"><label>絞る順位 <select onchange="npObj().nrF=this.value;anDirty=true;autoSave();npPage()">${[['','全'],['0','全店舗'],['1','店舗内'],['2','店舗機種']].map(([k,t])=>`<option value="${k}" ${v.nrF===k?'selected':''}>${t}</option>`).join('')}</select></label></div>${row('何位まで','nrN')}</div>
+<div class="card"><h2>🏆 狙いリストの表示</h2>
+<div class="row"><label>全 何位まで ${ni('nr0',50)}</label></div>
+<div class="row"><label>店舗 何位まで ${ni('nr1',50)}</label></div>
+<div class="row"><label>店舗機種 何位まで ${ni('nr2',50)}</label></div>
+<div class="note">空白の場合はそのレベルは無条件</div></div>
 <div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}<th>目印</th><th></th></tr>${mjL().map((m,i)=>`<tr>${NC.SEGS.map(sg=>`<td style="text-align:center"><input type="checkbox" ${m&&m.ax&&m.ax[sg]?'checked':''} onchange="mjSet(${i},'${sg}',this.checked)" style="width:20px;height:20px"></td>`).join('')}<td><input type="text" value="${esc(m&&m.t||'')}" style="width:52px;font-size:16px" onchange="mjSet(${i},'t',this.value)"></td><td><button class="b sub" onclick="mjDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="mjAdd()">追加</button></div></div>
 <div class="card"><h2>🎖 ○の点数</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr></table></div></div>
 <div class="card"><h2>🧮 サブ評価</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg]??0)} %</td>`).join('')}</tr></table></div>
