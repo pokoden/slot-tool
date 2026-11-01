@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=35"></script>
+<script src="core.js?v=36"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -342,9 +342,9 @@ function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null
 const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
 function idxOfV(m,v){if(!(v.g>0)||v.bb==null||v.rb==null||!TOUB)return null;return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base)}
 let TOUB=null;
-const okP=(x,i)=>{const p=NPV().pass[i]||NPV().pass[0];return!!x&&x.g!=null&&x.rb!=null&&x.gs!=null&&x.g>=p.g&&x.rb>=p.rb&&x.gs>=p.gs};const okIx=x=>okP(x,0);
+const okL=(x,p)=>!!x&&!!p&&x.g!=null&&x.gs!=null&&x.g>=p.g&&(x.rb==null||x.rb>=p.rb)&&x.gs>=p.gs;const okP=(x,i)=>okL(x,NPV().pass[i]||NPV().pass[0]);const okIx=x=>okL(x,NPV().std1);
 // 合格の判定（合格ライン i。店舗機種なら同じ店舗×機種の全データと比べた指数）
-const okRow=(r,set,base,i)=>{const p=NPV().pass[i]||NPV().pass[0];return okP(p.by==='tk'?tkRowIdx(r,set):NC.rowIdx(r,set,base),i)};
+const okRow=(r,set,base,i)=>{const p=NPV().pass[i]||NPV().pass[0];if(!p)return false;return okP(p.by==='tk'?tkRowIdx(r,set):NC.rowIdx(r,set,base),i)};
 let TKC=null;function tkRowIdx(r,set){const sig=JSON.stringify(NC.getP());if(!TKC||TKC.r!==S.rows||TKC.sig!==sig){const M=new Map();for(const q of S.rows){const k=q.s+'|'+NC.groupOf(q.m,set);let a=M.get(k);if(!a)M.set(k,a=[]);a.push(q)}
   const st=new Map();for(const[k,L]of M){const sg=NC.stat(L.map(q=>q.g));const hi=L.filter(q=>q.g>0&&NC.dev(q.g,sg)>=NC.getP().cmpTk);st.set(k,{g:sg,rb:NC.stat(hi.map(q=>q.rb/q.g)),gs:NC.stat(hi.map(q=>(q.bb+q.rb)/q.g))})}TKC={r:S.rows,sig,st}}
  const x=TKC.st.get(r.s+'|'+NC.groupOf(r.m,set));if(!x)return null;return{g:NC.dev(r.g,x.g),rb:NC.dev(r.g>0?r.rb/r.g:0,x.rb),gs:NC.dev(r.g>0?(r.bb+r.rb)/r.g:0,x.gs)}}
@@ -508,7 +508,7 @@ function anaCalc(sl,from,to,B){const key=[an.ax,from,to,JSON.stringify(B),S.rows
  const set=setObj(),ranks=allRanks(),base=NC.stdBase(S.rows,set,to);const v={};for(const s of sl)v[s]=NC.analysisFor(S.rows,set,ranks,s,an.ax,from,to,B,base);ANC={key,r:S.rows,v};return v}
 const stLab=k=>NC.stName(k);
 // 分析の自動○はボーダーの線
-function bordEff(){const B=Object.assign({},bord());delete B.by;for(const k of['g','rb','gs']){B[k]=Object.assign({},B[k]);delete B[k].idx;delete B[k].tki}const o=npObj();const L=a=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0||p.on===true)).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.allL={tk:L(o.anTk),hy:L(o.anHy)};const LP=(a,hy)=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0||p.on===true||(hy&&p.on!==false))).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.axL={tk:LP(o.passTk),hy:LP(o.pass,1)};return B}
+function bordEff(){const B=Object.assign({},bord());delete B.by;for(const k of['g','rb','gs']){B[k]=Object.assign({},B[k]);delete B[k].idx;delete B[k].tki}const o=npObj();const L=a=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true)).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.allL={tk:L(o.anTk),hy:L(o.anHy)};const LP=(a,hy)=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:(p.on===true||(hy&&p.on!==false)))).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.axL={tk:LP(o.passTk),hy:LP(o.pass,1)};return B}
 function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  const stores=[...new Set(R.map(r=>r.s))].sort();if(an.s!=='*'&&!stores.includes(an.s))an.s='*';
  let first='9',last='0';const lastD={};for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d;if(!lastD[r.s]||r.d>lastD[r.s])lastD[r.s]=r.d}
@@ -1108,16 +1108,16 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 const NPD={nrN:3,devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50};
 const PASS0=[{n:'合格',g:55,rb:55,gs:55,by:'hy'}];
 let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue','wRb','wRot','wTk','nrN'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];v.nrF=['0','1','2'].includes(String(o.nrF))?String(o.nrF):'';
- const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:55;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0||p.on===true||(by==='hy'&&p.on!==false)).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),by}))};const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));v.pass=ps;NPC={sig,v};return v}
+ const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:0;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0?p.on!==false:(p.on===true||(by==='hy'&&p.on!==false))).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),by}))};const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));{const q=(Array.isArray(o.pass)&&o.pass[0])||{};v.std1={g:nv(q.g),rb:nv(q.rb),gs:nv(q.gs)}}v.pass=ps.length?ps:[Object.assign({n:'標準ライン1',by:'hy'},v.std1)];NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
 window.npSet=(k,v)=>{v=String(v).trim();const o=npObj();if(v===''||!isFinite(+v))delete o[k];else o[k]=+v;anDirty=true;npApply();autoSave();npPage()};
 window.npPass=(i,k,v)=>{const o=npObj();if(!Array.isArray(o.pass))o.pass=JSON.parse(JSON.stringify(PASS0));while(o.pass.length<=i)o.pass.push({n:'',g:'',rb:'',gs:'',by:'hy',on:false});const p=o.pass[i];
  if(k==='n'||k==='by')p[k]=v;else if(k==='on')p.on=!!v;else p[k]=String(v).trim()===''?'':+v;anDirty=true;npApply();autoSave();npPage()};
-window.npL=(a,i,k,v)=>{const o=npObj();if(!Array.isArray(o[a]))o[a]=a==='pass'?JSON.parse(JSON.stringify(PASS0)):[];while(o[a].length<=i)o[a].push({g:'',rb:'',gs:'',on:false});const p=o[a][i]||(o[a][i]={g:'',rb:'',gs:''});if(k==='on')p.on=!!v;else p[k]=String(v).trim()===''?'':+v;anDirty=true;npApply();autoSave();npPage()};
-const npTbl=(a,nm)=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return[0,1,2].map(i=>{const p=A[i]||{};const on=i===0||(a==='pass'?p.on!==false&&A[i]!=null:p.on===true);
+window.npL=(a,i,k,v)=>{const o=npObj();if(!Array.isArray(o[a]))o[a]=a==='pass'?JSON.parse(JSON.stringify(PASS0)):[];while(o[a].length<=i)o[a].push({g:'',rb:'',gs:'',on:o[a].length===0});const p=o[a][i]||(o[a][i]={g:'',rb:'',gs:''});if(k==='on')p.on=!!v;else p[k]=String(v).trim()===''?'':+v;anDirty=true;npApply();autoSave();npPage()};
+const npTbl=(a,nm)=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return[0,1,2].map(i=>{const p=A[i]||{};const on=i===0?p.on!==false:(a==='pass'?p.on!==false&&A[i]!=null:p.on===true);
  const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npL('${a}',${i},'${k}',this.value)">`;
- return`<tr><td>${i?`<input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px">`:''}</td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('')};
+ return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('')};
 const npT=(a1,a2)=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th></tr>${npTbl(a1,'店舗機種')}${npTbl(a2,'標準')}</table></div>`;
 const nrRe=()=>tab==='np'?npPage():nerPage();
 function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
