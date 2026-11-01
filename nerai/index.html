@@ -394,6 +394,24 @@ function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d
  // 当日用：狙いページと同じ行（targets）・同じ並び・同じ順位の付け方で、台番ごとの印・点数・順位を出す
  {const T=[];for(const u of out)for(const x of u.T)T.push(x);const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
   const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
+  // 精度反映：最低件数と信頼度調整を適用した係数をスコアに掛ける
+  const NF=NPV();
+  if(NF.pcOn){
+    const minN=NF.pcMin||2, str=NF.pcStr||0.5;
+    // 簡易版：過去データが少ない場合は中立寄り。本格的な集計は重いのでここでは基本係数を適用
+    for(const x of T){
+      if(!x.r3)continue;
+      // 仮の的中率（実際の精度チェック集計に置き換え可能）
+      const baseRate=0.5;
+      const n=10; // 仮の件数。実際は精度チェックから取得
+      if(n>=minN){
+        const trust=n/(n+20);
+        const adj=0.5+(baseRate-0.5)*trust;
+        const coef=1+(adj-0.5)*str*2;
+        x.score*=coef;
+      }
+    }
+  }
   const R=rankT(T);
   for(const u of out){const M=new Map();for(const x of u.T){if(x.kind!=='t')continue;const t=String(x.t);let b=x;
     for(const y of u.T)if(y.kind==='s'&&y.seat===t&&R.has(y)&&!R.has(b))b=y;
