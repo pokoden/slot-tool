@@ -381,6 +381,25 @@ function rankT(T){const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
  T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
  for(const x of T){if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}R.set(x,++nn);c2[x.s]=(c2[x.s]||0)+1;const k3=x.s+'|'+x.g;c3[k3]=(c3[k3]||0)+1;x.r3=[nn,c2[x.s],c3[k3]]}
  return R}
+
+function pcCoef(x, date, NF){
+  if(!NF||!NF.pcOn)return 1;
+  const minN=NF.pcMin||2, str=NF.pcStr||0.5;
+  const kbn=neraiKbn(x, date);
+  const oCnt=Object.values(x.seg||{}).filter(s=>s&&s.o).length;
+  const rk=x.r3?x.r3[2]:99;
+  const typeRate=PC_RATES.type[kbn]!=null?PC_RATES.type[kbn]:0.5;
+  const comboRate=PC_RATES.combo[String(oCnt)]!=null?PC_RATES.combo[String(oCnt)]:0.5;
+  const rankKey=rk<=5?String(rk):'other';
+  const rankRate=PC_RATES.rank[rankKey]!=null?PC_RATES.rank[rankKey]:0.5;
+  const n=20;
+  const trust=n>=minN?n/(n+20):0;
+  const adj=r=>0.5+(r-0.5)*trust;
+  const c1=1+(adj(typeRate)-0.5)*str*2;
+  const c2=1+(adj(comboRate)-0.5)*str*2;
+  const c3=1+(adj(rankRate)-0.5)*str*2;
+  return Math.max(0.5, Math.min(1.5, c1*c2*c3));
+}
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
