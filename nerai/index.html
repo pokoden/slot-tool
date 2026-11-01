@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=40"></script>
+<script src="core.js?v=41"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -775,7 +775,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
  const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
-  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?(x.mark||'・')+x.rank+esc(x.mj||''):'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span>${x?esc(x.mj||x.mark||'・')+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
  <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
@@ -832,9 +832,9 @@ function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=0;let html='';const set=x.s
  const cell=(r,cc,cls,txt,ex='')=>`<div class="g ${cls}" style="grid-row:${r+1};grid-column:${cc+1}" ${ex}>${txt}</div>`;
  const acs=new Set(x.zshow?G.cards.map(k=>k[3]==='R'?k[2]-1:k[2]+1):[]);
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
-  const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'';
+  const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'',mkT=show?(nm.mj||nm.mark):'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
-  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,mk)+cell(r,rc,'gk'+sel,show?nm.rank+esc(nm.mj||''):'')}
+  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,esc(mkT||''))+cell(r,rc,'gk'+sel,show?nm.rank:'')}
  return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*(x.zshow==='ix'?6.5:x.zshow==='io'?4.2:2.4):c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
  return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
