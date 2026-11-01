@@ -1111,7 +1111,7 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 
 // ===== 各種数値設定（analysis.json の np に保存）=====
-const NPD={nrN:3,devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50,pcStr:0.5};
+const NPD={nrN:3,devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3,z:1.645,blue:55,nrMax:60,topN:10,taiMax:500,ckTH:0.000001,ckWin:14,ckMin:0.8,ckG:20000,ckExp:3,ckDisp:0.455,asMs:1200,undo:50,pcStr:0.5,pcMin:2};
 const PASS0=[{n:'合格',g:55,rb:55,gs:55,by:'hy'}];
 let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify(o);if(NPC&&NPC.sig===sig)return NPC.v;const v=Object.assign({},NPD);for(const k of['prev','subDiv','stMax','z','blue','wRb','wRot','wTk'])if(o[k]!==''&&o[k]!=null&&isFinite(+o[k]))v[k]=+o[k];
  v.nr0=(o.nr0!==''&&o.nr0!=null&&isFinite(+o.nr0))?+o.nr0:null;
@@ -1119,6 +1119,7 @@ let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify
  v.nr2=(o.nr2!==''&&o.nr2!=null&&isFinite(+o.nr2))?+o.nr2:null;
  v.pcOn=!!o.pcOn;
  v.pcStr=(o.pcStr!==''&&o.pcStr!=null&&isFinite(+o.pcStr))?Math.max(0,Math.min(1,+o.pcStr)):0.5;
+ v.pcMin=(o.pcMin!==''&&o.pcMin!=null&&isFinite(+o.pcMin))?Math.max(1,+o.pcMin):2;
  const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:0;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0?p.on!==false:(p.on===true||(by==='hy'&&p.on!==false))).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),by}))};const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));{const q=(Array.isArray(o.pass)&&o.pass[0])||{};v.std1={g:nv(q.g),rb:nv(q.rb),gs:nv(q.gs)}}v.pass=ps.length?ps:[Object.assign({n:'標準ライン1',by:'hy'},v.std1)];NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
@@ -1155,7 +1156,8 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="note">空白の場合はそのレベルは無条件</div>
 <div class="row"><label><input type="checkbox" ${v.pcOn?'checked':''} onchange="npObj().pcOn=this.checked;anDirty=true;autoSave();npPage()" style="width:20px;height:20px"> 精度反映</label></div>
 <div class="row"><label>反映の強さ ${ni('pcStr',50)}</label></div>
-<div class="note">0.0〜1.0。0.5が初期値。大きいほど過去の的中率を強く効かせる</div></div>
+<div class="row"><label>最低件数 ${ni('pcMin',50)}</label></div>
+<div class="note">0.0〜1.0。0.5が初期値。最低件数未満は中立（0.5）として扱う。件数に応じて信頼度を調整</div></div>
 <div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}<th>目印</th><th></th></tr>${mjL().map((m,i)=>`<tr>${NC.SEGS.map(sg=>`<td style="text-align:center"><input type="checkbox" ${m&&m.ax&&m.ax[sg]?'checked':''} onchange="mjSet(${i},'${sg}',this.checked)" style="width:20px;height:20px"></td>`).join('')}<td><input type="text" value="${esc(m&&m.t||'')}" style="width:52px;font-size:16px" onchange="mjSet(${i},'t',this.value)"></td><td><button class="b sub" onclick="mjDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="mjAdd()">追加</button></div></div>
 <div class="card"><h2>🎖 ○の点数</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr></table></div></div>
 <div class="card"><h2>🧮 サブ評価</h2><div class="tw"><table><tr>${NC.SEGS.map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr>${NC.SEGS.map(sg=>`<td>${num('sub.w.'+sg,cfg.sub.w[sg]??0)} %</td>`).join('')}</tr></table></div>
