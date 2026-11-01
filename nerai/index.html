@@ -762,7 +762,10 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
- window._ml=[];const body=shown.map(x=>{
+ window._ml=[];
+ const finalScore=x=>{const base=x.pts!=null?x.pts:0;const subc=x.sub!=null?(x.sub/(NPV().subDiv||10000)):0;const NF=NPV();const hitc=NF.pcOn?((pcCoef(x,date,NF)-1)*(base+subc)):0;return base+subc+hitc};
+ shown.sort((a,b)=>finalScore(b)-finalScore(a));shown.forEach((x,i)=>x.rank=i+1);
+ const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
   return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${x.sub!=null?(x.sub/ (NPV().subDiv||10000)).toFixed(1):''}</td><td>${(()=>{const NF=NPV();if(!NF.pcOn)return'';const c=pcCoef(x,date,NF);return ((c-1)*x.score).toFixed(1);})()}</td><td class="sc">${(()=>{const subc=x.sub!=null?(x.sub/(NPV().subDiv||10000)):0;const NF=NPV();const hitc=NF.pcOn?((pcCoef(x,date,NF)-1)*x.score):0;return (subc+hitc).toFixed(1);})()}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
@@ -776,10 +779,10 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  
  const stat=asBar();
- $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト</h2>
+ $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト ${(()=>{const u=units.find(u=>u.L&&u.L.from);if(!u)return'';const md=d=>+d.slice(5,7)+'/'+ +d.slice(8,10);return'分析期間 '+md(u.L.from)+'〜'+md(u.L.to)})()}</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
- ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}${(()=>{const u=units.find(u=>u.L&&u.L.from);if(!u)return'';const md=d=>+d.slice(5,7)+'/'+ +d.slice(8,10);return`<div class="row">分析期間 ${md(u.L.from)}〜${md(u.L.to)}</div>`})()}
+ ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
 </div>`}
 window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nrRe()};
 window.nrPrevX=v=>{nerCfg().prevX=!!v;anDirty=true;NRC={};autoSave();nrRe()};
