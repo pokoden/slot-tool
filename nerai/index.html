@@ -1115,10 +1115,33 @@ function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);c
  const len=Math.round((Date.parse(t)-Date.parse(f))/864e5)+1;return[NC.addDay(st,-len),pv]}
 const PCD=new Map();// 日ごとの狙い（分析期間・設定が同じなら使い回す）
 
-// 精度チェック結果から的中率を集計（○が付く条件を設定から使う）
-function computePcRates(){
-  // 本格集計は pcRun の結果を使って PC_RATES を更新する
-  // 現在は構造のみ。実際の集計は精度チェック実行時に行う
+let PC_RATES={type:{},combo:{},rank:{}};
+function updateRatesFromPrecision(results){
+  // results: array of {r, hit} where hit is whether it met ○ conditions
+  const cnt={type:{},combo:{},rank:{}};
+  const hit={type:{},combo:{},rank:{}};
+  for(const o of results){
+    const x=o.x||{};
+    const kbn=neraiKbn(x, o.date||'');
+    const oCnt=Object.values(x.seg||{}).filter(s=>s&&s.o).length;
+    const rk=x.r3?x.r3[2]:99;
+    const keys=[
+      ['type', kbn],
+      ['combo', String(oCnt)],
+      ['rank', rk<=5?String(rk):'other']
+    ];
+    for(const [cat, k] of keys){
+      cnt[cat][k]=(cnt[cat][k]||0)+1;
+      if(o.hit) hit[cat][k]=(hit[cat][k]||0)+1;
+    }
+  }
+  for(const cat of ['type','combo','rank']){
+    PC_RATES[cat]={};
+    for(const k in cnt[cat]){
+      const n=cnt[cat][k];
+      PC_RATES[cat][k]=n>0?(hit[cat][k]||0)/n:0.5;
+    }
+  }
 }
 function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(ym,first);const B=bordEff(),cfg=nerCfg();
  const key=[d,from,to,JSON.stringify(B),JSON.stringify(cfg),JSON.stringify(S.an.marks||{}),R.length].join('~');let v=PCD.get(key);if(v)return v;
