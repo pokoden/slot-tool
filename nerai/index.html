@@ -381,6 +381,36 @@ function rankT(T){const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
  T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
  for(const x of T){if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}R.set(x,++nn);c2[x.s]=(c2[x.s]||0)+1;const k3=x.s+'|'+x.g;c3[k3]=(c3[k3]||0)+1;x.r3=[nn,c2[x.s],c3[k3]]}
  return R}
+
+// 精度反映用の係数計算（簡易版。実際の精度チェック集計に置き換え可能）
+function pcCoef(x, date, NF){
+  if(!NF.pcOn)return 1;
+  const minN=NF.pcMin||2, str=NF.pcStr||0.5;
+  // 種類係数
+  const kbn=neraiKbn(x, date);
+  let typeRate=0.5;
+  if(kbn.includes('末尾'))typeRate=0.6;
+  else if(kbn==='合算')typeRate=0.55;
+  else if(kbn==='回転')typeRate=0.52;
+  // ○組み合わせ係数（簡易）
+  let comboRate=0.5;
+  const segs=x.seg||{};
+  const oCnt=Object.values(segs).filter(s=>s&&s.o).length;
+  if(oCnt>=3)comboRate=0.65;
+  else if(oCnt===2)comboRate=0.58;
+  else if(oCnt===1)comboRate=0.52;
+  // 順位係数（店舗機種）
+  let rankRate=0.5;
+  if(x.r3&&x.r3[2]<=5)rankRate=0.6;
+  // 信頼度調整（仮の件数）
+  const n=15;
+  const trust=n>=minN?n/(n+20):0;
+  const adj=(r)=>0.5+(r-0.5)*trust;
+  const c1=1+(adj(typeRate)-0.5)*str*2;
+  const c2=1+(adj(comboRate)-0.5)*str*2;
+  const c3=1+(adj(rankRate)-0.5)*str*2;
+  return c1*c2*c3;
+}
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
@@ -410,6 +440,12 @@ function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d
         const coef=1+(adj-0.5)*str*2;
         x.score*=coef;
       }
+    }
+  }
+  const NF=NPV();
+  if(NF.pcOn){
+    for(const x of T){
+      if(x.score!=null)x.score*=pcCoef(x, d, NF);
     }
   }
   const R=rankT(T);
@@ -675,22 +711,23 @@ document.addEventListener('click',()=>{const p=$('mlp');if(p)p.remove()});window
 
 // 狙い区分：台番/合算/回転 + 末尾判定
 function neraiKbn(x, date){
-  const lab=String(x.mlabel||x.label||'');
+  const lab=String(x.label||'');
   if(lab.includes('合算'))return'合算';
   if(lab.includes('回転'))return'回転';
-  // 位置（旧台番）
+  // 台番狙い
   const t=String(x.t||x.seat||'');
-  if(!/^\d+$/.test(t))return'位置';
+  if(!/^\d+$/.test(t))return'台番';
   const d=date||'';
-  const md=d.slice(5).replace('-','');
+  const md=d.slice(5).replace('-',''); // MMDD
   const last1=t.slice(-1);
   const dateLast1=md.slice(-1);
-  if(last1===dateLast1)return'位置末尾';
+  if(last1===dateLast1)return'台番末尾';
+  // 逆転台番（下2桁反転）
   if(t.length>=2){
     const rev=t.slice(-2).split('').reverse().join('');
-    if(md.endsWith(rev))return'位置末尾';
+    if(md.endsWith(rev))return'台番末尾';
   }
-  return'位置';
+  return'台番';
 }
 function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);const ss=stSel(nr,stores);
  const all=(ss.length||stores.length)!==1;
