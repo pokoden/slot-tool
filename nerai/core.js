@@ -210,16 +210,18 @@ function finalize(G,B,base){
  return G}
 let AFM=new WeakMap();
 // memo=true のときだけ base ごとに結果を覚える（精度チェック用）
-function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
+function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&B.allL&&axis!=='all'){B=Object.assign({},B);delete B.allL}if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
  let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);m.set(k,v)}return v}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
 function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;any=true;return f(+v)};
  const Bg=B.g||{},Br=B.rb||{},Bs=B.gs||{},by=B.by||'hy';const idxs=by==='tk'?[u.tk]:by==='hy'?[u.hy]:[u.tk,u.hy];const mc=(B.mach||{})[grp]||{};
  const ok=chk(B.ratio,v=>u.ratio*100+EPS>=v)&&chk(u.typ==='N'?Bg.nm:Bg.at,v=>u.avg+EPS>=v)
-  &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>(by!=='tk'?chk(b.idx,v=>u.hy[k]!=null&&u.hy[k]>=v):true)&&(by!=='hy'?chk(has(b.tki)?b.tki:b.idx,v=>u.tk[k]!=null&&u.tk[k]>=v):true)&&chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
+  &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
   &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v+EPS)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v+EPS);
- return any&&ok}
+ // 全軸だけ：指数合格ライン（店舗機種・標準）。同じ種類はどれか1本、両方あれば両方の種類で合格
+ let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=(AL[x]||[]).filter(l=>['g','rb','gs'].some(k=>has(l[k])));if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs'].every(k=>!has(l[k])||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
+ return any&&ok&&lok}
 // ===== 当日の数値表示（窓ごとの合計） =====
 function winIdx(rows,set){const by=new Map();
  for(const r of rows){let S=by.get(r.s);if(!S)by.set(r.s,S={dates:new Set(),idx:new Map()});S.dates.add(r.d);const k=groupOf(r.m,set)+'|'+r.t;let m=S.idx.get(k);if(!m)S.idx.set(k,m=new Map());m.set(r.d,r)}
