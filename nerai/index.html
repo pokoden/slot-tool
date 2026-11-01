@@ -1101,7 +1101,7 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
 
 
 // ===== 精度チェック：月ごとに分析期間をずらして（チェックする月の直前）狙いを出し、狙い順ちょうどN位の着席台番のその日の結果を集計 =====
-const PC0=()=>({from:'',to:'',s:'',g:'',ty:1,rk:1,so:{},view:'all'});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};if(!Array.isArray(pc.rks)||!pc.rks.length)pc.rks=[1];const pcMore=new Set();
+const PC0=()=>({from:'',to:'',s:'',g:'',ty:1,rk:1,so:{}});let pc=Object.assign(PC0(),LS.get('nr_pc',{}));if(!pc.so||typeof pc.so!=='object')pc.so={};if(!Array.isArray(pc.rks)||!pc.rks.length)pc.rks=[1];const pcMore=new Set();
 window.pcSoT=(id,c)=>{const o=pc.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';pc.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_pc',pc);const y=scrollY;pcRes();scrollTo(0,y)};
 window.pcTgl=id=>{pcMore.has(id)?pcMore.delete(id):pcMore.add(id);const y=scrollY;pcRes();scrollTo(0,y)};
 const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
@@ -1114,6 +1114,14 @@ function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);c
  if(/-01$/.test(f)&&t===mEnd(t.slice(0,7))){const n=(+t.slice(0,4)*12+ +t.slice(5,7))-(+f.slice(0,4)*12+ +f.slice(5,7))+1;return[ymOf(y,m-1-n)+'-01',pv]}
  const len=Math.round((Date.parse(t)-Date.parse(f))/864e5)+1;return[NC.addDay(st,-len),pv]}
 const PCD=new Map();// 日ごとの狙い（分析期間・設定が同じなら使い回す）
+
+// 精度チェックから集計した的中率キャッシュ（種類・○数・順位帯）
+let PC_RATES={type:{},combo:{},rank:{}};
+function updatePcRates(out){
+  // 簡易集計：実際の精度チェック結果から的中率を更新する場所
+  // out は精度チェックで集まった台のデータ
+  // ここでは構造だけ用意（本格集計は pcRun 後に呼び出す）
+}
 function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(ym,first);const B=bordEff(),cfg=nerCfg();
  const key=[d,from,to,JSON.stringify(B),JSON.stringify(cfg),JSON.stringify(S.an.marks||{}),R.length].join('~');let v=PCD.get(key);if(v)return v;
  const base=NC.stdBaseAt(R,set,to);const T=[],HD=new Map();
@@ -1146,9 +1154,7 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div class="row"><select onchange="pcMon(this.value)"><option value="" ${curM?'':'selected'}>何月</option>${yms.map(ym=>`<option value="${ym}" ${ym===curM?'selected':''}>${+ym.slice(0,4)}年${+ym.slice(5)}月</option>`).join('')}</select></div>
 <div class="row">${sel('s',[['','全店舗']].concat(stores.map(x=>[x,stShort(x)])),pc.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),pc.g)}</div>
 <div class="chips">${[[1,'①全店舗全機種'],[2,'②店舗内'],[3,'③店舗機種内']].map(([k,t])=>`<button class="${+pc.ty===k?'on':''}" onclick="pc.ty=${k};pcPage()">${t}</button>`).join('')}</div>
-<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div>
-<div class="chips" style="margin-top:6px">${[['all','全体'],['kbn','種類別'],['combo','○組み合わせ別'],['rank','順位別']].map(([k,t])=>`<button class="${pc.view===k?'on':''}" onclick="pc.view='${k}';pcPage()">${t}</button>`).join('')}</div>
-<div class="note">種類別＝位置/合算/回転、○組み合わせ別＝日末尾・日・曜日・全の○の数、順位別＝店舗機種内順位</div></div>
+<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div></div>
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 
 // ===== 各種数値設定（analysis.json の np に保存）=====
