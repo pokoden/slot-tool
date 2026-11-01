@@ -161,8 +161,8 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  const all=(await r.json()).filter(f=>f.type==='file');const list=all.filter(f=>/\.json$/.test(f.name));
  for(const f of all)if(!/\.json$/.test(f.name))S.files['nerai/'+f.name]={sha:f.sha,txt:null};
  // iPhoneで重くならないよう3つずつ読む。失敗したら1回だけやり直す
- let done=0;const q=[...list];const one=async f=>{let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
-  if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
+ let done=0;const q=[...list];const one=async f=>{let b;for(let t=0;t<2;t++){try{const ctrl=new AbortController();const to=setTimeout(()=>ctrl.abort(),15000);b=await gh('git/blobs/'+f.sha,{signal:ctrl.signal});clearTimeout(to);if(b.ok)break}catch(e){b=null}}
+  if(!b||!b.ok){console.warn(f.name+' skipped');done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}（一部スキップ）</div>`;return}
   const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
  await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
  const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);const zf=S.files['nerai/zumen.json'];S.zu=zf?JSON.parse(zf.txt):{v:1,stores:{}};if(!S.zu.stores)S.zu.stores={};S.zuSaved=JSON.stringify(S.zu);S.zimg={};S.zimgNew={};
