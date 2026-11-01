@@ -779,7 +779,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  
  const stat=asBar();
- $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト ${(()=>{const PD=anPer();const md=d=>d?+d.slice(5,7)+'/'+ +d.slice(8,10):'';let f=PD.from||'',t=PD.to||'';if(nr.d){const pv=NC.addDay(nr.d,-1);if(!f&&!t){t=pv;f=NC.addDay(pv,-60)}else if(t&&t>pv)t=pv}return f&&t?'分析期間 '+md(f)+'〜'+md(t):''})()}</h2>
+ $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト ${(()=>{const PD=anPer();const md=d=>d?+d.slice(5,7)+'/'+ +d.slice(8,10):'';let f='',t='';if(nr.d){const date=nr.d;if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);f=ymOf(y,m-1-(+PD.m))+'-01';t=NC.addDay(date.slice(0,7)+'-01',-1)}else{f=PD.from||'';t=PD.to||'';const pv=NC.addDay(date,-1);if(t>pv)t=pv}}return f&&t?'分析期間 '+md(f)+'〜'+md(t):''})()}</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
  ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
