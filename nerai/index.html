@@ -183,7 +183,7 @@ async function saveFiles0(out,msg,prog){if(!S.loaded)throw new Error('読み込�
 function allFiles(rows){const out=NC.monthFiles(rows,setObj());out['nerai/settings.json']=JSON.stringify({v:1,groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});return out}
 function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(out[k])}
 
-function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
+function nav(){$('nav').innerHTML=TABS.filter(t=>t[0]!=='pc').map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
 window.go=t=>{if((anDirty||zuDirty)&&t!==tab&&!confirm('設定や図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);render()};
 function render(){if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
@@ -1173,6 +1173,12 @@ function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(
   for(const x of L.targets||[])T.push(x);for(const r of day)HD.set(s+'|'+r.t,r)}
  rankT(T);v={T:T.filter(x=>x.r3&&x.seat!=null).map(x=>({s:x.s,g:x.g,seat:x.seat,r3:x.r3})),HD};if(PCD.size>400)PCD.clear();PCD.set(key,v);return v}
 function pcRun(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
+ // 分析期間を狙い日基準でスライド
+ const targetDate=nr.d||'';
+ const PD=anPer();
+ let from=PD.from||'',to=PD.to||'';
+ if(targetDate&&!from&&!to){const pv=NC.addDay(targetDate,-1);to=pv;from=NC.addDay(pv,-60);} // fallback
+
  let lo='9',hi='0';for(const r of R){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}const from=pc.from||lo,to=pc.to||hi;
  const days=[...new Set(R.filter(r=>r.d>=from&&r.d<=to).map(r=>r.d))].filter(d=>d.slice(0,7)>lo.slice(0,7)).sort();
  const ix=(+pc.ty||1)-1,NS=pc.rks.includes('all')?new Set([1,2,3,4,5]):new Set(pc.rks.map(Number));const out=[];
