@@ -765,7 +765,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  window._ml=[];const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${x.sub!=null?(x.sub/ (NPV().subDiv||10000)).toFixed(1):''}</td><td>${(()=>{const NF=NPV();if(!NF.pcOn)return'';const c=pcCoef(x,date,NF);return ((c-1)*x.score).toFixed(1);})()}</td><td class="sc">${(()=>{const base=x.pts!=null?x.pts:0;const subc=x.sub!=null?(x.sub/(NPV().subDiv||10000)):0;const NF=NPV();const hitc=NF.pcOn?((pcCoef(x,date,NF)-1)* (base+subc) ):0;return (base+subc+hitc).toFixed(1);})()}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${x.sub!=null?(x.sub/ (NPV().subDiv||10000)).toFixed(1):''}</td><td>${(()=>{const NF=NPV();if(!NF.pcOn)return'';const c=pcCoef(x,date,NF);return ((c-1)*x.score).toFixed(1);})()}</td><td class="sc">${(()=>{const subc=x.sub!=null?(x.sub/(NPV().subDiv||10000)):0;const NF=NPV();const hitc=NF.pcOn?((pcCoef(x,date,NF)-1)*x.score):0;return (subc+hitc).toFixed(1);})()}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')+TH('kbn','狙い<br>区分','','rowspan="2"')
@@ -1172,13 +1172,13 @@ function pcDay(d,stores,R,set,first){const ym=d.slice(0,7);const[from,to]=pcWin(
 function pcRun(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
  let lo='9',hi='0';for(const r of R){if(r.d<lo)lo=r.d;if(r.d>hi)hi=r.d}const from=pc.from||lo,to=pc.to||hi;
  const days=[...new Set(R.filter(r=>r.d>=from&&r.d<=to).map(r=>r.d))].filter(d=>d.slice(0,7)>lo.slice(0,7)).sort();
- const ix=(+pc.ty||1)-1,NS=new Set(pc.rks.map(Number));const out=[];
+ const ix=(+pc.ty||1)-1,NS=pc.rks.includes('all')?new Set([1,2,3,4,5]):new Set(pc.rks.map(Number));const out=[];
  for(const d of days){const D=pcDay(d,stores,R,set,lo);for(const x of D.T){if(!NS.has(x.r3[ix]))continue;if(pc.s&&x.s!==pc.s)continue;if(pc.g&&x.g!==pc.g)continue;const r=D.HD.get(x.s+'|'+x.seat);if(r)out.push({r})}}
  return out}
 function pcRes(){LS.set('nr_pc',pc);const el=$('pcres');if(!el)return;const set=setObj();const out=pcRun();
  if(!out.length){el.innerHTML='<div class="card"><h2>データなし</h2></div>';return}const base=kenBase();
  el.innerHTML=kbTable(['all','合計',()=>'合計',k=>k],out,set,base,1)+KBT.map(T=>kbTable(T,out,set,base,1)).join('')}
-window.pcRk=k=>{const i=pc.rks.indexOf(k);if(i>=0){if(pc.rks.length>1)pc.rks.splice(i,1)}else{pc.rks.push(k);pc.rks.sort((a,b)=>a-b)}pcPage()};
+window.pcRk=k=>{if(k==='all'){pc.rks=['all']}else{const i=pc.rks.indexOf(k);if(i>=0){if(pc.rks.length>1)pc.rks.splice(i,1)}else{pc.rks=pc.rks.filter(x=>x!=='all');pc.rks.push(k);pc.rks.sort((a,b)=>a-b)}}pcPage()};
 window.pcPer=n=>{if(n==='a'){pc.from='';pc.to=''}else{const p=mPer(+n);pc.from=p[0];pc.to=p[1]}pcPage()};
 window.pcMon=ym=>{if(ym){pc.from=ym+'-01';pc.to=mEnd(ym)}pcPage()};
 function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(pc.s&&!stores.includes(pc.s))pc.s='';
@@ -1193,7 +1193,7 @@ function pcPage(){LS.set('nr_pc',pc);const R=S.rows,set=setObj();const stores=[.
 <div class="row"><select onchange="pcMon(this.value)"><option value="" ${curM?'':'selected'}>何月</option>${yms.map(ym=>`<option value="${ym}" ${ym===curM?'selected':''}>${+ym.slice(0,4)}年${+ym.slice(5)}月</option>`).join('')}</select></div>
 <div class="row">${sel('s',[['','全店舗']].concat(stores.map(x=>[x,stShort(x)])),pc.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),pc.g)}</div>
 <div class="chips">${[[1,'①全店舗全機種'],[2,'②店舗内'],[3,'③店舗機種内']].map(([k,t])=>`<button class="${+pc.ty===k?'on':''}" onclick="pc.ty=${k};pcPage()">${t}</button>`).join('')}</div>
-<div class="chips">${[1,2,3,4,5].map(k=>`<button class="${pc.rks.includes(k)?'on':''}" onclick="pcRk(${k})">${k}位</button>`).join('')}</div></div>
+<div class="chips">${[1,2,3,4,5,'all'].map(k=>`<button class="${(k==='all'?pc.rks.includes('all'):pc.rks.includes(k))?'on':''}" onclick="pcRk(${k==='all'?'\'all\'':k})">${k==='all'?'全':k+'位'}</button>`).join('')}</div></div>
 <div id="pcres"><div class="card">計算中…</div></div>`;setTimeout(pcRes,30)}
 
 // ===== 各種数値設定（analysis.json の np に保存）=====
