@@ -381,25 +381,6 @@ function rankT(T){const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
  T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
  for(const x of T){if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}R.set(x,++nn);c2[x.s]=(c2[x.s]||0)+1;const k3=x.s+'|'+x.g;c3[k3]=(c3[k3]||0)+1;x.r3=[nn,c2[x.s],c3[k3]]}
  return R}
-
-function pcCoef(x, date, NF){
-  if(!NF||!NF.pcOn)return 1;
-  const minN=NF.pcMin||2, str=NF.pcStr||0.5;
-  const kbn=neraiKbn(x, date);
-  const oCnt=Object.values(x.seg||{}).filter(s=>s&&s.o).length;
-  const rk=x.r3?x.r3[2]:99;
-  const typeRate=PC_RATES.type[kbn]!=null?PC_RATES.type[kbn]:0.5;
-  const comboRate=PC_RATES.combo[String(oCnt)]!=null?PC_RATES.combo[String(oCnt)]:0.5;
-  const rankKey=rk<=5?String(rk):'other';
-  const rankRate=PC_RATES.rank[rankKey]!=null?PC_RATES.rank[rankKey]:0.5;
-  const n=20;
-  const trust=n>=minN?n/(n+20):0;
-  const adj=r=>0.5+(r-0.5)*trust;
-  const c1=1+(adj(typeRate)-0.5)*str*2;
-  const c2=1+(adj(comboRate)-0.5)*str*2;
-  const c3=1+(adj(rankRate)-0.5)*str*2;
-  return Math.max(0.5, Math.min(1.5, c1*c2*c3));
-}
 function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d])return NRG.m[d];const out=[];
  for(const s of stores){let day,rk,virt=false,date;
   if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
@@ -766,7 +747,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  window._ml=[];const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${x.sub!=null?(x.sub/ (NPV().subDiv||10000)).toFixed(1):''}</td><td>${(()=>{const NF=NPV();if(!NF.pcOn)return'';const c=pcCoef(x,date,NF);return c!==1?( (c-1)*x.score ).toFixed(1):'';})()}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center">${esc(mjOf(x))}</td>${NC.SEGS.map(sg=>`<td class="ox3 ${x.seg[sg].o?'og':'ox'}" style="text-align:center">${x.seg[sg].o?'○':'×'}</td>`).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${x.sub!=null?(x.sub/ (NPV().subDiv||10000)).toFixed(1):''}</td><td>${(()=>{const NF=NPV();if(!NF.pcOn)return'';const c=pcCoef(x,date,NF);return ((c-1)*x.score).toFixed(1);})()}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${x.rank}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')+TH('kbn','狙い<br>区分','','rowspan="2"')
@@ -1134,7 +1115,7 @@ function pcWin(ym,first){const P=anPer();const st=ym+'-01',pv=NC.addDay(st,-1);c
  const len=Math.round((Date.parse(t)-Date.parse(f))/864e5)+1;return[NC.addDay(st,-len),pv]}
 const PCD=new Map();// 日ごとの狙い（分析期間・設定が同じなら使い回す）
 
-let PC_RATES={type:{},combo:{},rank:{}};
+let PC_RATES={type:{'位置末尾':0.62,'合算':0.57,'回転':0.53,'位置':0.5},combo:{'0':0.5,'1':0.54,'2':0.60,'3':0.68,'4':0.70},rank:{'1':0.65,'2':0.62,'3':0.60,'4':0.58,'5':0.56,'other':0.5}};
 function updateRatesFromPrecision(results){
   // results: array of {r, hit} where hit is whether it met ○ conditions
   const cnt={type:{},combo:{},rank:{}};
