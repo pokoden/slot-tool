@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=45"></script>
+<script src="core.js?v=46"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -251,7 +251,9 @@ window.ckOkSel=async()=>{const L=S.chk.list,sel=ckSelF();if(!sel.length)return;
  const old=(S.an.ckOk||[]).slice();const set=new Set(old);sel.forEach(x=>set.add(ckKey(x)));S.an.ckOk=[...set];
  try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙いチェック了承',t=>ckMsg('',t));S.anSaved=snap;const ss=new Set(sel);S.chk.list=L.filter(x=>!ss.has(x));S.chk.sel=new Set();ckPaint();ckMsg('ok','了承したよ')}
  catch(e){S.an.ckOk=old;ckMsg('ng',e.message)}};
-function edOpenPicks(L){S.ed={d:'',s:'',m:'',t:''};S.edMode='pick';S.edPick=L.map(x=>({k:x.k,d:x.r.d,s:x.r.s,m:x.r.m||'',t:String(x.r.t??'')}));S.edPh=[];
+function edOpenPicks(L){S.edMode='pick';S.edPick=L.map(x=>({k:x.k,d:x.r.d,s:x.r.s,m:x.r.m||'',t:String(x.r.t??'')}));S.edPh=[];
+ // 開いた問題の日付・店舗・機種を前のものと入れかえる（みんな同じなら入れる）
+ {const one=k=>{const v=[...new Set(S.edPick.map(p=>p[k]))];return v.length===1?v[0]:''};S.ed={d:one('d'),s:one('s'),m:one('m'),t:''}}
  for(const p of S.edPick){if(p.k==='t'&&!S.rows.some(r=>r.d===p.d&&r.s===p.s&&String(r.t)===p.t))S.edPh.push(edNew(p.d,p.s,p.m,p.t));
   else if(p.k==='m'&&!S.rows.some(r=>r.d===p.d&&r.s===p.s&&r.m===p.m)){const T=edNearT(p.s,p.m,p.d);if(T.length)T.forEach(t=>S.edPh.push(edNew(p.d,p.s,p.m,t)));else S.edPh.push(edNew(p.d,p.s,p.m,''))}}
  edFillM();edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})}
@@ -275,7 +277,7 @@ window.edHd=k=>{const E=S.ed;const vs=[...new Set(S.rows.filter(r=>edMatch(r,E,k
 window.edPop=()=>{$('edpop').innerHTML=''};
 window.edPick=i=>{S.ed[window._edk]=i<0?'':window._edv[i];S.edMode='list';edPop();edForm();edList()};
 window.edAll=()=>{S.ed={d:'',s:'',m:'',t:''};S.edMode='list';edForm();edList()};
-window.edAdd=()=>{const E=S.ed;(S.edPh||(S.edPh=[])).unshift(edNew(E.d||curDate(),E.s||'',E.m||'',''));if(S.edMode!=='pick')S.edMode='list';edList()};
+window.edAdd=()=>{const E=S.ed;const P=(S.edMode==='pick'&&S.edPick&&S.edPick[0])||{};(S.edPh||(S.edPh=[])).unshift(edNew(E.d||P.d||curDate(),E.s||P.s||'',E.m||P.m||'',''));if(S.edMode!=='pick')S.edMode='list';edList()};
 window.edF=(k,v)=>{S.ed[k]=v;edForm();edList()};
 let ED=[];const edDirty=new Set();const edSv=new WeakSet();
 const edP=(g,n)=>+g>0&&n!=null&&n!==''?NC.fmtP(NC.den(+g,+n)):'';
@@ -289,7 +291,7 @@ function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
   (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,52)}</td><td ${vtd}>${inp(i,'g',r.g,64)}</td><td ${vtd}>${inp(i,'bb',r.bb,48)}</td><td ${vtd}>${inp(i,'rb',r.rb,48)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
-window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else if(f==='t'){if(!v)return;if(S.rows.some(x=>x!==r&&x.d===r.d&&x.s===r.s&&String(x.t)===v)){alert('その台番はもうあるよ');return}r.t=v}else r[f]=v===''?null:+v;
+window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else if(f==='t'){if(!v)return;if(S.rows.some(x=>x!==r&&x.d===r.d&&x.s===r.s&&String(x.t)===v)){alert('その台番はもうあるよ');return}r.t=v;if(!r.m&&r.s){const m=edNearM(r.s,v,r.d);if(m){r.m=m;const e=document.querySelector(`#edl input[oninput="edSet(${i},'m',this.value)"]`);if(e)e.value=m}}}else r[f]=v===''?null:+v;
  if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);if(edSv.has(r)){edSv.delete(r);const b=$('edb'+i);if(b)b.textContent='保存'}
  const p=edPs(r);['a','b','c'].forEach((c,j)=>{const e=$('edp'+c+i);if(e)e.textContent=p[j]});const s=$('eds');if(s){s.className='st ng';s.textContent='未保存 '+edDirty.size+'件'}};
 window.edDel=async i=>{const r=ED[i];if(r&&r._ph){S.edPh=S.edPh.filter(x=>x!==r);edList();return}if(!r||!confirm(`${r.d} ${r.s} ${r.t} を削除する？`))return;const keep=S.rows;S.rows=S.rows.filter(x=>x!==r);edDirty.delete(r);edList();await edSave(keep)};
