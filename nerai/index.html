@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=47"></script>
+<script src="core.js?v=48"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -291,6 +291,12 @@ function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
   (r,i)=>{const p=edPs(r);return`<tr><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${inp(i,'m',r.m,106)}</td><td ${vtd}>${inp(i,'t',r.t,52)}</td><td ${vtd}>${inp(i,'g',r.g,64)}</td><td ${vtd}>${inp(i,'bb',r.bb,48)}</td><td ${vtd}>${inp(i,'rb',r.rb,48)}</td><td ${vtd} id="edpa${i}">${p[0]}</td><td ${vtd} id="edpb${i}">${p[1]}</td><td ${vtd} id="edpc${i}">${p[2]}</td><td ${vtd}><button class="b sub" style="padding:2px 8px;margin:0 4px 0 0" onclick="edDel(${i})">削除</button><button class="b" style="padding:2px 8px;margin:0" id="edb${i}" onclick="edSave()">${edSv.has(r)?'保存済':'保存'}</button></td></tr>`},[44,36,110,50,64,50,50,50,50,50,116])}
+// PC：データ編集でEnterを押すと、すぐ下の行の同じ列へ（いちばん下はそのまま）。保存はしない
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter'||ev.isComposing||ev.keyCode===229)return;const e=ev.target;if(!e||e.tagName!=='INPUT'||!e.closest||!e.closest('#edl'))return;
+ const m=String(e.getAttribute('oninput')||'').match(/edSet\((\d+),'(\w+)'/);if(!m)return;ev.preventDefault();const i=+m[1]+1,f=m[2];if(i>=ED.length)return;
+ const q=()=>document.querySelector(`#edl input[oninput^="edSet(${i},'${f}',"]`);let n=q();
+ if(!n){const w=$('edlw');if(w){w.scrollTop+=VR;if(w.onscroll)w.onscroll();n=q()}}
+ if(n){n.focus();try{const L=n.value.length;n.setSelectionRange(L,L)}catch(_){}n.scrollIntoView({block:'nearest'})}},true);
 window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)return;r.m=v}else if(f==='t'){if(!v)return;if(S.rows.some(x=>x!==r&&x.d===r.d&&x.s===r.s&&String(x.t)===v)){alert('その台番はもうあるよ');return}r.t=v;if(!r.m&&r.s){const m=edNearM(r.s,v,r.d);if(m){r.m=m;const e=document.querySelector(`#edl input[oninput="edSet(${i},'m',this.value)"]`);if(e)e.value=m}}}else r[f]=v===''?null:+v;
  if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);if(edSv.has(r)){edSv.delete(r);const b=$('edb'+i);if(b)b.textContent='保存'}
  const p=edPs(r);['a','b','c'].forEach((c,j)=>{const e=$('edp'+c+i);if(e)e.textContent=p[j]});const s=$('eds');if(s){s.className='st ng';s.textContent='未保存 '+edDirty.size+'件'}};
