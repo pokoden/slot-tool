@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=44"></script>
+<script src="core.js?v=45"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -253,9 +253,14 @@ window.ckOkSel=async()=>{const L=S.chk.list,sel=ckSelF();if(!sel.length)return;
  catch(e){S.an.ckOk=old;ckMsg('ng',e.message)}};
 function edOpenPicks(L){S.ed={d:'',s:'',m:'',t:''};S.edMode='pick';S.edPick=L.map(x=>({k:x.k,d:x.r.d,s:x.r.s,m:x.r.m||'',t:String(x.r.t??'')}));S.edPh=[];
  for(const p of S.edPick){if(p.k==='t'&&!S.rows.some(r=>r.d===p.d&&r.s===p.s&&String(r.t)===p.t))S.edPh.push(edNew(p.d,p.s,p.m,p.t));
-  else if(p.k==='m'&&!S.rows.some(r=>r.d===p.d&&r.s===p.s&&r.m===p.m))S.edPh.push(edNew(p.d,p.s,'',''))}
- edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})}
+  else if(p.k==='m'&&!S.rows.some(r=>r.d===p.d&&r.s===p.s&&r.m===p.m)){const T=edNearT(p.s,p.m,p.d);if(T.length)T.forEach(t=>S.edPh.push(edNew(p.d,p.s,p.m,t)));else S.edPh.push(edNew(p.d,p.s,p.m,''))}}
+ edFillM();edForm();edList();$('edc').scrollIntoView({behavior:'smooth'})}
 const edNew=(d,s,m,t)=>({d,s,m,t,g:null,bb:null,rb:null,_ph:true});
+// 機種なしの日：同じ店舗でその機種があるいちばん近い前の日（なければ後の日）の台番
+function edNearT(s,m,d){let pv='',nx='';for(const r of S.rows)if(r.s===s&&r.m===m){if(r.d<d&&r.d>pv)pv=r.d;if(r.d>d&&(!nx||r.d<nx))nx=r.d}const dd=pv||nx;if(!dd)return[];return[...new Set(S.rows.filter(r=>r.s===s&&r.m===m&&r.d===dd).map(r=>String(r.t)))].sort((a,b)=>a.localeCompare(b,'ja',{numeric:true}))}
+// 機種名が空の行：同じ店舗・同じ台番のいちばん近い前の日の機種名（なければ後の日）。入れるだけで保存はしない
+function edNearM(s,t,d){let pv=null,nx=null;for(const r of S.rows){if(r.s!==s||String(r.t)!==String(t)||!r.m)continue;if(r.d<d&&(!pv||r.d>pv.d))pv=r;if(r.d>d&&(!nx||r.d<nx.d))nx=r}return(pv||nx||{}).m||''}
+function edFillM(){const L=(S.edPh||[]).concat(S.rows.filter(r=>S.edPick&&S.edPick.some(p=>p.d===r.d&&p.s===r.s)));for(const r of L){if(r.m||!r.t)continue;const m=edNearM(r.s,r.t,r.d);if(m){r.m=m;if(!r._ph)edDirty.add(r)}}}
 window.ckOpen=i=>{const x=CF[i];if(x)edOpenPicks([x])};
 window.ckOpenSel=()=>{const L=ckSelF();if(L.length)edOpenPicks(L)};
 const EDN={d:'日付',s:'店舗',m:'機種',t:'台番'};
