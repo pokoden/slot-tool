@@ -273,8 +273,8 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
     const to=!!(T&&T.o);code+=(to||ost.length)?'1':'0';codeT+=to?'1':'0';
     const ix=T?(by==='tk'?T.u.tk:T.u.hy):null;const mv=metricOf(T&&T.u);if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;
     res[sg]={o:to,ost,u:T&&T.u,ix};segT[sg]={o:to,u:T&&T.u,mv:T?mv:null}}
-   const pv=prevO(r.t);const mk=useP&&pv?'×':comboMark(code,cfg),pts=PT(mk,code);out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/P.subDiv,code,mark:mk,prev:pv,seg:res,one});
-   const mT=useP&&pv?'×':comboMark(codeT,cfg);tg.push({kind:'t',s:r.s,g,m:r.m,t:String(r.t),label:String(r.t),seat:String(r.t),pts:PT(mT,codeT),sub,score:PT(mT,codeT)+sub/P.subDiv,code:codeT,mark:mT,prev:pv,seg:segT})}
+   const pv=prevO(r.t);const mk=useP&&pv?'':comboMark(code,cfg),pts=PT(mk,code);out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/P.subDiv,code,mark:mk,prev:pv,seg:res,one});
+   const mT=useP&&pv?'':comboMark(codeT,cfg);tg.push({kind:'t',s:r.s,g,m:r.m,t:String(r.t),label:String(r.t),seat:String(r.t),pts:PT(mT,codeT),sub,score:PT(mT,codeT)+sub/P.subDiv,code:codeT,mark:mT,prev:pv,seg:segT})}
   // 状態順の行：その機種で、どれかの区分に○がある状態順ごとに1行
   const keys=new Set();for(const sg of SEGS)for(const k of seg[sg].st.keys())keys.add(k);
   const ordK=[...keys].sort((a,b)=>skOrd(a)-skOrd(b));
@@ -283,11 +283,11 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    // 着席台番：その日の朝の時点でこの状態順1位になる台番。前日のデータがない（前日を含む期間）・1位が決まらない（同じ値）なら未定
    const[kb0,kn0]=k.split('~');const i=RANK_KEYS.indexOf(kb0),rn=+kn0||1;let seat=null;
    if(!(NEAR.includes(k.split('_')[0])&&o.hasPrev===false)){const w=mem.find(r=>((o.tRanks||{})[r.s+'|'+r.t]||[])[i]===rn);if(w)seat=String(w.t)}
-   const pvS=seat!=null&&prevO(seat);const mS=useP&&pvS?'×':comboMark(code,cfg);tg.push({kind:'s',s:o.store,g,m:[...new Set(mem.map(r=>r.m))].join('／'),k,label:stName(k),seat,pts:PT(mS,code),sub,score:PT(mS,code)+sub/P.subDiv,code,mark:mS,prev:pvS,seg:segS})}}
+   const pvS=seat!=null&&prevO(seat);const mS=useP&&pvS?'':comboMark(code,cfg);tg.push({kind:'s',s:o.store,g,m:[...new Set(mem.map(r=>r.m))].join('／'),k,label:stName(k),seat,pts:PT(mS,code),sub,score:PT(mS,code)+sub/P.subDiv,code,mark:mS,prev:pvS,seg:segS})}}
  if(cfg.seatMerge){const G=new Map(),T2=[];for(const x of tg){if(x.seat==null){T2.push(x);continue}const k=x.s+'|'+x.seat;if(G.has(k))G.get(k).push(x);else{const a=[x];G.set(k,a);T2.push(a)}}
   tg.length=0;for(const a of T2){if(!Array.isArray(a)){tg.push(a);continue}if(a.length===1){tg.push(a[0]);continue}
    const b=a.find(x=>x.kind==='t')||a[0];const seg={};let code='';for(const sg of SEGS){const w=a.find(x=>x.seg[sg].o);code+=w?'1':'0';seg[sg]=w?w.seg[sg]:b.seg[sg]}
-   const sub=Math.max(...a.map(x=>x.sub));const pv=a.some(x=>x.prev);const mk=useP&&pv?'×':comboMark(code,cfg);
+   const sub=Math.max(...a.map(x=>x.sub));const pv=a.some(x=>x.prev);const mk=useP&&pv?'':comboMark(code,cfg);
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
