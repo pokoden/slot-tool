@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=43"></script>
+<script src="core.js?v=44"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -279,7 +279,7 @@ function edList(){const E=S.ed;const el=$('edr');if(!el)return;
  const md=S.edMode||'none';const PK=S.edPick||[];const pm=r=>PK.some(p=>r.d===p.d&&r.s===p.s&&(!p.m||r.m===p.m)&&(p.k==='m'||!p.t||String(r.t)===p.t));
  S.edPh=(S.edPh||[]).filter(r=>r._ph);
  ED=(md==='none'?[]:S.rows.filter(r=>md==='pick'?pm(r):edMatch(r,E))).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.s<b.s?-1:a.s>b.s?1:String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));ED=S.edPh.concat(ED);
- el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div class="row"><button class="b" onclick="edSave()">一括保存</button></div><div id="edl"></div>`;
+ el.innerHTML=`<div class="st">${ED.length.toLocaleString()}件</div><div class="row"><button class="b" onclick="edSave()">一括保存</button><button class="b sub" onclick="edDelAll()">一括削除</button></div><div id="edl"></div>`;
  const inp=(i,f,v,w)=>`<input class="mi" ${f==='m'?'list="edml"':f==='t'?'inputmode="numeric"':'type="text" inputmode="numeric"'} style="width:${w}px;height:28px;padding:0 2px;box-sizing:border-box;font-size:16px" value="${esc(v??'')}" oninput="edSet(${i},'${f}',this.value)">`;
  const th=k=>`<th class="l" onclick="edHd('${k}')" style="cursor:pointer;color:${S.ed[k]?'#1f5fd6':'inherit'}">${EDN[k]}▼</th>`;
  vlist('edl',ED,`${th('d')}${th('s')}${th('m')}${th('t').replace('class="l" ','')}<th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th></th>`,
@@ -288,6 +288,7 @@ window.edSet=(i,f,v)=>{const r=ED[i];if(!r)return;v=v.trim();if(f==='m'){if(!v)r
  if(r._ph){if(!(r.m&&r.t&&r.s&&r.d&&[r.g,r.bb,r.rb].some(x=>x!=null)))return;delete r._ph;S.rows.push(r)}edDirty.add(r);if(edSv.has(r)){edSv.delete(r);const b=$('edb'+i);if(b)b.textContent='保存'}
  const p=edPs(r);['a','b','c'].forEach((c,j)=>{const e=$('edp'+c+i);if(e)e.textContent=p[j]});const s=$('eds');if(s){s.className='st ng';s.textContent='未保存 '+edDirty.size+'件'}};
 window.edDel=async i=>{const r=ED[i];if(r&&r._ph){S.edPh=S.edPh.filter(x=>x!==r);edList();return}if(!r||!confirm(`${r.d} ${r.s} ${r.t} を削除する？`))return;const keep=S.rows;S.rows=S.rows.filter(x=>x!==r);edDirty.delete(r);edList();await edSave(keep)};
+window.edDelAll=async()=>{const L=ED.filter(r=>!r._ph);if(!L.length)return;if(!confirm(`表示中の${L.length.toLocaleString()}件を削除する？`))return;const del=new Set(L);const keep=S.rows;S.rows=S.rows.filter(x=>!del.has(x));L.forEach(r=>edDirty.delete(r));S.edPh=[];edList();await edSave(keep)};
 async function edSaveNow(prog){const out=allFiles(S.rows);NRC={};await saveFiles(out,'設定狙い編集',prog);refreshAgg(out)}
 let edBusy=false;
 async function edSave(undo){if(edBusy)return;edBusy=true;const sv=$('eds');
@@ -309,8 +310,11 @@ window.readIn=async()=>{let txt=$('paste').value;const fs=$('f').files;for(const
  <div class="row"><button class="b" ${m.add+m.rep?'':'disabled'} onclick="doSave()">保存する</button><button class="b sub" onclick="S.pending=null;$('pv').innerHTML=''">やめる</button></div><div id="sv" class="st"></div>`};
 
 // ===== Grok TSV：名前が合わない・?がある時の確認 =====
-function grokFix(p,set){const opt=(L,c)=>`<option value="">選ぶ</option>${c.length?`<optgroup label="候補">${c.map(x=>`<option>${esc(x)}</option>`).join('')}</optgroup>`:''}${L.slice().sort((a,b)=>a.localeCompare(b,'ja')).map(x=>`<option>${esc(x)}</option>`).join('')}`;
- const sel=(k,n,c,L)=>`<tr><td class="l">${esc(n)}</td><td class="l"><select class="gk" data-k="${k}" data-n="${esc(n)}">${opt(L,c)}</select></td></tr>`;
+// 機種名は自動で入れる：①候補の1番目 ②なければ開いたファイル名に含まれる登録機種名（長い名前を優先）
+function grokFix(p,set){const fnm=[...(($('f')&&$('f').files)||[])].map(f=>NC.nz(f.name)).join(' ');const byFile=(set.known||[]).filter(k=>fnm&&fnm.includes(NC.nz(k))).sort((a,b)=>b.length-a.length)[0]||'';
+ const auto=(k,c)=>k==='m'?(c[0]||byFile):'';
+ const opt=(L,c,v)=>`<option value="">選ぶ</option>${c.length?`<optgroup label="候補">${c.map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`).join('')}</optgroup>`:''}${L.slice().sort((a,b)=>a.localeCompare(b,'ja')).map(x=>`<option ${x===v&&!c.includes(x)?'selected':''}>${esc(x)}</option>`).join('')}`;
+ const sel=(k,n,c,L)=>`<tr><td class="l">${esc(n)}</td><td class="l"><select class="gk" data-k="${k}" data-n="${esc(n)}">${opt(L,c,auto(k,c))}</select></td></tr>`;
  const us=Object.entries(p.unk.s),um=Object.entries(p.unk.m);const F=['s','d','m','t','g','bb','rb'],FL={s:'店名',d:'日付',m:'機種名',t:'台番',g:'G',bb:'BB',rb:'RB'};
  $('pv').innerHTML=`${us.length+um.length?`<div class="tw"><table><tr><th class="l">読んだ名前</th><th class="l">登録名</th></tr>${us.map(([n,c])=>sel('s',n,c,set.stores)).join('')}${um.map(([n,c])=>sel('m',n,c,set.known)).join('')}</table></div>`:''}
  ${p.q.length?`<div class="st ng">「?」がある行：${p.q.length}件</div><div class="tw"><table><tr><th>行</th>${F.map(f=>`<th>${FL[f]}</th>`).join('')}</tr>${p.q.map((x,i)=>`<tr data-q="${i}"><td>${x.line}</td>${F.map(f=>`<td><input class="gq" data-f="${f}" value="${esc(x.raw[f])}" ${['t','g','bb','rb'].includes(f)?'inputmode="numeric" pattern="[0-9]*" ':''}style="font-size:16px;width:${['s','m','d'].includes(f)?'8em':'4em'}"></td>`).join('')}</tr>`).join('')}</table></div>`:''}
