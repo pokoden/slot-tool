@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=50"></script>
+<script src="core.js?v=51"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -141,7 +141,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['ana','分析'],['np','各種数値設定'],['set','設定']];
+const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['sa','店舗分析'],['ana','台分析'],['np','各種数値設定'],['set','設定']];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
 let anDirty=false,zuDirty=false;
@@ -187,7 +187,7 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{if((anDirty||zuDirty)&&t!==tab&&!confirm('設定や図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&anDirty){anDirty=false;S.an=JSON.parse(S.anSaved);NRC={}}if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);render()};
 function render(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='np')return npPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
+ if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='sa')return saPage();if(tab==='np')return npPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -627,6 +627,46 @@ window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
 window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anKeep=true;anaPage()};
 window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);anKeep=true;render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
+// ===== 店舗分析：店舗機種の全台合計を、日末尾・日・曜日の区分値ごとに指数にする（表示だけ。狙いの点数には入れない）=====
+let sa=Object.assign({s:'*',g:'',ax:'matsu',val:'all',so:'std',rev:0,only:0},LS.get('nr_sa',{}));if(!['matsu','hi','you'].includes(sa.ax))sa.ax='matsu';
+let SAC=null;
+function saCalc(sl,from,to){const set=setObj();const key=[from,to,sl.join(','),S.rows.length,JSON.stringify(NC.getP()),JSON.stringify(set.groups||{}),sa.ax,JSON.stringify(npObj().saTk||[]),JSON.stringify(npObj().saHy||[])].join('~');if(SAC&&SAC.key===key&&SAC.r===S.rows)return SAC.v;
+ const base=NC.stdBase(S.rows,set,to);const z=NC.zeroOf(S.rows,set);const M=new Map();
+ for(const r of S.rows){if(r.d<from||r.d>to||!sl.includes(r.s))continue;const g=NC.groupOf(r.m,set);const v=String(NC.segOf(r.d,sa.ax));const k=r.s+'|'+g+'|'+v;let a=M.get(k);if(!a)M.set(k,a={s:r.s,g,v,m:r.m,n:0,G:0,bb:0,rb:0,days:new Set()});a.n++;a.G+=r.g;a.bb+=r.bb;a.rb+=r.rb;a.days.add(r.d)}
+ const L=[...M.values()];for(const a of L){a.avg=a.n?a.G/a.n:0;a.rbR=a.G>0?a.rb/a.G:0;a.gsR=a.G>0?(a.bb+a.rb)/a.G:0;a.nd=a.days.size;delete a.days;a.hy=NC.rowIdx({m:a.m,g:a.avg,bb:a.bb/a.n,rb:a.rb/a.n},set,base)}
+ const SG=new Map();for(const a of L){const k=a.s+'|'+a.g;let x=SG.get(k);if(!x)SG.set(k,x=[]);x.push(a)}
+ for(const A of SG.values()){const g=A[0].g,noRb=z.rb.has(g)||z.both.has(g),noGs=z.both.has(g);const st={g:NC.stat(A.map(a=>a.avg)),rb:NC.stat(A.map(a=>a.rbR)),gs:NC.stat(A.map(a=>a.gsR))};
+  for(const a of A){const t={g:NC.dev(a.avg,st.g),rb:noRb?null:NC.dev(a.rbR,st.rb),gs:noGs?null:NC.dev(a.gsR,st.gs)};a.tk=t;a.on=saOk(a)}}
+ SAC={key,r:S.rows,v:L};return L}
+// 合格：チェックが入った店舗機種ラインのどれか1本と標準ラインのどれか1本（入れたほうだけ）。空欄は0、RB・合算がない機種はそこを見ない
+function saOk(a){const o=npObj();const Ls=x=>(Array.isArray(x)?x:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true));const ok=(ix,p)=>!!ix&&ix.g!=null&&['g','rb','gs'].every(k=>{const v=p[k];const t=v===''||v==null||!isFinite(+v)?0:+v;return ix[k]==null&&k!=='g'?true:ix[k]!=null&&ix[k]>=t});
+ const T=Ls(o.saTk),H=Ls(o.saHy);if(!T.length&&!H.length)return false;return(!T.length||T.some(p=>ok(a.tk,p)))&&(!H.length||H.some(p=>ok(a.hy,p)))}
+window.saAx=k=>{sa.ax=k;sa.val='all';saPage()};window.saSo=k=>{if(sa.so===k)sa.rev=sa.rev?0:1;else{sa.so=k;sa.rev=0}saPage()};
+function saPage(){LS.set('nr_sa',sa);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(sa.s!=='*'&&!stores.includes(sa.s))sa.s='*';
+ let first='9',last='0';for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d}const PD=anPer();const from=PD.from||first,to=PD.to||last;const sl=sa.s==='*'?stores:[sa.s];
+ const all=saCalc(sl,from,to);const groups=[...new Set(all.map(a=>a.g))];if(sa.g&&!groups.includes(sa.g))sa.g='';
+ const vals=segVals(sa.ax);if(sa.val!=='all'&&!vals.some(x=>x[0]===String(sa.val)))sa.val='all';
+ let L=all.filter(a=>(!sa.g||a.g===sa.g)&&(sa.val==='all'||a.v===String(sa.val))&&(!sa.only||a.on));
+ const go=gOrd();const vo=a=>+a.v;const std=(a,b)=>storeCmp(a.s,b.s)||go(a.g,b.g)||vo(a)-vo(b);
+ const den=(G,n)=>n>0?G/n:null;
+ const COLS=[['sm','店舗<br>機種','t'],['v','区分','n',a=>vo(a)],['nd','日数','h',a=>a.nd],['n','台日','h',a=>a.n],['avg','平均<br>回転','h',a=>a.avg],['prb','RB<br>確率','l',a=>den(a.G,a.rb)],['pgs','合算','l',a=>den(a.G,a.bb+a.rb)],
+  ['tkg','回転','h',a=>a.tk.g],['tkrb','RB','h',a=>a.tk.rb],['tkgs','合算','h',a=>a.tk.gs],['hyg','回転','h',a=>a.hy.g],['hyrb','RB','h',a=>a.hy.rb],['hygs','合算','h',a=>a.hy.gs]];
+ const c=COLS.find(x=>x[0]===sa.so);
+ L.sort((a,b)=>{if(sa.so==='std'||!c)return std(a,b);if(c[2]==='t'){const d=storeCmp(a.s,b.s)||go(a.g,b.g);return(sa.rev?-d:d)||vo(a)-vo(b)}
+  const x=c[3](a),y=c[3](b);const nx=x==null,ny=y==null;if(nx||ny)return nx&&ny?std(a,b):nx?1:-1;if(x===y)return std(a,b);let d=c[2]==='l'||c[2]==='n'?(x<y?-1:1):(x>y?-1:1);return(sa.rev?-d:d)});
+ const B=NPV().blue;const bc=n=>n!=null&&n>=B?' class="ib"':'';const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ const TH=(k,t,ex='')=>`<th class="s ${sa.so===k?'on':''}" ${ex} onclick="saSo('${k}')">${t}</th>`;
+ const head=`<tr>${TH('sm','店舗<br>機種','rowspan="2" class="fix"')}${TH('v','区分','rowspan="2"')}<th rowspan="2" class="s ${sa.only?'on':''}" onclick="sa.only=sa.only?0:1;saPage()">○${sa.only?'<br>のみ':''}</th>${['nd','n','avg','prb','pgs'].map(k=>TH(k,COLS.find(x=>x[0]===k)[1],'rowspan="2"')).join('')}<th colspan="3">店舗機種指数</th><th colspan="3">標準指数</th></tr><tr>${['tkg','tkrb','tkgs','hyg','hyrb','hygs'].map(k=>TH(k,COLS.find(x=>x[0]===k)[1])).join('')}</tr>`;
+ const vS=v=>sa.ax==='matsu'?v+'末':sa.ax==='hi'?v+'日':'日月火水木金土'[+v];
+ const body=L.map(a=>{const bg=stBg(a.s);return`<tr><td class="fix l"${bg?` style="background:${bg}"`:''} title="${esc(a.g)}"><b>${esc(stShort(a.s))}</b> <span class="mn">${esc(mShort(a.g))}</span></td><td>${vS(a.v)}</td><td style="text-align:center">${a.on?'<span class="mk a">○</span>':''}</td><td>${a.nd}</td><td>${a.n}</td><td>${Math.round(a.avg).toLocaleString()}</td><td>${P(a.G,a.rb)}</td><td>${P(a.G,a.bb+a.rb)}</td>${['g','rb','gs'].map(k=>`<td${bc(a.tk[k])}>${a.tk[k]??''}</td>`).join('')}${['g','rb','gs'].map(k=>`<td${bc(a.hy[k])}>${a.hy[k]??''}</td>`).join('')}</tr>`}).join('');
+ const sel=(id,Lx,v)=>`<select onchange="sa.${id}=this.value;saPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
+ $('main').innerHTML=`<div class="card"><h2>🔍 検索期間</h2><div class="row">${from.slice(5).replace('-','/')}〜${to.slice(5).replace('-','/')}</div></div>
+ <div class="card"><h2>👁 表示する範囲</h2>
+ <div class="chips">${['matsu','hi','you'].map(k=>`<button class="${sa.ax===k?'on':''}" onclick="saAx('${k}')">${AXN[k]}</button>`).join('')}</div>
+ <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),sa.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(go).map(g=>[g,mShort(g)])),sa.g)}</div>
+ <div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[sa.ax]]].concat(vals),sa.val)}</div>
+ <div class="row"><button class="b sub" onclick="sa.so='std';sa.rev=0;saPage()">標準の並びに戻す</button><button class="b sub" onclick="sa.s='*';sa.g='';sa.val='all';sa.only=0;saPage()">条件リセット</button></div>
+ ${L.length?`<div class="tw"><table>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 // ===== ボーダー =====
 const bGet=p=>{let o=bord();for(const k of p.split('.')){if(o==null)return'';o=o[k]}return o==null?'':o};
 window.anB=(p,v)=>{const B=bord();const a=p.split('.');let o=B;for(let i=0;i<a.length-1;i++){if(o[a[i]]==null||typeof o[a[i]]!=='object')o[a[i]]={};o=o[a[i]]}o[a[a.length-1]]=v;anDirty=true;NRC={};autoSave();anKeep=true;anaPage()};
@@ -1152,6 +1192,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
  $('main').innerHTML=`${asBar()}
 <div class="card"><h2>共通指数合格ライン</h2>${npT('passTk','pass')}${row('青色ライン','blue')}</div>
 <div class="card"><h2>分析</h2><div class="row"><label>全 指数合格ライン</label></div>${npT('anTk','anHy')}${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
+<div class="card"><h2>店舗分析</h2><div class="row"><label>合格ライン</label></div>${npT('saTk','saHy')}</div>
 <div class="card"><h2>狙い</h2>
 <div class="card"><h2>🏆 狙いリストの表示</h2>
 <div class="row"><label>全 何位まで ${ni('nr0',50)}</label></div>
