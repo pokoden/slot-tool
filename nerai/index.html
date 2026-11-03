@@ -45,7 +45,7 @@ th.fix{background:#f6f7fa;z-index:2}
 .zw{overflow:auto;-webkit-overflow-scrolling:touch;max-height:70vh;border:1px solid #ccc;border-radius:8px;background:#fafafa}
 .zb{position:relative;min-width:100%}
 .zc{position:absolute;transform:translate(-50%,-50%);min-width:36px;padding:1px 3px;border-radius:6px;border:2px solid #999;background:#fff;text-align:center;font-size:11px;line-height:1.15;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;cursor:pointer}
-.zc b{display:block;font-size:12px}.zc.ed{touch-action:none;cursor:move}.zc.sel{box-shadow:0 0 0 3px #1f5fd6;z-index:2}
+.zc b{display:block;font-size:12px;white-space:nowrap}.zc.ed{touch-action:none;cursor:move}.zc.sel{box-shadow:0 0 0 3px #1f5fd6;z-index:2}
 .zgrid{display:grid;width:max-content;padding:2px;background:#fff}
 .g{border:1px solid #444;margin:0 -1px -1px 0;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden;white-space:nowrap;line-height:1}
 .gt{font-weight:700;cursor:pointer}.ga{color:#333}.gk{font-weight:700}.mo{background:#39ff14}.mt{background:#f5ff00}.mx{background:#ddd}.ms{background:#ff9100}.mb{background:#00b0ff}.mq{background:#b4b4b4}
@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=66"></script>
+<script src="core.js?v=67"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -741,8 +741,8 @@ function nrEval(L,store,date,from,to){const cfg=nerCfg();const EW=cfg.ew;
    if(so){base+=pt*WS('s',sg);if(t.tt!=null){ixs+=pt*WS('s',sg)*(t.tt/50-1);ttS+=t.tt;ttN++}}
    const u=x.seg[sg]&&x.seg[sg].u;if(ao){base+=pt*WS('a',sg);if(u&&u.tt!=null){ixs+=pt*WS('a',sg)*(u.tt/50-1);ttS+=u.tt;ttN++}}}
   x.cand=['matsu','hi','you'].some(sg=>{const t=SAM[sg].get(x.g);return!!(t&&t.on)});
-  x.ev=ev;x.base=base;x.ixs=ixs;x.tti=ttN?ttS/ttN:null;x.score=base+ixs;const pvX=cfg.prevX!==false&&x.prev;x.mark=x.cand&&!pvX&&base>0?'○':''};
- for(const x of L)one(x);const T=L.targets||[];for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T.filter(x=>x.cand);
+  x.ev=ev;x.base=base;x.ixs=ixs;x.tti=ttN?ttS/ttN:null;x.score=base+ixs;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&base>0?'○':''};
+ for(const x of L)one(x);const T=L.targets||[];for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
  L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
 const SEGN={all:'全',matsu:'日末尾',hi:'日',you:'曜日'};
@@ -797,7 +797,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  // 同じ点数（ぴったり同じ）は、店舗→台番の小さい順
  const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
  // 標準の並び：印があって×じゃない行を点数の高い順に上へ、そのあとにそれ以外（これも点数順）
- T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));
+ T.sort(cmpT);
  // 順位：印があって×じゃない行を点数の高い順に 1,2,3…。同じ店舗で着席台番が同じ（未定は除く）行は、いちばん点数が高い1行だけに番号を付け、ほかは空白（番号は使わない）
  const seen=new Set();let nn=0;
  for(const x of T){x.rank='';if(!rk(x))continue;if(x.seat!=null){const k=x.s+'|'+x.seat;if(seen.has(k))continue;seen.add(k)}x.rank=++nn}
@@ -808,7 +808,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const MO=NC.MARKS;const nat=(a,b)=>String(a).localeCompare(String(b),'ja',{numeric:true});
  const SV=k=>{const m=k.match(/^c_(matsu|hi|you)_(\d)$/);
   if(m){const sg=m[1],i=+m[2];return x=>{const u=x.seg[sg].u;if(!u)return null;return i===0?-u.cnt:i===1?-u.avg:i===2?NC.den(u.g,u.rb):i===3?NC.den(u.g,u.bb+u.rb):(x.seg[sg].mv!=null?-x.seg[sg].mv:null)}}
-  if(k==='def')return x=>x.dpos;
+  if(k==='def')return x=>x.pos;
   if(k==='rank')return x=>x.pos;
   if(k==='sm')return x=>String(ST_ORD.indexOf(stShort(x.s))+100).padStart(4,'0')+' '+x.g;
   if(k==='kbn')return x=>neraiKbn(x,date);
@@ -832,7 +832,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const shown=V.map(o=>o.x);
  const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(12)+'<td class="gr"></td>';
   const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=NPV().blue?' class="ib"':''}>${n==null?'':n}</td>`;
-  const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc" style="text-align:center">${esc(dMk(x))}</td>${inR(x)?`<td>${x.r3[0]}</td><td>${x.r3[1]}</td><td class="gr">${x.r3[2]}</td>`:'<td></td><td></td><td class="gr"></td>'}`};
+  const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${mkBox(dMk(x))}</td>${inR(x)?`<td>${x.r3[0]}</td><td>${x.r3[1]}</td><td class="gr">${x.r3[2]}</td>`:'<td></td><td></td><td class="gr"></td>'}`};
  const cells=(x,sg)=>{const q=x.seg[sg],u=q.u;const c=['','','','',''];
   if(u){c[0]=u.cnt;c[1]=Math.round(u.avg).toLocaleString();c[2]=P(u.g,u.rb);c[3]=P(u.g,u.bb+u.rb);c[4]=q.mv!=null?f(q.mv):'-'}else{c[0]=0;c[1]=c[2]=c[3]=c[4]='-'}
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===4?' gr':''}">${v}</td>`).join('')};
@@ -842,7 +842,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${esc(dMk(x))}</td>${EVS.map(sg=>evTd(x.ev&&x.ev[sg])).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${(x.base||0).toFixed(1)}</td><td>${(x.ixs||0).toFixed(1)}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${inR(x)?x.rank:''}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${mkBox(dMk(x))}</td>${EVS.map(sg=>evTd(x.ev&&x.ev[sg])).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${(x.base||0).toFixed(1)}</td><td>${(x.ixs||0).toFixed(1)}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${inR(x)?x.rank:''}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')+TH('kbn','狙い<br>区分','','rowspan="2"')
@@ -856,7 +856,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  $('main').innerHTML=`${stat}<div class="card"><h2>🏆 狙いリスト ${(()=>{const PD=anPer();const md=d=>d?+d.slice(5,7)+'/'+ +d.slice(8,10):'';let f='',t='';if(nr.d){const date=nr.d;if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);f=ymOf(y,m-1-(+PD.m))+'-01';t=NC.addDay(date.slice(0,7)+'-01',-1)}else{f=PD.from||'';t=PD.to||'';const pv=NC.addDay(date,-1);if(t>pv)t=pv}}return f&&t?'分析期間 '+md(f)+'〜'+md(t):''})()}</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
- ${T.length?`<div class="tw"><table>${head}${body}</table></div>`:`<p class="note">${units.length?'○の付いた狙いがないよ':'その日のデータがないよ'}</p>`}
+ <div class="tw"><table>${head}${body}</table></div>${T.length?'':`<div class="row">${units.length?'狙いがないよ':'その日のデータがないよ'}</div>`}
 </div>`}
 window.nrEvs=(k,f,v)=>{const c=nerCfg();c.evs[k][f]=String(v).trim().slice(0,f==='c'?9:2);anDirty=true;autoSave();nrRe()};
 window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nrRe()};
@@ -913,7 +913,7 @@ function zuPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>
  const sel=(id,Lx,v)=>`<select onchange="zu.${id}=this.value;${id==='s'?'zu.sel=null;':''}zuPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  const edit=zu.mode==='edit';const G=zGridOf(Z,zu.s);
  const cards=Z.cards.map((c,i)=>{const x=NM.get(String(c.t));const l=last.get(String(c.t));const g=l?NC.groupOf(l.m,set):null;const col=g?zColor(gi(g)):'#999';
-  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b>${esc(c.t)}</b><span${x&&x.mjc?` style="background:${x.mjc}"`:''}>${x?esc(x.mj??x.mark)+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
+  return`<div class="zc ${String(c.t)===String(zu.sel)?'sel':''} ${edit?'ed':''}" data-i="${i}" style="left:${c.x*100}%;top:${c.y*100}%;border-color:${col}"><b${String(c.t).length>3?` style="font-size:${String(c.t).length>4?9:10}px"`:''}>${esc(c.t)}</b><span${x&&x.mjc?` style="background:${x.mjc}"`:''}>${x?esc(x.mj??x.mark)+x.rank:'-'}</span>${zval(c.t)!==''?`<span class="zv" style="${zshow?zsty(c.t,zshow):''}">${zval(c.t)}</span>`:''}</div>`}).join('');
  const legend=groups.map(g=>`<span class="zl"><i style="background:${zColor(gi(g))}"></i>${esc(g)}</span>`).join('');
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🗺 図面</h2>
  <div class="row">${sel('s',stores.map(x=>[x,x]),zu.s)}<b style="font-size:15px">${date}（${'日月火水木金土'[new Date(date+'T00:00:00Z').getUTCDay()]}）</b></div>
@@ -972,7 +972,7 @@ function zGridHtml(G,x){const c=19*zu.zg,h=c*.85,top=0;let html='';const set=x.s
  for(const k of G.cards){const t=String(k[0]),r=k[1],cc=k[2],d=k[3];const nm=x.NM.get(t);const l=x.last.get(t);const ab=l?zAbbr(NC.groupOf(l.m,set)):'';
   const mc=d==='R'?cc+1:cc-1,rc=d==='R'?cc+2:cc-2,ac=d==='R'?cc-1:cc+1;const show=nm&&(!top||(nm.rank!==''&&nm.rank<=top));const mk=show?nm.mark:'',mkT=show?(nm.mj??nm.mark):'';
   const sel=t===String(zu.sel)?' sel':'';const mcls=MKZ[mk]||'';
-  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,esc(t),`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,esc(mkT||''),'',show&&nm.mjc?nm.mjc:'')+cell(r,rc,'gk'+sel,show?nm.rank:'')}
+  const zv=x.zval?x.zval(t):'';html+=cell(r,ac,'ga'+sel,esc(ab)+(zv!==''?`<span class="gv" style="${x.zshow?_z.zsty(t,x.zshow):''}">${zv}</span>`:''))+cell(r,cc,'gt'+sel,`<span style="font-size:${Math.min(c*.5,c*.9/(.6*Math.max(1,t.length))).toFixed(1)}px">${esc(t)}</span>`,`onclick="zuTap('${esc(t).replace(/'/g,'')}')"`)+cell(r,mc,'gm'+mcls+sel,esc(mkT||''),'',show&&nm.mjc?nm.mjc:'')+cell(r,rc,'gk'+sel,show?nm.rank:'')}
  return`<div id="zw" class="zw"><div id="zg" class="zgrid" style="font-size:${c*.5}px;grid-template-columns:${Array.from({length:G.cols},(_,i)=>(acs.has(i)?c*(x.zshow==='ix'?6.5:x.zshow==='io'?4.2:2.4):c)+'px').join(' ')};grid-template-rows:repeat(${G.rows},${h}px)">${html}</div></div>`}
 function zLegendGrid(x){const m=new Map();for(const[,r]of x.last){const g=NC.groupOf(r.m,x.set);m.set(g,zAbbr(g))}
  return[...m].sort((a,b)=>a[1].localeCompare(b[1],'ja')).map(([g,a])=>`<span class="zl"><b>${esc(a)}</b>${esc(g)}</span>`).join('')}
@@ -1230,6 +1230,8 @@ const npTbl=(a,nm,X=[])=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return
  const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npL('${a}',${i},'${k}',this.value)">`;
  return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td>${X.map(k=>`<td>${pi(k)}</td>`).join('')}</tr>`}).join('')};
 const npT=(a1,a2,X=['t'])=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(k=>`<th>${{p:'確率',t:'総合'}[k]}</th>`).join('')}</tr>${npTbl(a1,'店舗機種',X)}${npTbl(a2,'標準',X)}</table></div>`;
+// 狙い印を評価印と同じ大きさの枠で
+const mkBox=t=>t?`<span class="em2"><span class="eo">${esc(t)}</span></span>`:'';
 // 目印：店舗機種内の狙い順ごとの印と背景色（狙い・当日・図面）
 const MJC=['#00E5FF','#FFFF00','#FF4FD8','#39FF14','#FF9F1A','#B266FF','#7FDBFF','#FF3B3B','#C0C0C0',''];
 const RM0=[{t:'★',c:'#FF4FD8'},{t:'◎',c:'#00E5FF'},{t:'○',c:'#FFFF00'},{t:'△',c:''},{t:'▲',c:''}];
