@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=72"></script>
+<script src="core.js?v=73"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -413,7 +413,7 @@ function rankT(T){const rk=x=>!!x.mark&&x.mark!=='×';
  {const v=T.map(x=>x.score);const n=v.length,m=n?v.reduce((a,b)=>a+b,0)/n:0,sd=n?Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/n):0;for(const x of T)x.sdv=sd>0?50+10*(x.score-m)/sd:50}
  const NF=NPV();T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};
  const lim=(i,c,x)=>{const l=NF['nr'+i];if(l!=null&&c>l)return false;const p=NF['nrp'+i];if(p!=null&&x.n3&&c>Math.max(1,Math.ceil(x.n3[i]*p/100)))return false;return true};
- for(const x of T){x.r3=null;if(!rk(x))continue;if(NF.nrDev!=null&&!(x.sdv>=NF.nrDev))continue;if(x.seat!=null&&seen.has(x.s+'|'+x.seat))continue;const k3=x.s+'|'+x.g;const a0=nn+1,a1=(c2[x.s]||0)+1,a2=(c3[k3]||0)+1;
+ for(const x of T){x.r3=null;if(!rk(x))continue;if(NF.nrDev!=null&&!(Math.round(x.sdv*10)/10>=NF.nrDev))continue;if(x.seat!=null&&seen.has(x.s+'|'+x.seat))continue;const k3=x.s+'|'+x.g;const a0=nn+1,a1=(c2[x.s]||0)+1,a2=(c3[k3]||0)+1;
   if(!lim(0,a0,x)||!lim(1,a1,x)||!lim(2,a2,x))continue;if(x.seat!=null)seen.add(x.s+'|'+x.seat);nn=a0;c2[x.s]=a1;c3[k3]=a2;x.r3=[a0,a1,a2];R.set(x,a0)}
  return R}
 
