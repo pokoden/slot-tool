@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=58"></script>
+<script src="core.js?v=59"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -638,8 +638,11 @@ function saCalc(sl,from,to){const set=setObj();const key=[from,to,sl.join(','),S
  // 全：同じ店舗の全機種と比べる／他：同じ店舗機種の他の区分と比べる
  const SG=new Map();for(const a of L){const k=sa.ax==='all'?a.s:a.s+'|'+a.g;let x=SG.get(k);if(!x)SG.set(k,x=[]);x.push(a)}
  const pR=a=>RT===''||!isFinite(+RT)||a.ratio*100+1e-9>=+RT;
- for(const A of SG.values()){const nR=a=>z.rb.has(a.g)||z.both.has(a.g),nG=a=>z.both.has(a.g);const Bs=sa.ax==='all'?A.filter(pR):A;const st={g:NC.stat(Bs.map(a=>a.avg)),rb:NC.stat(Bs.filter(a=>!nR(a)).map(a=>a.rbR)),gs:NC.stat(Bs.filter(a=>!nG(a)).map(a=>a.gsR))};const nB=!Bs.length,nBr=!Bs.some(a=>!nR(a)),nBg=!Bs.some(a=>!nG(a));
-  for(const a of A){const noRb=nR(a)||nBr,noGs=nG(a)||nBg;const t={g:nB?null:NC.dev(a.avg,st.g),rb:nB||noRb?null:NC.dev(a.rbR,st.rb),gs:nB||noGs?null:NC.dev(a.gsR,st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=pR(a)&&saOk(a)}}
+ for(const A of SG.values()){const nR0=a=>z.rb.has(a.g)||z.both.has(a.g),nG0=a=>z.both.has(a.g);const AL=sa.ax==='all';const Bs=AL?A.filter(pR):A;
+  // 全：機種ごとに仕様が違うので、生の数値ではなく各機種の標準指数を店内で比べる
+  const V=AL?{g:a=>a.hy.g,rb:a=>a.hy.rb,gs:a=>a.hy.gs}:{g:a=>a.avg,rb:a=>a.rbR,gs:a=>a.gsR};const nR=AL?(a=>nR0(a)||a.hy.rb==null):nR0,nG=AL?(a=>nG0(a)||a.hy.gs==null):nG0;const Bg=AL?Bs.filter(a=>a.hy.g!=null):Bs;
+  const st={g:NC.stat(Bg.map(V.g)),rb:NC.stat(Bs.filter(a=>!nR(a)).map(V.rb)),gs:NC.stat(Bs.filter(a=>!nG(a)).map(V.gs))};const nB=!Bg.length,nBr=!Bs.some(a=>!nR(a)),nBg=!Bs.some(a=>!nG(a));
+  for(const a of A){const noRb=nR(a)||nBr,noGs=nG(a)||nBg;const t={g:nB||V.g(a)==null?null:NC.dev(V.g(a),st.g),rb:nB||noRb?null:NC.dev(V.rb(a),st.rb),gs:nB||noGs?null:NC.dev(V.gs(a),st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=pR(a)&&saOk(a)}}
  SAC={key,r:S.rows,v:L};return L}
 // 検索割合（店舗分析用。未設定は60%）
 const saRt=()=>{const B=bord();if(B.saRatio==null)B.saRatio='60';return String(B.saRatio)};
