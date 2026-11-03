@@ -23,7 +23,7 @@ const normStore=s=>nz(s).replace(/店$/,'');
 const FIX_ALIAS={'甲鉄城のカバネリ 海門(うなと)決戦':'スマスロ 甲鉄城のカバネリ 海門決戦','ジャグラーガールズ':'ジャグラーガールズSS','アイムジャグラーEX-TP':'SアイムジャグラーEX-TP','甲鉄城のカバネリ':'パチスロ 甲鉄城のカバネリ','ミリオンゴッド‐神々の軌跡‐':'スマスロ ミリオンゴッド-神々の軌跡-'};
 const FIXN={};for(const k in FIX_ALIAS)FIXN[nz(k)]=nz(FIX_ALIAS[k]);
 const mKey=s=>nz(s).replace(/[‐‑‒–—―−ｰ]/g,'-').replace(/[〜～]/g,'~').replace(/^(スマスロ ?|Lパチスロ ?|パチスロ ?|スロット ?|L ?|S ?)/,'').replace(/\s+/g,'');
-const KC=new WeakMap();
+let KC=new WeakMap();
 function keyMap(set){const k=set&&set.known;if(!k)return null;let m=KC.get(k);if(m)return m;m=new Map();for(const n of k){const x=mKey(n);if(!x)continue;const o=m.get(x);m.set(x,o===undefined||o===n?n:null)}KC.set(k,m);return m}
 function normMachine(s,set){let m=nz(s);const a=set&&set.alias||{};if(a[m])m=nz(a[m]);if(FIXN[m])return FIXN[m];
  const km=keyMap(set);if(km){if(set.known.includes(m))return m;const x=km.get(mKey(m));if(x)return nz(x)}return m}
@@ -171,7 +171,7 @@ const AXWIN={matsu:'matsu',hi:'dou',you:'you'};
 const stKeys=ax=>['zen','d2','d3','d6'].concat(ax==='all'?['matsu','dou','you']:AXWIN[ax]?[AXWIN[ax]]:[]).flatMap(w=>['g','gs'].map(m=>w+'_'+m+'_w'));
 // 標準指数の母集団：登録初日〜期間の最終日の全データ（1台1日を1件）
 // 全履歴でRB（BB）の合計が0の機種。その指数は出さない（50にしない）
-const ZC=new WeakMap();function zeroOf(rows,set){const sig=JSON.stringify(set.groups||{});let z=ZC.get(rows);if(z&&z.sig===sig)return z;const T=new Map();for(const r of rows){const g=groupOf(r.m,set);let a=T.get(g);if(!a)T.set(g,a={bb:0,rb:0,n:0});a.bb+=+r.bb||0;a.rb+=+r.rb||0;a.n++}
+let ZC=new WeakMap();function zeroOf(rows,set){const sig=JSON.stringify(set.groups||{});let z=ZC.get(rows);if(z&&z.sig===sig)return z;const T=new Map();for(const r of rows){const g=groupOf(r.m,set);let a=T.get(g);if(!a)T.set(g,a={bb:0,rb:0,n:0});a.bb+=+r.bb||0;a.rb+=+r.rb||0;a.n++}
  z={sig,rb:new Set(),bb:new Set(),both:new Set()};for(const[g,a]of T){if(a.bb===0&&a.rb===0)z.both.add(g);else if(a.rb===0)z.rb.add(g);else if(a.bb===0)z.bb.add(g)}ZC.set(rows,z);return z}
 function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<=to);
  for(const r of L)rot[typeOf(r.m,set)].push(r.g);const rs={N:stat(rot.N),AT:stat(rot.AT)};
@@ -179,7 +179,7 @@ function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<
  const ps={};for(const g in pr)ps[g]={rb:stat(pr[g].rb),gs:stat(pr[g].gs)};return{rot:rs,prob:ps,zr:zeroOf(rows,set)}}
 // 確率指数：RB・合算のうち出せるものだけで（RB無し機種は合算だけ）
 function idx(rT,rbT,gsT){if(rT==null||(rbT==null&&gsT==null))return{p:null,t:null};const p=rbT==null?gsT:gsT==null?rbT:Math.round(rbT*P.wRb+gsT*(1-P.wRb));return{p,t:Math.round(rT*P.wRot+p*(1-P.wRot))}}
-const SM=new WeakMap();
+let SM=new WeakMap();
 function storeRows(rows,s){let m=SM.get(rows);if(!m){m=new Map();for(const r of rows){let a=m.get(r.s);if(!a)m.set(r.s,a=[]);a.push(r)}SM.set(rows,m)}return m.get(s)||[]}
 // 店舗1つぶんの集計。軸の値（日末尾なら0〜9）ごとに、台番別と状態順1位別を出す
 // 検索割合の分母：期間（from〜to）のカレンダー上で、その軸の値に当たる日の数（データがない日も数える）
@@ -299,6 +299,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),parts:a,mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={zeroOf,skOrd,setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
