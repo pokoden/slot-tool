@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=56"></script>
+<script src="core.js?v=57"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -637,8 +637,9 @@ function saCalc(sl,from,to){const set=setObj();const key=[from,to,sl.join(','),S
  const L=[...M.values()];for(const a of L){a.avg=a.n?a.G/a.n:0;a.rbR=a.G>0?a.rb/a.G:0;a.gsR=a.G>0?(a.bb+a.rb)/a.G:0;a.nd=a.days.size;delete a.days;a.ratio=CAL[a.v]?a.nd/CAL[a.v]:0;a.hy=NC.rowIdx({m:a.m,g:a.avg,bb:a.bb/a.n,rb:a.rb/a.n},set,base)}
  // 全：同じ店舗の全機種と比べる／他：同じ店舗機種の他の区分と比べる
  const SG=new Map();for(const a of L){const k=sa.ax==='all'?a.s:a.s+'|'+a.g;let x=SG.get(k);if(!x)SG.set(k,x=[]);x.push(a)}
- for(const A of SG.values()){const nR=a=>z.rb.has(a.g)||z.both.has(a.g),nG=a=>z.both.has(a.g);const st={g:NC.stat(A.map(a=>a.avg)),rb:NC.stat(A.filter(a=>!nR(a)).map(a=>a.rbR)),gs:NC.stat(A.filter(a=>!nG(a)).map(a=>a.gsR))};
-  for(const a of A){const noRb=nR(a),noGs=nG(a);const t={g:NC.dev(a.avg,st.g),rb:noRb?null:NC.dev(a.rbR,st.rb),gs:noGs?null:NC.dev(a.gsR,st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=(RT===''||!isFinite(+RT)||a.ratio*100+1e-9>=+RT)&&saOk(a)}}
+ const pR=a=>RT===''||!isFinite(+RT)||a.ratio*100+1e-9>=+RT;
+ for(const A of SG.values()){const nR=a=>z.rb.has(a.g)||z.both.has(a.g),nG=a=>z.both.has(a.g);const Bs=sa.ax==='all'?A.filter(pR):A;const st={g:NC.stat(Bs.map(a=>a.avg)),rb:NC.stat(Bs.filter(a=>!nR(a)).map(a=>a.rbR)),gs:NC.stat(Bs.filter(a=>!nG(a)).map(a=>a.gsR))};const nB=!Bs.length,nBr=!Bs.some(a=>!nR(a)),nBg=!Bs.some(a=>!nG(a));
+  for(const a of A){const noRb=nR(a)||nBr,noGs=nG(a)||nBg;const t={g:nB?null:NC.dev(a.avg,st.g),rb:nB||noRb?null:NC.dev(a.rbR,st.rb),gs:nB||noGs?null:NC.dev(a.gsR,st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=pR(a)&&saOk(a)}}
  SAC={key,r:S.rows,v:L};return L}
 // 検索割合（店舗分析用。未設定は60%）
 const saRt=()=>{const B=bord();if(B.saRatio==null)B.saRatio='60';return String(B.saRatio)};
