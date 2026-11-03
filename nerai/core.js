@@ -224,7 +224,7 @@ function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;a
   &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
   &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v+EPS)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v+EPS);
  // 全軸だけ：指数合格ライン（店舗機種・標準）。同じ種類はどれか1本、両方あれば両方の種類で合格
- let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs','t'].every(k=>!has(l[k])||((k==='rb'||k==='t')&&(!u[x]||u[x][k]==null))||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
+ let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs','t'].every(k=>!has(l[k])||(k!=='g'&&u[x]&&u[x][k]==null)||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
  return any&&ok&&lok}
 // ===== 当日の数値表示（窓ごとの合計） =====
 function winIdx(rows,set){const by=new Map();
@@ -297,8 +297,8 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
     const to=!!(T&&T.o);code+=(to||ost.length)?'1':'0';codeT+=to?'1':'0';
     const ix=T?(by==='tk'?T.u.tk:T.u.hy):null;const mv=metricOf(T&&T.u);if(mv!=null)sub+=mv*(+cfg.sub.w[sg]||0)/100;
     res[sg]={o:to,ost,u:T&&T.u,ix};segT[sg]={o:to,u:T&&T.u,mv:T?mv:null}}
-   const pv=prevO(r.t);const mk=useP&&pv?'':comboMark(code,cfg),pts=PT(mk,code);out.push({s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/P.subDiv,code,mark:mk,prev:pv,seg:res,one});
-   const mT=useP&&pv?'':comboMark(codeT,cfg);tg.push({kind:'t',s:r.s,g,m:r.m,t:String(r.t),label:String(r.t),seat:String(r.t),pts:PT(mT,codeT),sub,score:PT(mT,codeT)+sub/P.subDiv,code:codeT,mark:mT,prev:pv,seg:segT})}
+   const pv=prevO(r.t);const mk=useP&&pv?'':comboMark(code,cfg),pts=PT(mk,code);out.push({axp:AXPg,s:r.s,t:r.t,m:r.m,g,pts,sub,score:pts+sub/P.subDiv,code,mark:mk,prev:pv,seg:res,one});
+   const mT=useP&&pv?'':comboMark(codeT,cfg);tg.push({axp:AXPg,kind:'t',s:r.s,g,m:r.m,t:String(r.t),label:String(r.t),seat:String(r.t),pts:PT(mT,codeT),sub,score:PT(mT,codeT)+sub/P.subDiv,code:codeT,mark:mT,prev:pv,seg:segT})}
   // 状態順の行：その機種で、どれかの区分に○がある状態順ごとに1行
   const keys=new Set();for(const sg of SEGS)for(const k of seg[sg].st.keys())keys.add(k);
   const ordK=[...keys].sort((a,b)=>skOrd(a)-skOrd(b));
@@ -307,7 +307,7 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    // 着席台番：その日の朝の時点でこの状態順1位になる台番。前日のデータがない（前日を含む期間）・1位が決まらない（同じ値）なら未定
    const[kb0,kn0]=k.split('~');const i=RANK_KEYS.indexOf(kb0),rn=+kn0||1;let seat=null;
    if(!(NEAR.includes(k.split('_')[0])&&o.hasPrev===false)){const w=mem.find(r=>((o.tRanks||{})[r.s+'|'+r.t]||[])[i]===rn);if(w)seat=String(w.t)}
-   const pvS=seat!=null&&prevO(seat);const mS=useP&&pvS?'':comboMark(code,cfg);tg.push({kind:'s',s:o.store,g,m:[...new Set(mem.map(r=>r.m))].join('／'),k,label:stName(k),seat,pts:PT(mS,code),sub,score:PT(mS,code)+sub/P.subDiv,code,mark:mS,prev:pvS,seg:segS})}}
+   const pvS=seat!=null&&prevO(seat);const mS=useP&&pvS?'':comboMark(code,cfg);tg.push({axp:AXPg,kind:'s',s:o.store,g,m:[...new Set(mem.map(r=>r.m))].join('／'),k,label:stName(k),seat,pts:PT(mS,code),sub,score:PT(mS,code)+sub/P.subDiv,code,mark:mS,prev:pvS,seg:segS})}}
  if(cfg.seatMerge){const G=new Map(),T2=[];for(const x of tg){if(x.seat==null){T2.push(x);continue}const k=x.s+'|'+x.seat;if(G.has(k))G.get(k).push(x);else{const a=[x];G.set(k,a);T2.push(a)}}
   tg.length=0;for(const a of T2){if(!Array.isArray(a)){tg.push(a);continue}if(a.length===1){tg.push(a[0]);continue}
    const b=a.find(x=>x.kind==='t')||a[0];const seg={};let code='';for(const sg of SEGS){const w=a.find(x=>x.seg[sg].o);code+=w?'1':'0';seg[sg]=w?w.seg[sg]:b.seg[sg]}
