@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=54"></script>
+<script src="core.js?v=55"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -647,7 +647,7 @@ const saPT=x=>{const P=NC.getP();if(x.g==null||(x.rb==null&&x.gs==null))return{p
 // 合格：チェックが入った店舗機種ラインのどれか1本と標準ラインのどれか1本（入れたほうだけ）。空欄は0、RB・合算がない機種はそこを見ない
 function saOk(a){const o=npObj();const Ls=x=>(Array.isArray(x)?x:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true));const ok=(ix,p)=>!!ix&&ix.g!=null&&['g','rb','gs','p','t'].every(k=>{const v=p[k];const t=v===''||v==null||!isFinite(+v)?0:+v;return ix[k]==null&&k!=='g'?true:ix[k]!=null&&ix[k]>=t});
  const T=Ls(o.saTk),H=Ls(o.saHy);if(!T.length&&!H.length)return false;return(!T.length||T.some(p=>ok(a.tk,p)))&&(!H.length||H.some(p=>ok(a.hy,p)))}
-window.saAx=k=>{sa.ax=k;sa.val='all';saPage()};window.saSo=k=>{if(sa.so===k)sa.rev=sa.rev?0:1;else{sa.so=k;sa.rev=0}saPage()};
+window.saAx=k=>{if(!sa.vs)sa.vs={};sa.vs[sa.ax]=sa.val;sa.ax=k;sa.val=sa.vs[k]!=null?sa.vs[k]:'all';saPage()};window.saSo=k=>{if(sa.so===k)sa.rev=sa.rev?0:1;else{sa.so=k;sa.rev=0}saPage()};
 function saPage(){LS.set('nr_sa',sa);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(sa.s!=='*'&&!stores.includes(sa.s))sa.s='*';
  let first='9',last='0';for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d}const PD=anPer();const from=PD.from||first,to=PD.to||last;const sl=sa.s==='*'?stores:[sa.s];
  const all=saCalc(sl,from,to);const groups=[...new Set(all.map(a=>a.g))];if(sa.g&&!groups.includes(sa.g))sa.g='';
