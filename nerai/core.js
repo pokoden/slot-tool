@@ -167,7 +167,8 @@ const has=v=>v!==''&&v!=null&&!isNaN(+v);
 // 分析の軸（日末尾・日・曜日）。状態順は前日〜6日間＋その軸の「前回」だけ、回転と合算の悪い順だけ
 const AXES=['matsu','hi','you','all'];
 const AXWIN={matsu:'matsu',hi:'dou',you:'you'};
-const stKeys=ax=>['zen','d2','d3','d6'].concat(AXWIN[ax]?[AXWIN[ax]]:[]).flatMap(w=>['g','gs'].map(m=>w+'_'+m+'_w'));
+// 前日〜6日間はどの区分も。前回〇〇はその区分だけ、全は前回日末尾・前回同日・前回曜日ぜんぶ
+const stKeys=ax=>['zen','d2','d3','d6'].concat(ax==='all'?['matsu','dou','you']:AXWIN[ax]?[AXWIN[ax]]:[]).flatMap(w=>['g','gs'].map(m=>w+'_'+m+'_w'));
 // 標準指数の母集団：登録初日〜期間の最終日の全データ（1台1日を1件）
 // 全履歴でRB（BB）の合計が0の機種。その指数は出さない（50にしない）
 const ZC=new WeakMap();function zeroOf(rows,set){const sig=JSON.stringify(set.groups||{});let z=ZC.get(rows);if(z&&z.sig===sig)return z;const T=new Map();for(const r of rows){const g=groupOf(r.m,set);let a=T.get(g);if(!a)T.set(g,a={bb:0,rb:0,n:0});a.bb+=+r.bb||0;a.rb+=+r.rb||0;a.n++}
