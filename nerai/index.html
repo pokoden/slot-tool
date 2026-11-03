@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=60"></script>
+<script src="core.js?v=61"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -238,7 +238,7 @@ function ckPaint(){const el=$('ckr');if(!el||!S.chk)return;const L=S.chk.list;if
  el.innerHTML=`<div class="st ${L.length?'ng':'ok'}">${S.chk.all?'全データ':'取り込んだデータ'}：${L.length?cnt(L):'異常なし'}</div>${L.length&&fon?`<div class="st ng">絞り込み：${cnt(CF)}</div>`:''}${L.length?`<div class="row"><button class="b sub" onclick="ckSelAll()">一括チェック</button><button class="b" style="background:#c62828" onclick="ckDelSel()">削除</button><button class="b" style="background:#137a3a" onclick="ckOkSel()">了承</button><button class="b" onclick="ckOpenSel()">まとめて開く</button><span class="st" id="ckn" style="margin:0">${S.chk.sel.size}件</span></div><div id="cks" class="st"></div>`:''}<div id="ckpop"></div><div id="ckl"></div>`;
  const th=(k,c)=>`<th ${c?'class="l" ':''}onclick="ckHd('${k}')" style="cursor:pointer;color:${F[k]?'#1f5fd6':'inherit'}">${CKF[k]}▼</th>`;
  ckPt=vlist('ckl',CF,`<th></th>${th('d',1)}${th('s',1)}${th('m',1)}${th('t')}<th>回転</th><th>BB</th><th>RB</th>${th('w',1)}<th></th>`,
-  (x,i)=>{const r=x.r;return`<tr><td ${vtd}><input type="checkbox" ${cbx} ${S.chk.sel.has(x)?'checked':''} onchange="ckTg(${i},this.checked)"></td><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd}>${esc(r.m)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${r.g??''}</td><td ${vtd}>${r.bb??''}</td><td ${vtd}>${r.rb??''}</td><td class="l ng" ${vtd}>${x.why}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="ckOpen(${i})">開く</button></td></tr>`},[30,56,44,120,52,52,40,40,130,56]);
+  (x,i)=>{const r=x.r;return`<tr><td ${vtd}><input type="checkbox" ${cbx} ${S.chk.sel.has(x)?'checked':''} onchange="ckTg(${i},this.checked)"></td><td class="l" ${vtd}>${r.d.slice(5)}</td><td class="l" ${vtd}>${esc(stS(r.s))}</td><td class="l" ${vtd} title="${esc(r.m)}">${esc(r.m)}</td><td ${vtd}>${esc(r.t)}</td><td ${vtd}>${r.g??''}</td><td ${vtd}>${r.bb??''}</td><td ${vtd}>${r.rb??''}</td><td class="l ng" ${vtd}>${x.why}</td><td ${vtd}><button class="b sub" style="padding:2px 8px" onclick="ckOpen(${i})">開く</button></td></tr>`},[30,56,44,120,52,52,40,40,130,56]);
  if(L.length&&!CF.length)$('ckl').innerHTML=`<div class="tw"><table><thead><tr><th></th>${th('d',1)}${th('s',1)}${th('m',1)}${th('t')}${th('w',1)}</tr></thead></table></div>`}
 window.ckTg=(i,on)=>{const x=CF[i];if(!x)return;if(on)S.chk.sel.add(x);else S.chk.sel.delete(x);if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件'};
 window.ckSelAll=()=>{const all=CF.length&&CF.every(x=>S.chk.sel.has(x));S.chk.sel=all?new Set():new Set(CF);if($('ckn'))$('ckn').textContent=S.chk.sel.size+'件';if(ckPt)ckPt()};
@@ -1230,7 +1230,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 function setPage(){const set=setObj();const ms=[...new Set(S.rows.map(r=>r.m))].sort((a,b)=>a.localeCompare(b,'ja'));
  const al=Object.entries(set.alias).map(([a,b])=>a+'='+b).join('\n');
  $('main').innerHTML=`<div class="card"><h2>⚙️ 機種のタイプとまとめ</h2>
- <div class="tw"><table><tr><th class="l fix">機種</th><th>タイプ</th><th class="l">まとめ名</th></tr>${ms.map((m,i)=>`<tr><td class="l fix" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(m)}</td><td><select data-m="${i}" class="ty"><option value="N" ${NC.typeOf(m,set)==='N'?'selected':''}>ノーマル</option><option value="AT" ${NC.typeOf(m,set)==='AT'?'selected':''}>AT</option></select></td><td><input data-m="${i}" class="gr" value="${esc(NC.groupOf(m,set))}" style="width:150px;font-size:16px"></td></tr>`).join('')}</table></div>
+ <div class="tw"><table><tr><th class="l fix">機種</th><th>タイプ</th><th class="l">まとめ名</th></tr>${ms.map((m,i)=>`<tr><td class="l fix" style="max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${esc(m)}">${esc(m)}</td><td><select data-m="${i}" class="ty"><option value="N" ${NC.typeOf(m,set)==='N'?'selected':''}>ノーマル</option><option value="AT" ${NC.typeOf(m,set)==='AT'?'selected':''}>AT</option></select></td><td><input data-m="${i}" class="gr" value="${esc(NC.groupOf(m,set))}" style="width:150px;font-size:16px"></td></tr>`).join('')}</table></div>
  <h2 style="margin-top:12px">機種名の言いかえ</h2>
  <textarea id="al">${esc(al)}</textarea>
  <div class="row"><button class="b" onclick="saveSet()">保存して計算し直す</button></div><div id="sv" class="st"></div></div>${tokCard()}`;
@@ -1283,6 +1283,15 @@ const n=new Date(),td=n.getFullYear()+'年'+(n.getMonth()+1)+'月'+n.getDate()+'
 document.getElementById('gpt').value=T.replace('{TODAY}',td).replace('{DAYS}',days)}
 window.gpCopy=async()=>{const t=document.getElementById('gpt'),b=document.getElementById('gpb');render();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(e){}if(!ok){t.focus();t.select();t.setSelectionRange(0,t.value.length);try{ok=document.execCommand('copy')}catch(e){}}if(ok){b.textContent='コピー済';setTimeout(()=>b.textContent='コピー',1500)}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render);else render()})();
+</script>
+<script>
+// 表の中で省略された名前（title付き）をタップ → 近くに全文。ほかをタップで閉じる。元のタップ動作はそのまま
+(function(){let tip=null,cur=null;const close=()=>{if(tip){tip.remove();tip=null;cur=null}};
+document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('td[title],td [title]');
+ if(!el||!el.title||el.closest('th')){close();return}if(cur===el){close();return}close();
+ tip=document.createElement('div');tip.textContent=el.title;tip.style.cssText='position:fixed;z-index:9999;background:#fff;color:#111;border:1px solid #888;border-radius:6px;padding:4px 8px;font-size:inherit;max-width:90vw;box-shadow:0 2px 8px rgba(0,0,0,.25);word-break:break-all';
+ document.body.appendChild(tip);cur=el;const r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;let x=Math.min(Math.max(4,r.left),innerWidth-w-4),y=r.bottom+4;if(y+h>innerHeight-4)y=Math.max(4,r.top-h-4);tip.style.left=x+'px';tip.style.top=y+'px'},true);
+addEventListener('scroll',close,true);addEventListener('resize',close)})();
 </script>
 </body>
 </html>
