@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=67"></script>
+<script src="core.js?v=68"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -429,7 +429,7 @@ function unitsAll(d,stores,R,set){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};if(NRG.m[d
   const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
   const R=rankT(T);
   // 何%までの母数：その日の台の数（全店舗・店舗・店舗機種）
-  {const all=new Set(),st={},sm={};for(const u of out)for(const r of u.day){const t=u.s+'|'+r.t;all.add(t);(st[u.s]||(st[u.s]=new Set())).add(t);const k=u.s+'|'+NC.groupOf(r.m,set);(sm[k]||(sm[k]=new Set())).add(t)}
+  {const all=new Set(),st={},sm={};for(const u of out)for(const r of u.day){if(nxHas(NC.groupOf(r.m,set)))continue;const t=u.s+'|'+r.t;all.add(t);(st[u.s]||(st[u.s]=new Set())).add(t);const k=u.s+'|'+NC.groupOf(r.m,set);(sm[k]||(sm[k]=new Set())).add(t)}
    for(const x of T)if(x.r3)x.n3=[all.size,(st[x.s]||new Set()).size,(sm[x.s+'|'+x.g]||new Set()).size]}
   for(const u of out){const M=new Map();for(const x of u.T){if(x.kind!=='t')continue;const t=String(x.t);let b=x;
     for(const y of u.T)if(y.kind==='s'&&y.seat===t&&R.has(y)&&!R.has(b))b=y;
@@ -733,6 +733,8 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
 // 狙いの評価：区分ごとに 店舗分析○と台分析○の両方＝◎、店舗分析だけ＝店、台分析だけ＝台。
 // 候補：日末尾・日・曜日のどれかで店舗分析○がある店舗機種だけ。
 // ベース点数＝Σ（○の点数×重み）、指数点数＝Σ（○の点数×重み×（総合トータル指数÷50−1））。マイナスもある。総合点数＝ベース＋指数
+// 狙わない機種（狙い・図面・当日の印から外す）
+const nxL=()=>Array.isArray(npObj().nx)?npObj().nx:[];const nxHas=g=>nxL().includes(g);
 function nrEval(L,store,date,from,to){const cfg=nerCfg();const EW=cfg.ew;
  const SAM={};for(const sg of NC.SEGS){const v=sg==='all'?'all':String(NC.segOf(date,sg));const M=new Map();for(const a of saCalc([store],from,to,sg))if(a.v===v)M.set(a.g,a);SAM[sg]=M}
   const WS=(k,sg)=>+EW[k][sg]||0;
@@ -742,7 +744,7 @@ function nrEval(L,store,date,from,to){const cfg=nerCfg();const EW=cfg.ew;
    const u=x.seg[sg]&&x.seg[sg].u;if(ao){base+=pt*WS('a',sg);if(u&&u.tt!=null){ixs+=pt*WS('a',sg)*(u.tt/50-1);ttS+=u.tt;ttN++}}}
   x.cand=['matsu','hi','you'].some(sg=>{const t=SAM[sg].get(x.g);return!!(t&&t.on)});
   x.ev=ev;x.base=base;x.ixs=ixs;x.tti=ttN?ttS/ttN:null;x.score=base+ixs;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&base>0?'○':''};
- for(const x of L)one(x);const T=L.targets||[];for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
+ for(const x of L){one(x);if(nxHas(x.g))x.mark=''}const T=(L.targets||[]).filter(x=>!nxHas(x.g));for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
  L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
 const SEGN={all:'全',matsu:'日末尾',hi:'日',you:'曜日'};
@@ -808,7 +810,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const MO=NC.MARKS;const nat=(a,b)=>String(a).localeCompare(String(b),'ja',{numeric:true});
  const SV=k=>{const m=k.match(/^c_(matsu|hi|you)_(\d)$/);
   if(m){const sg=m[1],i=+m[2];return x=>{const u=x.seg[sg].u;if(!u)return null;return i===0?-u.cnt:i===1?-u.avg:i===2?NC.den(u.g,u.rb):i===3?NC.den(u.g,u.bb+u.rb):(x.seg[sg].mv!=null?-x.seg[sg].mv:null)}}
-  if(k==='def')return x=>x.pos;
+  if(k==='def')return x=>x.dpos;
   if(k==='rank')return x=>x.pos;
   if(k==='sm')return x=>String(ST_ORD.indexOf(stShort(x.s))+100).padStart(4,'0')+' '+x.g;
   if(k==='kbn')return x=>neraiKbn(x,date);
@@ -1242,6 +1244,9 @@ const mjBg=x=>{const m=rmOf(x);return m&&m.c?m.c:''};
 const swH=(cur,fn)=>MJC.map(c=>`<span onclick="${fn}('${c}')" style="display:inline-block;width:20px;height:20px;margin:3px;border-radius:4px;vertical-align:middle;background:${c||'#fff'};border:1px solid #888;box-sizing:border-box;${(cur||'')===c?'outline:3px solid #000;outline-offset:2px':''}"></span>`).join('');
 const rmE=()=>{const o=npObj();if(!Array.isArray(o.rm))o.rm=JSON.parse(JSON.stringify(RM0));return o.rm};
 window.rmSet=(i,k,v)=>{const L=rmE();if(!L[i])return;L[i][k]=String(v).trim();anDirty=true;NRC={};autoSave();npPage()};
+window.nxSet=(i,v)=>{const o=npObj();if(!Array.isArray(o.nx))o.nx=[];o.nx[i]=v;anDirty=true;NRC={};NRG={nrc:null,m:{}};autoSave();npPage()};
+window.nxAdd=()=>{const o=npObj();if(!Array.isArray(o.nx))o.nx=[];o.nx.push('');anDirty=true;autoSave();npPage()};
+window.nxDel=i=>{const o=npObj();if(!Array.isArray(o.nx))return;o.nx.splice(i,1);anDirty=true;NRC={};NRG={nrc:null,m:{}};autoSave();npPage()};
 window.rmAdd=()=>{rmE().push({t:'',c:''});anDirty=true;NRC={};autoSave();npPage()};
 window.rmDel=i=>{rmE().splice(i,1);anDirty=true;NRC={};autoSave();npPage()};
 const nrRe=()=>tab==='np'?npPage():nerPage();
@@ -1265,6 +1270,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr><th>店舗機種<br>順位</th><th>目印</th><th>色</th><th></th></tr>${rmL().map((m,i)=>`<tr><td>${i+1}位</td><td><input type="text" value="${esc(m.t||'')}" style="width:52px;font-size:16px" onchange="rmSet(${i},'t',this.value)"></td><td style="white-space:nowrap">${swH(m.c,'((c)=>rmSet('+i+',\'c\',c))')}</td><td><button class="b sub" onclick="rmDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="rmAdd()">追加</button></div></div>
 <div class="card"><h2>🎖 ○の点数と重み</h2><div class="tw"><table><tr><th></th>${['all','matsu','hi','you'].map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr><td class="l">○の点数</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr>${[['s','店舗分析 重み'],['a','台分析 重み']].map(([k,t])=>`<tr><td class="l">${t}</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('ew.'+k+'.'+sg,cfg.ew[k][sg])}</td>`).join('')}</tr>`).join('')}</table></div></div>
 <div class="card"><h2>🎨 評価の印</h2><div class="tw"><table><tr><th></th><th>印</th><th>中の文字</th><th>色</th></tr>${[['s','店舗分析だけ○'],['a','台分析だけ○'],['b','両方○']].map(([k,t])=>`<tr><td class="l">${t}</td><td><input type="text" value="${esc(cfg.evs[k].o||'')}" style="width:44px;font-size:16px" onchange="nrEvs('${k}','o',this.value)"></td><td><input type="text" value="${esc(cfg.evs[k].i||'')}" style="width:44px;font-size:16px" onchange="nrEvs('${k}','i',this.value)"></td><td style="white-space:nowrap">${swH(cfg.evs[k].c,'((c)=>nrEvs(\''+k+'\',\'c\',c))')}</td></tr>`).join('')}</table></div></div>
+${(()=>{const set=setObj();const gs=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());return`<div class="card"><h2>🚫 狙わない機種</h2>${nxL().map((g,i)=>`<div class="row"><select onchange="nxSet(${i},this.value)"><option value=""></option>${gs.map(x=>`<option value="${esc(x)}" ${x===g?'selected':''}>${esc(mShort(x))}</option>`).join('')}</select><button class="b sub" onclick="nxDel(${i})">削除</button></div>`).join('')}<div class="row"><button class="b sub" onclick="nxAdd()">追加</button></div></div>`})()}
 <div class="card"><h2>🧩 その他考慮</h2>
 <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○は空白</label></div>${row('前日○の指数','prev')}
 <div class="row"><label><input type="checkbox" ${cfg.seatMerge?'checked':''} onchange="nrSeatM(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 着席台番被りを考慮する</label></div></div>
