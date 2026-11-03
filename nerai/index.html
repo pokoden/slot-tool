@@ -65,7 +65,7 @@ th.s{cursor:pointer}th.s.on{color:#1f5fd6}
 .fs{min-width:5.2em;max-width:7.5em;text-align:left!important;white-space:normal!important;line-height:1.25}input.mi{font-size:16px;padding:2px 4px;text-align:right;border:1px solid #888;border-radius:4px;background:#fff;color:#111;width:68px}input.mi.s{width:50px}td.ib{color:#0b57d0;font-weight:700}.gv{font-size:.8em;margin-left:2px;font-weight:700;color:#111}.zv{display:block;font-size:10px;font-weight:700}
 td.fs b{display:block}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:4px 0}.cal i{font-style:normal;text-align:center;font-size:12px;color:#111;font-weight:700}.cal button{height:36px;padding:0;border:1px solid #ccd;border-radius:6px;background:#fff;color:#111;font-size:14px}.cal button.dd{background:#e3edff;font-weight:700}.cal button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6;font-weight:700}.cal .su{color:#c0201a}.cal .sa{color:#0b57d0}.cal button.on.su,.cal button.on.sa{color:#fff}.calh{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:6px}.calh button{width:40px;height:34px;font-size:18px;border:1px solid #ccd;border-radius:8px;background:#fff;color:#111}.calh b{font-size:15px}
-td.kst{color:#0b57d0;font-weight:700;font-size:11px;line-height:12px;white-space:normal;overflow:hidden}td.kst span{white-space:nowrap}#kvt .mn{max-width:9.5em}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+td.kst{color:#0b57d0;font-weight:700;font-size:11px;line-height:12px;white-space:nowrap;overflow:hidden}td.kst span{white-space:nowrap}#kvt .mn{max-width:9.5em}#kvt tr.kr td{height:30px;padding-top:0;padding-bottom:0;overflow:hidden;text-overflow:ellipsis}.mn{display:inline-block;max-width:6.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .chips{display:flex;flex-wrap:wrap;gap:4px}.chips button{font-size:13px;padding:5px 9px;border-radius:14px;border:1px solid #ccd;background:#fff;color:#111}.chips button.on{background:#1f5fd6;color:#fff;border-color:#1f5fd6}
 details summary{font-size:14px;font-weight:600;padding:4px 0}
 .mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:1px solid #888!important}.hl{border-left:1px solid #888!important}#kvt td:nth-child(2),#kvt th:nth-child(2),#kvt td:nth-child(3),#kvt th:nth-child(3),#kvt td:nth-child(6),#kvt th:nth-child(6),#kvt td:nth-child(7),#kvt th:nth-child(7),.kat td:nth-child(2),.kat th:nth-child(2),.kat td:nth-child(4),.kat th:nth-child(4),.kat td:nth-child(6),.kat th:nth-child(6),.kat td:nth-child(8),.kat th:nth-child(8),.kat td:nth-child(11),.kat th:nth-child(11),.kbt td:nth-child(2),.kbt th:nth-child(2),.kbt td:nth-child(7),.kbt th:nth-child(7),.kbt td:nth-child(10),.kbt th:nth-child(10){border-left:1px solid #888!important}th.hc{width:1px}.gr{border-right:1px solid #888!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:nowrap!important;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=62"></script>
+<script src="core.js?v=63"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -1063,6 +1063,10 @@ ${kenCal()}
 <div id="kres"></div>`;kenRes()}
 // 下の表は全行を一度に見られる（もっと見るなし）。画面に見えている行の前後だけ描いて、スクロールで入れ替える
 const KRH=30,KBUF=40;let KV=null;
+// 台番列の幅：この表に出る一番長い台番・状態ラベルがちょうど入る幅（折り返しなし）
+let KTWC=null;function knTW(out){const c=KTWC||(KTWC=document.createElement('canvas').getContext('2d'));const td=document.querySelector('td')||document.body;const cs=getComputedStyle(td);const fs=parseFloat(cs.fontSize)||15;
+ let w=0;for(const x of out){const t=String(x.r.t);if(x.k){c.font=`700 11px ${cs.fontFamily}`;w=Math.max(w,c.measureText(x.k.lab+'('+t+')').width)}else{c.font=`400 ${fs}px ${cs.fontFamily}`;w=Math.max(w,c.measureText(t).width)}}
+ c.font=`700 ${fs}px ${cs.fontFamily}`;w=Math.max(w,c.measureText('台番').width);return Math.ceil(w)+14}
 function kenRow(x){const r=x.r,P=(g,n)=>NC.fmtP(NC.den(g,n));const ix=NC.rowIdx(r,KV.set,KV.base);const hit=okRow(r,KV.set,KV.base);
  const ks=KV.KGS.get(r.s+'|'+NC.groupOf(r.m,KV.set)+'|'+r.d);
  const tc=x.k?`<td class="fix kst">${esc(x.k.lab)}<span>(${esc(r.t)})</span></td>`:`<td class="fix">${esc(r.t)}</td>`;
@@ -1080,7 +1084,7 @@ function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=
  const t={n:nT,g:0,bb:0,rb:0};for(const x of out)if(!x.k){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb}
  const KG=new Map();for(const x of out)if(!x.k){const k=x.r.s+'|'+NC.groupOf(x.r.m,set)+'|'+x.r.d;let a=KG.get(k);if(!a)KG.set(k,a=[]);a.push(x.r)}const KGS=new Map();for(const[k,a]of KG)KGS.set(k,grpSt(a));
  if(kn.vw==='s')out=out.filter(x=>x.k);else if(kn.vw==='t')out=out.filter(x=>!x.k);KV={KGS,out,set,base:out.length?kenBase():null,first:-1};
- const cw=[48,56,48,48,50,34,66,120];const KO=k=>kn.so.replace(/[-+]$/,'')===k?'on':'';
+ const cw=[knTW(out),56,48,48,50,34,66,120];const KO=k=>kn.so.replace(/[-+]$/,'')===k?'on':'';
  el.innerHTML=`<div class="card"><h2>📋 結果 ${nT.toLocaleString()}件${nS?`（状態 ${nS.toLocaleString()}件）`:''}</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th></tr>
 <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td rowspan="2">${P(t.g,t.bb)}</td><td rowspan="2">${P(t.g,t.rb)}</td><td rowspan="2">${P(t.g,t.bb+t.rb)}</td></tr>
