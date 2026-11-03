@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=68"></script>
+<script src="core.js?v=69"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -721,7 +721,7 @@ function borHtml(){const B=bord();const set=setObj();
  ${mk.map((g,i)=>`<div class="row" style="border-top:1px solid #eee;padding-top:6px"><b style="flex:1 1 100%" title="${esc(g)}">${esc(mShort(g))}</b><label>RB <input inputmode="decimal" type="text" step="any" value="${esc(B.mach[g].rb)}" style="width:70px" onchange="anMachSet(${i},'rb',this.value)"> 以下</label><label>合算 <input inputmode="decimal" type="text" step="any" value="${esc(B.mach[g].gs)}" style="width:70px" onchange="anMachSet(${i},'gs',this.value)"> 以下</label><button class="b sub" onclick="anMachDel(${i})">削除</button></div>`).join('')}</div>
 `}
 // ===== 狙いリスト =====
-function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.marks=Object.assign({},NC.DEF_CFG.marks,c.marks);c.combo=c.combo||{};c.prevX=c.prevX==null?true:!!c.prevX;c.seatMerge=!!c.seatMerge;c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);c.axp=Object.assign({matsu:1,hi:1,you:1,all:1},c.axp);delete c.autoP;delete c.autoS;c.sub.metric='tt';const EV0={s:{o:'○',i:'店',c:'#FFFF00'},a:{o:'○',i:'台',c:'#FFFF00'},b:{o:'◎',i:'',c:'#00E5FF'}};c.evs=c.evs||{};for(const k in EV0){const e=c.evs[k];if(e&&e.o==null&&e.t!=null){if(e.t==='◎'||e.t==='○'){e.o=e.t;e.i=''}else{e.o='○';e.i=e.t}delete e.t}c.evs[k]=Object.assign({},EV0[k],c.evs[k])}const EW0={matsu:1,hi:0.5,you:1,all:0.7};c.ew=c.ew||{};c.ew.s=Object.assign({},EW0,c.ew.s);c.ew.a=Object.assign({},EW0,c.ew.a);return c}
+function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.marks=Object.assign({},NC.DEF_CFG.marks,c.marks);c.combo=c.combo||{};c.prevX=c.prevX==null?true:!!c.prevX;c.seatMerge=!!c.seatMerge;c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);c.axp=Object.assign({matsu:1,hi:1,you:1,all:1},c.axp);delete c.autoP;delete c.autoS;c.sub.metric='tt';const EV0={s:{o:'○',i:'店',c:'#FFFF00'},a:{o:'○',i:'台',c:'#FFFF00'},b:{o:'◎',i:'',c:'#00E5FF'}};c.evs=c.evs||{};for(const k in EV0){const e=c.evs[k];if(e&&e.o==null&&e.t!=null){if(e.t==='◎'||e.t==='○'){e.o=e.t;e.i=''}else{e.o='○';e.i=e.t}delete e.t}c.evs[k]=Object.assign({},EV0[k],c.evs[k])}const MU0={matsu:1.5,hi:1.25,you:1.5,all:1.35};c.mul=c.mul||{};c.mul.s=Object.assign({},MU0,c.mul.s);c.mul.a=Object.assign({},MU0,c.mul.a);delete c.ew;return c}
 // 分析タブの期間を使う。終わりは狙う日の前日まで
 function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
  let first='9';for(const r of S.rows)if(r.s===store&&r.d<first)first=r.d;
@@ -735,15 +735,15 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
 // ベース点数＝Σ（○の点数×重み）、指数点数＝Σ（○の点数×重み×（総合トータル指数÷50−1））。マイナスもある。総合点数＝ベース＋指数
 // 狙わない機種（狙い・図面・当日の印から外す）
 const nxL=()=>Array.isArray(npObj().nx)?npObj().nx:[];const nxHas=g=>nxL().includes(g);
-function nrEval(L,store,date,from,to){const cfg=nerCfg();const EW=cfg.ew;
+function nrEval(L,store,date,from,to){const cfg=nerCfg();const MU=cfg.mul;
  const SAM={};for(const sg of NC.SEGS){const v=sg==='all'?'all':String(NC.segOf(date,sg));const M=new Map();for(const a of saCalc([store],from,to,sg))if(a.v===v)M.set(a.g,a);SAM[sg]=M}
-  const WS=(k,sg)=>+EW[k][sg]||0;
- const one=x=>{const ev={};let base=0,ixs=0,ttS=0,ttN=0;const ap=x.axp||cfg.axp;
-  for(const sg of NC.SEGS){const t=SAM[sg].get(x.g);const so=!!(t&&t.on),ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=so&&ao?'◎':so?'店':ao?'台':'';const pt=+ap[sg]||0;
-   if(so){base+=pt*WS('s',sg);if(t.tt!=null){ixs+=pt*WS('s',sg)*(t.tt/50-1);ttS+=t.tt;ttN++}}
-   const u=x.seg[sg]&&x.seg[sg].u;if(ao){base+=pt*WS('a',sg);if(u&&u.tt!=null){ixs+=pt*WS('a',sg)*(u.tt/50-1);ttS+=u.tt;ttN++}}}
-  x.cand=['matsu','hi','you'].some(sg=>{const t=SAM[sg].get(x.g);return!!(t&&t.on)});
-  x.ev=ev;x.base=base;x.ixs=ixs;x.tti=ttN?ttS/ttN:null;x.score=base+ixs;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&base>0?'○':''};
+ // 総合点数＝店舗分析・台分析×4区分の総合トータル指数の合計。○の区分はその倍率を掛ける。指数がない区分は0
+ const one=x=>{const ev={};let sc=0,ttS=0,ttN=0,miss=0,anyO=false;
+  for(const sg of NC.SEGS){const t=SAM[sg].get(x.g);const so=!!(t&&t.on),ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=so&&ao?'◎':so?'店':ao?'台':'';if(so||ao)anyO=true;
+   const u=x.seg[sg]&&x.seg[sg].u;
+   if(t&&t.tt!=null){sc+=t.tt*(so?(+MU.s[sg]||1):1);ttS+=t.tt;ttN++}else miss++;
+   if(u&&u.tt!=null){sc+=u.tt*(ao?(+MU.a[sg]||1):1);ttS+=u.tt;ttN++}else miss++}
+  x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=sc;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
  for(const x of L){one(x);if(nxHas(x.g))x.mark=''}const T=(L.targets||[]).filter(x=>!nxHas(x.g));for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
  L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
@@ -819,8 +819,6 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   if(k==='seat')return x=>x.seat==null?null:String(x.seat);
   if(k==='mark')return x=>MO.indexOf(x.mark||'×');
   if(k==='score')return x=>-x.score;
-  if(k==='base')return x=>-(x.base||0);
-  if(k==='ixs')return x=>-(x.ixs||0);
   {const e=k.match(/^e_(matsu|hi|you|all)$/);if(e)return x=>{const v=x.ev&&x.ev[e[1]];return v==='◎'?0:v==='店'?1:v==='台'?2:3}}
   const o=k.match(/^o_(matsu|hi|you)$/);if(o)return x=>x.seg[o[1]].o?0:1;
   return x=>x.pos};
@@ -844,12 +842,12 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
-  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${mkBox(dMk(x))}</td>${EVS.map(sg=>evTd(x.ev&&x.ev[sg])).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td>${(x.base||0).toFixed(1)}</td><td>${(x.ixs||0).toFixed(1)}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${inR(x)?x.rank:''}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
+  return`<tr><td class="fix fs l"${bg?` style="background:${bg}"`:''} title="${esc(x.m)}"><b>${esc(stShort(x.s))}</b><span class="mn">${esc(mShort(x.g))}</span></td>${seat}<td class="l tn ${x.kind==='s'?'sl':''}" style="white-space:nowrap;${x.kind==='s'?'color:#1f5fd6;font-weight:600;':''}${mi>=0?'cursor:pointer':''}"${mi>=0?` onclick="nrML(event,${mi})"`:''}>${lab}</td><td>${neraiKbn(x,date)}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${mkBox(dMk(x))}</td>${EVS.map(sg=>evTd(x.ev&&x.ev[sg])).join('')}<td class="ox3" style="text-align:center">${x.prev?'<span class="mk a">○</span>':''}</td><td class="sc">${x.score.toFixed(1)}</td><td><b>${inR(x)?x.rank:''}</b></td>${NC.SEGS.map(sg=>cells(x,sg)).join('')}${hist(x)}</tr>`}).join('');
  const TH=(k,t,cls='',ex='')=>`<th class="s ${nr.so===k?'on':''} ${cls}" ${ex} onclick="nrSo('${k}')">${t}</th>`;
  const gh=sg=>`<th colspan="5" class="gl gr">${SEGN[sg]}${oneDate&&date?'<br>'+segv(sg,date):''}</th>`;
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')+TH('kbn','狙い<br>区分','','rowspan="2"')
   +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
-  +EVS.map(sg=>TH('e_'+sg,SEGN[sg]+'<br>評価','ox3','rowspan="2"')).join('')+TH('prev','前日<br>評価','ox3','rowspan="2"')+TH('base','ベース<br>点数','','rowspan="2"')+TH('ixs','指数<br>点数','','rowspan="2"')+TH('score','総合<br>点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="14" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
+  +EVS.map(sg=>TH('e_'+sg,SEGN[sg]+'<br>評価','ox3','rowspan="2"')).join('')+TH('prev','前日<br>評価','ox3','rowspan="2"')+TH('score','総合<br>点数','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="14" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
   +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===4?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','○','狙い<br>印','全店舗','店舗内','店舗機種'].map((t,i)=>i===9?`<th class="s ${nr.hok?'on':''}" onclick="nr.hok=nr.hok?0:1;nerPage()">○${nr.hok?'<br>のみ':''}</th>`:`<th class="${i===0?'gl hl':''}${i===13?' gr':''}">${t}</th>`).join(''):'')+'</tr>';
  const mx=NC.addDay(last,NPV().nrMax);
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
@@ -1268,7 +1266,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="row"><label>店舗機種 何位まで ${ni('nr2',50)}</label><label>何%まで ${ni('nrp2',50)}</label></div>
 </div>
 <div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr><th>店舗機種<br>順位</th><th>目印</th><th>色</th><th></th></tr>${rmL().map((m,i)=>`<tr><td>${i+1}位</td><td><input type="text" value="${esc(m.t||'')}" style="width:52px;font-size:16px" onchange="rmSet(${i},'t',this.value)"></td><td style="white-space:nowrap">${swH(m.c,'((c)=>rmSet('+i+',\'c\',c))')}</td><td><button class="b sub" onclick="rmDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="rmAdd()">追加</button></div></div>
-<div class="card"><h2>🎖 ○の点数と重み</h2><div class="tw"><table><tr><th></th>${['all','matsu','hi','you'].map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr><td class="l">○の点数</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('axp.'+sg,cfg.axp[sg])}</td>`).join('')}</tr>${[['s','店舗分析 重み'],['a','台分析 重み']].map(([k,t])=>`<tr><td class="l">${t}</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('ew.'+k+'.'+sg,cfg.ew[k][sg])}</td>`).join('')}</tr>`).join('')}</table></div></div>
+<div class="card"><h2>🎖 ○の倍率</h2><div class="tw"><table><tr><th></th>${['all','matsu','hi','you'].map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr>${[['s','店舗分析'],['a','台分析']].map(([k,t])=>`<tr><td class="l">${t}</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('mul.'+k+'.'+sg,cfg.mul[k][sg])}</td>`).join('')}</tr>`).join('')}</table></div></div>
 <div class="card"><h2>🎨 評価の印</h2><div class="tw"><table><tr><th></th><th>印</th><th>中の文字</th><th>色</th></tr>${[['s','店舗分析だけ○'],['a','台分析だけ○'],['b','両方○']].map(([k,t])=>`<tr><td class="l">${t}</td><td><input type="text" value="${esc(cfg.evs[k].o||'')}" style="width:44px;font-size:16px" onchange="nrEvs('${k}','o',this.value)"></td><td><input type="text" value="${esc(cfg.evs[k].i||'')}" style="width:44px;font-size:16px" onchange="nrEvs('${k}','i',this.value)"></td><td style="white-space:nowrap">${swH(cfg.evs[k].c,'((c)=>nrEvs(\''+k+'\',\'c\',c))')}</td></tr>`).join('')}</table></div></div>
 ${(()=>{const set=setObj();const gs=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());return`<div class="card"><h2>🚫 狙わない機種</h2>${nxL().map((g,i)=>`<div class="row"><select onchange="nxSet(${i},this.value)"><option value=""></option>${gs.map(x=>`<option value="${esc(x)}" ${x===g?'selected':''}>${esc(mShort(x))}</option>`).join('')}</select><button class="b sub" onclick="nxDel(${i})">削除</button></div>`).join('')}<div class="row"><button class="b sub" onclick="nxAdd()">追加</button></div></div>`})()}
 <div class="card"><h2>🧩 その他考慮</h2>
