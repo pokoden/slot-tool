@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=55"></script>
+<script src="core.js?v=56"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -628,16 +628,17 @@ window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
 window.anMark=(k,auto)=>{const M=S.an.marks;if(M[k]==null)M[k]=auto?0:1;else delete M[k];anDirty=true;NRC={};anKeep=true;anaPage()};
 window.anSave=async()=>{const sv=$('sv');try{const n=await saveFiles({'nerai/analysis.json':JSON.stringify(S.an)},'設定狙い分析',t=>sv.textContent=t);anDirty=false;S.anSaved=JSON.stringify(S.an);anKeep=true;render();$('sv').className='st ok';$('sv').textContent='保存したよ'}catch(e){sv.className='st ng';sv.textContent=e.message}};
 // ===== 店舗分析：店舗機種の全台合計を、日末尾・日・曜日の区分値ごとに指数にする（表示だけ。狙いの点数には入れない）=====
-let sa=Object.assign({s:'*',g:'',ax:'matsu',val:'all',so:'std',rev:0,only:0},LS.get('nr_sa',{}));if(!['matsu','hi','you'].includes(sa.ax))sa.ax='matsu';
+let sa=Object.assign({s:'*',g:'',ax:'matsu',val:'all',so:'std',rev:0,only:0},LS.get('nr_sa',{}));if(!['all','matsu','hi','you'].includes(sa.ax))sa.ax='matsu';
 let SAC=null;
 function saCalc(sl,from,to){const set=setObj();const key=[from,to,sl.join(','),S.rows.length,JSON.stringify(NC.getP()),JSON.stringify(set.groups||{}),sa.ax,JSON.stringify(npObj().saTk||[]),JSON.stringify(npObj().saHy||[]),saRt()].join('~');if(SAC&&SAC.key===key&&SAC.r===S.rows)return SAC.v;
  const base=NC.stdBase(S.rows,set,to);const z=NC.zeroOf(S.rows,set);const M=new Map();
  for(const r of S.rows){if(r.d<from||r.d>to||!sl.includes(r.s))continue;const g=NC.groupOf(r.m,set);const v=String(NC.segOf(r.d,sa.ax));const k=r.s+'|'+g+'|'+v;let a=M.get(k);if(!a)M.set(k,a={s:r.s,g,v,m:r.m,n:0,G:0,bb:0,rb:0,days:new Set()});a.n++;a.G+=r.g;a.bb+=r.bb;a.rb+=r.rb;a.days.add(r.d)}
  const CAL={};for(let d=from;d<=to;d=NC.addDay(d,1)){const v=String(NC.segOf(d,sa.ax));CAL[v]=(CAL[v]||0)+1}const RT=saRt();
  const L=[...M.values()];for(const a of L){a.avg=a.n?a.G/a.n:0;a.rbR=a.G>0?a.rb/a.G:0;a.gsR=a.G>0?(a.bb+a.rb)/a.G:0;a.nd=a.days.size;delete a.days;a.ratio=CAL[a.v]?a.nd/CAL[a.v]:0;a.hy=NC.rowIdx({m:a.m,g:a.avg,bb:a.bb/a.n,rb:a.rb/a.n},set,base)}
- const SG=new Map();for(const a of L){const k=a.s+'|'+a.g;let x=SG.get(k);if(!x)SG.set(k,x=[]);x.push(a)}
- for(const A of SG.values()){const g=A[0].g,noRb=z.rb.has(g)||z.both.has(g),noGs=z.both.has(g);const st={g:NC.stat(A.map(a=>a.avg)),rb:NC.stat(A.map(a=>a.rbR)),gs:NC.stat(A.map(a=>a.gsR))};
-  for(const a of A){const t={g:NC.dev(a.avg,st.g),rb:noRb?null:NC.dev(a.rbR,st.rb),gs:noGs?null:NC.dev(a.gsR,st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=(RT===''||!isFinite(+RT)||a.ratio*100+1e-9>=+RT)&&saOk(a)}}
+ // 全：同じ店舗の全機種と比べる／他：同じ店舗機種の他の区分と比べる
+ const SG=new Map();for(const a of L){const k=sa.ax==='all'?a.s:a.s+'|'+a.g;let x=SG.get(k);if(!x)SG.set(k,x=[]);x.push(a)}
+ for(const A of SG.values()){const nR=a=>z.rb.has(a.g)||z.both.has(a.g),nG=a=>z.both.has(a.g);const st={g:NC.stat(A.map(a=>a.avg)),rb:NC.stat(A.filter(a=>!nR(a)).map(a=>a.rbR)),gs:NC.stat(A.filter(a=>!nG(a)).map(a=>a.gsR))};
+  for(const a of A){const noRb=nR(a),noGs=nG(a);const t={g:NC.dev(a.avg,st.g),rb:noRb?null:NC.dev(a.rbR,st.rb),gs:noGs?null:NC.dev(a.gsR,st.gs)};Object.assign(t,saPT(t));a.tk=t;a.tt=a.tk.t!=null&&a.hy.t!=null?Math.round(a.tk.t*NC.getP().wTk+a.hy.t*(1-NC.getP().wTk)):null;a.on=(RT===''||!isFinite(+RT)||a.ratio*100+1e-9>=+RT)&&saOk(a)}}
  SAC={key,r:S.rows,v:L};return L}
 // 検索割合（店舗分析用。未設定は60%）
 const saRt=()=>{const B=bord();if(B.saRatio==null)B.saRatio='60';return String(B.saRatio)};
@@ -653,7 +654,7 @@ function saPage(){LS.set('nr_sa',sa);const R=S.rows,set=setObj();const stores=[.
  const all=saCalc(sl,from,to);const groups=[...new Set(all.map(a=>a.g))];if(sa.g&&!groups.includes(sa.g))sa.g='';
  const vals=segVals(sa.ax);if(sa.val!=='all'&&!vals.some(x=>x[0]===String(sa.val)))sa.val='all';
  let L=all.filter(a=>(!sa.g||a.g===sa.g)&&(sa.val==='all'||a.v===String(sa.val))&&(!sa.only||a.on));
- const go=gOrd();const vo=a=>+a.v;const std=(a,b)=>storeCmp(a.s,b.s)||go(a.g,b.g)||vo(a)-vo(b);
+ const go=gOrd();const vo=a=>a.v==='all'?0:+a.v;const std=(a,b)=>storeCmp(a.s,b.s)||go(a.g,b.g)||vo(a)-vo(b);
  const den=(G,n)=>n>0?G/n:null;
  const IX=[['g','回転'],['rb','RB'],['gs','合算'],['p','確率'],['t','総合']];
  const COLS=[['sm','店舗<br>機種','t'],['v','区分','n',a=>vo(a)],['nd','日数','h',a=>a.nd],['n','台日','h',a=>a.n],['avg','平均<br>回転','h',a=>a.avg],['pbb','BB<br>確率','l',a=>den(a.G,a.bb)],['prb','RB<br>確率','l',a=>den(a.G,a.rb)],['pgs','合算','l',a=>den(a.G,a.bb+a.rb)],['tt','総合<br>トータル<br>指数','h',a=>a.tt]]
@@ -666,16 +667,16 @@ function saPage(){LS.set('nr_sa',sa);const R=S.rows,set=setObj();const stores=[.
  const TH=(k,t,ex='')=>`<th class="s ${GL.has(k)?'gl ':''}${sa.so===k?'on':''}" ${ex} onclick="saSo('${k}')">${t}</th>`;
  const one=['nd','n','avg','pbb','prb','pgs','tt'];
  const head=`<tr>${TH('sm','店舗<br>機種','rowspan="2"')}${TH('v','区分','rowspan="2"')}<th rowspan="2" class="s ${sa.only?'on':''}" onclick="sa.only=sa.only?0:1;saPage()">○${sa.only?'<br>のみ':''}</th>${one.map(k=>TH(k,COLS.find(x=>x[0]===k)[1],'rowspan="2"')).join('')}<th colspan="5" class="gl">店舗機種指数</th><th colspan="5" class="gl">標準指数</th>${['tg','tbb','trb'].map(k=>TH(k,COLS.find(x=>x[0]===k)[1],'rowspan="2"')).join('')}</tr><tr>${IX.map(([m])=>TH('tk'+m,COLS.find(x=>x[0]==='tk'+m)[1])).join('')}${IX.map(([m])=>TH('hy'+m,COLS.find(x=>x[0]==='hy'+m)[1])).join('')}</tr>`;
- const vS=v=>sa.ax==='matsu'?v+'末':sa.ax==='hi'?v+'日':'日月火水木金土'[+v];
+ const vS=v=>sa.ax==='all'?'全':sa.ax==='matsu'?v+'末':sa.ax==='hi'?v+'日':'日月火水木金土'[+v];
  const W=[120,40,30,40,40,52,52,52,52,56].concat(Array(10).fill(40),[64,40,40]);
  const body=L.map(a=>{const bg=stBg(a.s);return`<tr><td class="fix l"${bg?` style="background:${bg}"`:''} title="${esc(a.g)}"><b>${esc(stShort(a.s))}</b> <span class="mn">${esc(mShort(a.g))}</span></td><td>${vS(a.v)}</td><td style="text-align:center">${a.on?'<span class="mk a">○</span>':''}</td><td class="gl">${a.nd}</td><td>${a.n}</td><td class="gl">${Math.round(a.avg).toLocaleString()}</td><td>${P(a.G,a.bb)}</td><td>${P(a.G,a.rb)}</td><td>${P(a.G,a.bb+a.rb)}</td><td class="gl"><b>${a.tt??''}</b></td>${IX.map(([m],i)=>`<td${bc(a.tk[m],i===0)}>${m==='t'&&a.tk[m]!=null?'<b>'+a.tk[m]+'</b>':a.tk[m]??''}</td>`).join('')}${IX.map(([m],i)=>`<td${bc(a.hy[m],i===0)}>${m==='t'&&a.hy[m]!=null?'<b>'+a.hy[m]+'</b>':a.hy[m]??''}</td>`).join('')}<td class="gl">${a.G.toLocaleString()}</td><td>${a.bb}</td><td>${a.rb}</td></tr>`}).join('');
  const sel=(id,Lx,v)=>`<select onchange="sa.${id}=this.value;saPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
  $('main').innerHTML=`<div class="card"><h2>🔍 検索期間</h2><div class="row">${from.slice(5).replace('-','/')}〜${to.slice(5).replace('-','/')}</div></div>
  <div class="card"><div class="row"><label>検索割合 <input inputmode="decimal" type="text" step="any" value="${esc(saRt())}" placeholder="なし" style="width:70px" onchange="saRtSet(this.value)"> %以上</label></div></div>
  <div class="card"><h2>👁 表示する範囲</h2>
- <div class="chips">${['matsu','hi','you'].map(k=>`<button class="${sa.ax===k?'on':''}" onclick="saAx('${k}')">${AXN[k]}</button>`).join('')}</div>
+ <div class="chips">${['all','matsu','hi','you'].map(k=>`<button class="${sa.ax===k?'on':''}" onclick="saAx('${k}')">${AXN[k]}</button>`).join('')}</div>
  <div class="row">${sel('s',[['*','全店舗']].concat(stores.map(x=>[x,x])),sa.s)}${sel('g',[['','すべての機種']].concat(groups.slice().sort(go).map(g=>[g,mShort(g)])),sa.g)}</div>
- <div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[sa.ax]]].concat(vals),sa.val)}</div>
+ ${sa.ax==='all'?'':`<div class="row">${sel('val',[['all',{matsu:'日末尾全部',hi:'日全部',you:'曜日全部'}[sa.ax]]].concat(vals),sa.val)}</div>`}
  <div class="row"><button class="b sub" onclick="sa.so='std';sa.rev=0;saPage()">標準の並びに戻す</button><button class="b sub" onclick="sa.s='*';sa.g='';sa.val='all';sa.only=0;saPage()">条件リセット</button></div>
  ${L.length?`<div class="tw"><table style="table-layout:fixed;width:${W.reduce((a,b)=>a+b,0)}px"><colgroup>${W.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 // ===== ボーダー =====
