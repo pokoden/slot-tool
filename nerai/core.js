@@ -224,7 +224,7 @@ function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;a
   &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
   &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v+EPS)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v+EPS);
  // 全軸だけ：指数合格ライン（店舗機種・標準）。同じ種類はどれか1本、両方あれば両方の種類で合格
- let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs'].every(k=>!has(l[k])||(k==='rb'&&(!u[x]||u[x].rb==null))||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
+ let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs','t'].every(k=>!has(l[k])||((k==='rb'||k==='t')&&(!u[x]||u[x][k]==null))||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
  return any&&ok&&lok}
 // ===== 当日の数値表示（窓ごとの合計） =====
 function winIdx(rows,set){const by=new Map();

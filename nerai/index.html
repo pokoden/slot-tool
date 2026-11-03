@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=59"></script>
+<script src="core.js?v=60"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -359,7 +359,7 @@ function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null
 const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
 function idxOfV(m,v){if(!(v.g>0)||v.bb==null||v.rb==null||!TOUB)return null;return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base)}
 let TOUB=null;
-const okL=(x,p)=>!!x&&!!p&&x.g!=null&&x.gs!=null&&x.g>=p.g&&(x.rb==null||x.rb>=p.rb)&&x.gs>=p.gs;const okP=(x,i)=>okL(x,NPV().pass[i]||NPV().pass[0]);const okIx=x=>okL(x,NPV().std1);
+const okL=(x,p)=>!!x&&!!p&&x.g!=null&&x.gs!=null&&x.g>=p.g&&(x.rb==null||x.rb>=p.rb)&&x.gs>=p.gs&&(x.t==null||x.t>=(+p.t||0));const okP=(x,i)=>okL(x,NPV().pass[i]||NPV().pass[0]);const okIx=x=>okL(x,NPV().std1);
 // 合格の判定（合格ライン i。店舗機種なら同じ店舗×機種の全データと比べた指数）
 // 日別集計・項目別集計の合格：共通指数合格ラインのチェックが入った標準ラインをぜんぶ満たす（空欄は0、RB指数がない機種はRBを見ない）
 const okRow=(r,set,base)=>{const L=NPV().hyL||[];if(!L.length)return false;const x=NC.rowIdx(r,set,base);return L.every(p=>okL(x,p))};
@@ -531,7 +531,7 @@ function anaCalc(sl,from,to,B){const key=[an.ax,from,to,JSON.stringify(B),S.rows
  const set=setObj(),ranks=allRanks(),base=NC.stdBase(S.rows,set,to);const v={};for(const s of sl)v[s]=NC.analysisFor(S.rows,set,ranks,s,an.ax,from,to,B,base);ANC={key,r:S.rows,v};return v}
 const stLab=k=>NC.stName(k);
 // 分析の自動○はボーダーの線
-function bordEff(){const B=Object.assign({},bord());delete B.by;for(const k of['g','rb','gs']){B[k]=Object.assign({},B[k]);delete B[k].idx;delete B[k].tki}const o=npObj();const L=a=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true)).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.allL={tk:L(o.anTk),hy:L(o.anHy)};const LP=(a,hy)=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:(p.on===true||(hy&&p.on!==false)))).map(p=>({g:p.g,rb:p.rb,gs:p.gs}));B.axL={tk:LP(o.passTk),hy:LP(o.pass,1)};return B}
+function bordEff(){const B=Object.assign({},bord());delete B.by;for(const k of['g','rb','gs']){B[k]=Object.assign({},B[k]);delete B[k].idx;delete B[k].tki}const o=npObj();const L=a=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true)).map(p=>({g:p.g,rb:p.rb,gs:p.gs,t:p.t}));B.allL={tk:L(o.anTk),hy:L(o.anHy)};const LP=(a,hy)=>(Array.isArray(a)?a:[]).filter((p,i)=>p&&(i===0?p.on!==false:(p.on===true||(hy&&p.on!==false)))).map(p=>({g:p.g,rb:p.rb,gs:p.gs,t:p.t}));B.axL={tk:LP(o.passTk),hy:LP(o.pass,1)};return B}
 function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  const stores=[...new Set(R.map(r=>r.s))].sort();if(an.s!=='*'&&!stores.includes(an.s))an.s='*';
  let first='9',last='0';const lastD={};for(const r of R){if(r.d<first)first=r.d;if(r.d>last)last=r.d;if(!lastD[r.s]||r.d>lastD[r.s])lastD[r.s]=r.d}
@@ -649,8 +649,9 @@ const saRt=()=>{const B=bord();if(B.saRatio==null)B.saRatio='60';return String(B
 window.saRtSet=v=>{bord().saRatio=String(v).trim();anDirty=true;autoSave();saPage()};
 // 確率指数・総合指数（各種数値設定の割合。RB・合算のうち出せるものだけ）
 const saPT=x=>{const P=NC.getP();if(x.g==null||(x.rb==null&&x.gs==null))return{p:null,t:null};const p=x.rb==null?x.gs:x.gs==null?x.rb:Math.round(x.rb*P.wRb+x.gs*(1-P.wRb));return{p,t:Math.round(x.g*P.wRot+p*(1-P.wRot))}};
+// 合格（総合は出せないときだけ見ない。確率は総合の中でだけ使う）
 // 合格：チェックが入った店舗機種ラインのどれか1本と標準ラインのどれか1本（入れたほうだけ）。空欄は0、RB・合算がない機種はそこを見ない
-function saOk(a){const o=npObj();const Ls=x=>(Array.isArray(x)?x:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true));const ok=(ix,p)=>!!ix&&ix.g!=null&&['g','rb','gs','p','t'].every(k=>{const v=p[k];const t=v===''||v==null||!isFinite(+v)?0:+v;return ix[k]==null&&k!=='g'?true:ix[k]!=null&&ix[k]>=t});
+function saOk(a){const o=npObj();const Ls=x=>(Array.isArray(x)?x:[]).filter((p,i)=>p&&(i===0?p.on!==false:p.on===true));const ok=(ix,p)=>!!ix&&ix.g!=null&&['g','rb','gs','t'].every(k=>{const v=p[k];const t=v===''||v==null||!isFinite(+v)?0:+v;return ix[k]==null&&k!=='g'?true:ix[k]!=null&&ix[k]>=t});
  const T=Ls(o.saTk),H=Ls(o.saHy);if(!T.length&&!H.length)return false;return(!T.length||T.some(p=>ok(a.tk,p)))&&(!H.length||H.some(p=>ok(a.hy,p)))}
 window.saAx=k=>{if(!sa.vs)sa.vs={};sa.vs[sa.ax]=sa.val;sa.ax=k;sa.val=sa.vs[k]!=null?sa.vs[k]:'all';saPage()};window.saSo=k=>{if(sa.so===k)sa.rev=sa.rev?0:1;else{sa.so=k;sa.rev=0}saPage()};
 function saPage(){LS.set('nr_sa',sa);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);if(sa.s!=='*'&&!stores.includes(sa.s))sa.s='*';
@@ -1179,7 +1180,7 @@ let NPC=null;function NPV(){const o=(S.an&&S.an.np)||{};const sig=JSON.stringify
  v.pcOn=!!o.pcOn;
  v.pcStr=(o.pcStr!==''&&o.pcStr!=null&&isFinite(+o.pcStr))?Math.max(0,Math.min(1,+o.pcStr)):0.5;
  v.pcMin=(o.pcMin!==''&&o.pcMin!=null&&isFinite(+o.pcMin))?Math.max(1,+o.pcMin):2;
- const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:0;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0?p.on!==false:(p.on===true||(by==='hy'&&p.on!==false))).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),by}))};v.hyL=LS(o.pass,'hy','標準ライン');const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));{const q=(Array.isArray(o.pass)&&o.pass[0])||{};v.std1={g:nv(q.g),rb:nv(q.rb),gs:nv(q.gs)}}v.pass=ps.length?ps:[Object.assign({n:'標準ライン1',by:'hy'},v.std1)];NPC={sig,v};return v}
+ const nv=x=>isFinite(+x)&&x!==''&&x!=null?+x:0;const LS=(a,by,nm)=>{const A=Array.isArray(a)&&a.length?a:[{}];return A.map((p,i)=>({p:p||{},i})).filter(({p,i})=>i===0?p.on!==false:(p.on===true||(by==='hy'&&p.on!==false))).map(({p,i})=>({n:nm+(i+1),g:nv(p.g),rb:nv(p.rb),gs:nv(p.gs),t:nv(p.t),by}))};v.hyL=LS(o.pass,'hy','標準ライン');const ps=LS(o.pass,'hy','標準ライン').concat(LS(o.passTk,'tk','店舗機種ライン'));{const q=(Array.isArray(o.pass)&&o.pass[0])||{};v.std1={g:nv(q.g),rb:nv(q.rb),gs:nv(q.gs),t:nv(q.t)}}v.pass=ps.length?ps:[Object.assign({n:'標準ライン1',by:'hy'},v.std1)];NPC={sig,v};return v}
 function npApply(){const v=NPV();const ch=NC.setP(v);window.NCKP={TH:v.ckTH,WIN:v.ckWin,MIN:v.ckMin,G:v.ckG,E:v.ckExp,D:v.ckDisp};if(ch){NRC={};NRG={nrc:null,m:{}};KBC=null;ANC=null;TKC=null}}
 const npObj=()=>S.an.np||(S.an.np={});
 window.npSet=(k,v)=>{v=String(v).trim();const o=npObj();if(v===''||!isFinite(+v))delete o[k];else o[k]=+v;anDirty=true;npApply();autoSave();npPage()};
@@ -1189,7 +1190,7 @@ window.npL=(a,i,k,v)=>{const o=npObj();if(!Array.isArray(o[a]))o[a]=a==='pass'?J
 const npTbl=(a,nm,X=[])=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return[0,1,2].map(i=>{const p=A[i]||{};const on=i===0?p.on!==false:(a==='pass'?p.on!==false&&A[i]!=null:p.on===true);
  const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npL('${a}',${i},'${k}',this.value)">`;
  return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td>${X.map(k=>`<td>${pi(k)}</td>`).join('')}</tr>`}).join('')};
-const npT=(a1,a2,X=[])=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(k=>`<th>${{p:'確率',t:'総合'}[k]}</th>`).join('')}</tr>${npTbl(a1,'店舗機種',X)}${npTbl(a2,'標準',X)}</table></div>`;
+const npT=(a1,a2,X=['t'])=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(k=>`<th>${{p:'確率',t:'総合'}[k]}</th>`).join('')}</tr>${npTbl(a1,'店舗機種',X)}${npTbl(a2,'標準',X)}</table></div>`;
 // 目印：上から順に、選んだ軸がぜんぶ○の行の文字（1台1つ）
 const mjL=()=>Array.isArray(npObj().mj)?npObj().mj:[];
 // 目印：○×の並びがぴったり同じ行（チェック＝○、チェックなし＝×）。上の行が優先。文字が空なら印なし。合う行がなければ null
@@ -1208,7 +1209,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
  $('main').innerHTML=`${asBar()}
 <div class="card"><h2>共通指数合格ライン</h2>${npT('passTk','pass')}${row('青色ライン','blue')}</div>
 <div class="card"><h2>分析</h2><div class="row"><label>全 指数合格ライン</label></div>${npT('anTk','anHy')}${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分（確率は残り）','wRot')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
-<div class="card"><h2>店舗分析</h2><div class="row"><label>合格ライン</label></div>${npT('saTk','saHy',['p','t'])}</div>
+<div class="card"><h2>店舗分析</h2><div class="row"><label>合格ライン</label></div>${npT('saTk','saHy')}</div>
 <div class="card"><h2>狙い</h2>
 <div class="card"><h2>🏆 狙いリストの表示</h2>
 <div class="row"><label>全 何位まで ${ni('nr0',50)}</label></div>
