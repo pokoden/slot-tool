@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=49"></script>
+<script src="core.js?v=50"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -207,10 +207,10 @@ function impPage(){$('main').innerHTML=`
 <div class="card" id="ckc"><h2>🔍 データチェック</h2><div class="row"><button class="b" onclick="ckAll()">過去のデータを全部チェック</button></div><div id="ckr"></div></div>
 <div class="card" id="edc"><h2>✏️ データ編集</h2><div id="edf"></div><div id="edr"></div><div id="eds" class="st"></div></div>`;if(window.gpRender)gpRender();ckPaint();edForm();edList()}
 // ===== データチェック・データ編集 =====
-const CKN={g:'回転なし',p:'確率',m:'機種なし',t:'台番なし'};
+const CKN={g:'回転なし',p:'確率',m:'機種なし',t:'台番なし',z:'機種注意'};
 const ckKey=x=>{const r=x.r;return[x.k,r.d,r.s,r.t,r.m,r.g??'',r.bb??'',r.rb??''].join('|')};
 function ckOkF(L){const ok=new Set((S.an&&S.an.ckOk)||[]);return L.filter(x=>!ok.has(ckKey(x)))}
-window.ckAll=()=>{$('ckr').innerHTML='<p class="st">チェック中…</p>';setTimeout(()=>{S.chk={all:true,list:ckOkF(NCK.check(S.rows,S.rows)),sel:new Set()};ckPaint()},30)};
+window.ckAll=()=>{$('ckr').innerHTML='<p class="st">チェック中…</p>';setTimeout(()=>{const z=NC.zeroOf(S.rows,setObj());const zn=(k,w)=>[...z[k]].sort().map(m=>({k:'z',r:{d:'',s:'',m,t:'',g:null,bb:null,rb:null},why:w}));S.chk={all:true,list:zn('rb','RB無し機種（RBの判定は飛ばします）').concat(zn('bb','BB無し機種（BBの判定は飛ばします）'),zn('both','BB・RBとも0（指数が出せません）'),ckOkF(NCK.check(S.rows,S.rows))),sel:new Set()};ckPaint()},30)};
 function ckRun(newRows){const keys=[...new Set(newRows.map(r=>r.d+'|'+r.s))];const set=new Set(newRows.map(r=>r.d+'|'+r.s+'|'+r.t));
  S.chk={all:false,list:ckOkF(NCK.check(S.rows,S.rows.filter(r=>set.has(r.d+'|'+r.s+'|'+r.t)),keys)),sel:new Set()}}
 const VR=30;
@@ -365,7 +365,7 @@ const okL=(x,p)=>!!x&&!!p&&x.g!=null&&x.gs!=null&&x.g>=p.g&&(x.rb==null||x.rb>=p
 const okRow=(r,set,base)=>{const L=NPV().hyL||[];if(!L.length)return false;const x=NC.rowIdx(r,set,base);return L.every(p=>okL(x,p))};
 let TKC=null;function tkRowIdx(r,set){const sig=JSON.stringify(NC.getP());if(!TKC||TKC.r!==S.rows||TKC.sig!==sig){const M=new Map();for(const q of S.rows){const k=q.s+'|'+NC.groupOf(q.m,set);let a=M.get(k);if(!a)M.set(k,a=[]);a.push(q)}
   const st=new Map();for(const[k,L]of M){const sg=NC.stat(L.map(q=>q.g));const hi=L.filter(q=>q.g>0&&NC.dev(q.g,sg)>=NC.getP().cmpTk);st.set(k,{g:sg,rb:NC.stat(hi.map(q=>q.rb/q.g)),gs:NC.stat(hi.map(q=>(q.bb+q.rb)/q.g))})}TKC={r:S.rows,sig,st}}
- const x=TKC.st.get(r.s+'|'+NC.groupOf(r.m,set));if(!x)return null;return{g:NC.dev(r.g,x.g),rb:NC.dev(r.g>0?r.rb/r.g:0,x.rb),gs:NC.dev(r.g>0?(r.bb+r.rb)/r.g:0,x.gs)}}
+ const gr=NC.groupOf(r.m,set),x=TKC.st.get(r.s+'|'+gr);if(!x)return null;const z=NC.zeroOf(S.rows,set);return{g:NC.dev(r.g,x.g),rb:z.rb.has(gr)||z.both.has(gr)?null:NC.dev(r.g>0?r.rb/r.g:0,x.rb),gs:z.both.has(gr)?null:NC.dev(r.g>0?(r.bb+r.rb)/r.g:0,x.gs)}}
 const ciH=(c,n)=>n==null?'':String(n);const IB='#cfe8ff';
 const idxTds=(m,v)=>{const x=idxOfV(m,v);return[['ig','g'],['irb','rb'],['igs','gs']].map(([c,k])=>{const n=x?x[k]:null;return`<td data-c="${c}"${c==='ig'?' class="hl"':''}${n!=null&&n>=NPV().blue?` style="background:${IB}"`:''}>${ciH(c,n)}</td>`}).join('')+`<td data-c="iok" style="text-align:center">${okIx(x)?'<span class="mk a">○</span>':''}</td>`};
 function touPaint(tr){const v={};tr.querySelectorAll('input.mi').forEach(i=>{v[i.dataset.f]=i.value.trim()===''?null:+i.value});
