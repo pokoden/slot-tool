@@ -158,8 +158,8 @@ function nextDay(rows,set,store,date){const R=rows.filter(r=>r.s===store);if(!R.
 function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x of a)s+=x;const m=s/n;let v=0;for(const x of a)v+=(x-m)*(x-m);return{m,sd:Math.sqrt(v/n),n}}
 // 指数。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
 // 各種数値設定（index から setP で変える）
-const PDEF={devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wTk:0.4,prev:55,subDiv:10000,stMax:3};let P=Object.assign({},PDEF);
-function setP(o){const n=Object.assign({},PDEF);for(const k in PDEF)if(o&&o[k]!==''&&o[k]!=null&&isFinite(+o[k]))n[k]=+o[k];if(JSON.stringify(n)!==JSON.stringify(P)){P=n;PBC=new WeakMap();AFM=new WeakMap();return true}return false}
+const PDEF={devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wPr:0.4,wOk:0.2,wTk:0.4,prev:55,subDiv:10000,stMax:3};let P=Object.assign({},PDEF);
+function setP(o){const n=Object.assign({},PDEF);for(const k in PDEF)if(o&&o[k]!==''&&o[k]!=null&&isFinite(+o[k]))n[k]=+o[k];if(JSON.stringify(n)!==JSON.stringify(P)){P=n;PBC=new WeakMap();AFM=new WeakMap();HOK=new WeakMap();return true}return false}
 const dev=(x,st)=>x==null||!st||!st.n?null:Math.round(st.sd>0?P.devM+P.devS*(x-st.m)/st.sd:P.devM);
 const dowC=new Map();const dowF=d=>{let v=dowC.get(d);if(v==null){v=dow(d);dowC.set(d,v)}return v};
 const segOf=(d,type)=>type==='matsu'?+d.slice(8)%10:type==='hi'?+d.slice(8):type==='you'?dowF(d):'all';
@@ -178,18 +178,21 @@ function stdBase(rows,set,to){const rot={N:[],AT:[]};const L=rows.filter(r=>r.d<
  const pr={};for(const r of L){if(r.g<=0)continue;const t=dev(r.g,rs[typeOf(r.m,set)]);if(t<P.cmpHy)continue;const g=groupOf(r.m,set);const o=pr[g]||(pr[g]={rb:[],gs:[]});o.rb.push(r.rb/r.g);o.gs.push((r.bb+r.rb)/r.g)}
  const ps={};for(const g in pr)ps[g]={rb:stat(pr[g].rb),gs:stat(pr[g].gs)};return{rot:rs,prob:ps,zr:zeroOf(rows,set)}}
 // 確率指数：RB・合算のうち出せるものだけで（RB無し機種は合算だけ）
-function idx(rT,rbT,gsT){if(rT==null||(rbT==null&&gsT==null))return{p:null,t:null};const p=rbT==null?gsT:gsT==null?rbT:Math.round(rbT*P.wRb+gsT*(1-P.wRb));return{p,t:Math.round(rT*P.wRot+p*(1-P.wRot))}}
+function idx(rT,rbT,gsT,okT){if(rT==null||(rbT==null&&gsT==null))return{p:null,t:null};const p=rbT==null?gsT:gsT==null?rbT:Math.round(rbT*P.wRb+gsT*(1-P.wRb));const w=P.wRot+P.wPr+(okT!=null?P.wOk:0);return{p,t:w>0?Math.round((rT*P.wRot+p*P.wPr+(okT!=null?okT*P.wOk:0))/w):null}}
+// 合格（○）の判定：index から setOk で渡す
+let OKF=null,OKS=null,OKC=new WeakMap(),HOK=new WeakMap();function setOk(fn,sig){OKF=fn;if(sig!==OKS){OKS=sig;OKC=new WeakMap();AFM=new WeakMap();HOK=new WeakMap();return true}return false}
+function okOf(r,set,base){if(!OKF||!base)return false;let m=OKC.get(base);if(!m)OKC.set(base,m=new WeakMap());let v=m.get(r);if(v==null){v=!!OKF(rowIdx(r,set,base));m.set(r,v)}return v}
 let SM=new WeakMap();
 function storeRows(rows,s){let m=SM.get(rows);if(!m){m=new Map();for(const r of rows){let a=m.get(r.s);if(!a)m.set(r.s,a=[]);a.push(r)}SM.set(rows,m)}return m.get(s)||[]}
 // 店舗1つぶんの集計。軸の値（日末尾なら0〜9）ごとに、台番別と状態順1位別を出す
 // 検索割合の分母：期間（from〜to）のカレンダー上で、その軸の値に当たる日の数（データがない日も数える）
 const calC=new Map();
 function calDays(from,to,axis){const key=from+'|'+to+'|'+axis;let c=calC.get(key);if(c)return c;c={};if(from<=to&&to<'2200'){for(let d=from;d<=to;d=addDay(d,1)){const v=segOf(d,axis);c[v]=(c[v]||0)+1}}calC.set(key,c);return c}
-function analyzeStore(rows,set,ranks,store,axis,from,to,B){const cal=calDays(from,to,axis);
+let CUR=false;function analyzeStore(rows,set,ranks,store,axis,from,to,B,base){const cal=calDays(from,to,axis);
  const ks=stKeys(axis).map(k=>[k,RANK_KEYS.indexOf(k)]);const G=new Map();
- const add=(M,key,k,v,r)=>{let u=M.get(key);if(!u)M.set(key,u={k,v:String(v),cnt:0,g:0,bb:0,rb:0});u.cnt++;u.g+=r.g;u.bb+=r.bb;u.rb+=r.rb;return u};
+ const add=(M,key,k,v,r)=>{let u=M.get(key);if(!u)M.set(key,u={k,v:String(v),cnt:0,g:0,bb:0,rb:0,okN:0});u.cnt++;if(CUR)u.okN++;u.g+=r.g;u.bb+=r.bb;u.rb+=r.rb;return u};
  for(const r of storeRows(rows,store)){if(r.d<from||r.d>to)continue;
-  const g=groupOf(r.m,set);let o=G.get(g);if(!o)G.set(g,o={g,typ:typeOf(r.m,set),cal,tai:new Map(),st:new Map()});
+  CUR=okOf(r,set,base);const g=groupOf(r.m,set);let o=G.get(g);if(!o)G.set(g,o={g,typ:typeOf(r.m,set),cal,tai:new Map(),st:new Map()});
   const v=segOf(r.d,axis);
   add(o.tai,v+'|'+r.t,r.t,v,r).m=r.m;
   const x=(ranks[r.d]||{})[r.s+'|'+r.t];if(x)for(const[k,i]of ks){const n=x[i];if(n>=1&&n<=P.stMax){const kk=n===1?k:k+'~'+n;add(o.st,v+'|'+kk,kk,v,r)}}}
@@ -198,25 +201,29 @@ const topFn=vals=>{const s=vals.slice().sort((a,b)=>b-a);const n=s.length;return
 // 指数・上位%・自動○を付ける。
 // 店舗機種指数：この店舗×機種の「軸ぜんぶ」（件数割合のボーダー以上の台）の平均と偏差から。確率は回転指数55以上の台だけと比べる
 // 標準指数：登録初日からの全データ。確率は回転指数55以上の台・日だけと比べる
-function finalize(G,B,base){
+function finalize(G,B,base,HS){
  for(const o of G.values()){const sb=base.rot[o.typ],pb=base.prob[o.g]||{};const zr=base.zr||{rb:new Set(),both:new Set()};const noRb=zr.rb.has(o.g)||zr.both.has(o.g),noGs=zr.both.has(o.g);o.taiL=[...o.tai.values()];o.stL=[...o.st.values()];
   for(const L of[o.taiL,o.stL]){
-   for(const u of L){const nd=o.cal[u.v]||0;u.typ=o.typ;u.ratio=nd?u.cnt/nd:0;u.avg=u.g/u.cnt;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0}
+   for(const u of L){const nd=o.cal[u.v]||0;u.typ=o.typ;u.ratio=nd?u.cnt/nd:0;u.avg=u.g/u.cnt;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0;u.okR=u.cnt?u.okN/u.cnt:0}
    const pool=L.filter(u=>!has(B.ratio)||u.ratio*100>=+B.ratio);const inP=new Set(pool);
    const sg=stat(pool.map(u=>u.avg));let p55=pool.filter(u=>dev(u.avg,sg)>=P.cmpTk);if(!p55.length)p55=pool;
-   const s1={rb:stat(p55.map(u=>u.rbR)),gs:stat(p55.map(u=>u.gsR))};
+   const s1={rb:stat(p55.map(u=>u.rbR)),gs:stat(p55.map(u=>u.gsR))};const sok=stat(pool.map(u=>u.okR));
    const val={g:u=>u.avg,rb:u=>u.rbR,gs:u=>u.gsR};const sp={},dp={};
    for(const m in val){sp[m]=topFn(pool.map(val[m]));const bv=new Map();for(const u of pool){let a=bv.get(u.v);if(!a)bv.set(u.v,a=[]);a.push(val[m](u))}dp[m]=new Map([...bv].map(([v,a])=>[v,topFn(a)]))}
-   for(const u of L){const a=[dev(u.avg,sg),noRb?null:dev(u.rbR,s1.rb),noGs?null:dev(u.gsR,s1.gs)];const i1=idx(...a);u.tk={g:a[0],rb:a[1],gs:a[2],p:i1.p,t:i1.t};
-    const b=[dev(u.avg,sb),noRb?null:dev(u.rbR,pb.rb),noGs?null:dev(u.gsR,pb.gs)];const i2=idx(...b);u.hy={g:b[0],rb:b[1],gs:b[2],p:i2.p,t:i2.t};
+   for(const u of L){const a=[dev(u.avg,sg),noRb?null:dev(u.rbR,s1.rb),noGs?null:dev(u.gsR,s1.gs)];const ok1=dev(u.okR,sok);const i1=idx(...a,ok1);u.tk={g:a[0],rb:a[1],gs:a[2],ok:ok1,p:i1.p,t:i1.t};
+    const b=[dev(u.avg,sb),noRb?null:dev(u.rbR,pb.rb),noGs?null:dev(u.gsR,pb.gs)];const ok2=HS&&HS.n&&(!has(B.ratio)||u.ratio*100+1e-9>=+B.ratio)?dev(u.okR,HS):null;const i2=idx(...b,ok2);u.hy={g:b[0],rb:b[1],gs:b[2],ok:ok2,p:i2.p,t:i2.t};
     u.tt=u.tk.t!=null&&u.hy.t!=null?Math.round(u.tk.t*P.wTk+u.hy.t*(1-P.wTk)):null;
     if(inP.has(u)){u.sp={};u.dp={};for(const m in val){u.sp[m]=sp[m](val[m](u));u.dp[m]=dp[m].get(u.v)(val[m](u))}}else{u.sp=null;u.dp=null}
     u.auto=judge(u,B,o.g)}}}
  return G}
 let AFM=new WeakMap();
+// 標準の合格指数の母集団：全店舗・全機種の台（件数割合のボーダー以上）の合格率
+function hyOk(rows,set,axis,from,to,B,base){if(!base)return null;let m=HOK.get(base);if(!m)HOK.set(base,m=new Map());const k=[rows.length,axis,from,to,B&&B.ratio,JSON.stringify(set.groups||{})].join('~');if(m.has(k))return m.get(k);const cal=calDays(from,to,axis);const M=new Map();
+ for(const r of rows){if(r.d<from||r.d>to)continue;const v=segOf(r.d,axis);const kk=r.s+'|'+groupOf(r.m,set)+'|'+v+'|'+r.t;let u=M.get(kk);if(!u)M.set(kk,u={v,c:0,o:0});u.c++;if(okOf(r,set,base))u.o++}
+ const a=[];for(const u of M.values()){const nd=cal[u.v]||0;const ra=nd?u.c/nd:0;if(!has(B&&B.ratio)||ra*100+1e-9>=+B.ratio)a.push(u.o/u.c)}const st=stat(a);m.set(k,st);return st}
 // memo=true のときだけ base ごとに結果を覚える（精度チェック用）
-function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);
- let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B),B,base);m.set(k,v)}return v}
+function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}const HS=hyOk(rows,set,axis,from,to,B,base);if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);
+ let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);m.set(k,v)}return v}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
 function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;any=true;return f(+v)};
@@ -225,7 +232,7 @@ function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;a
   &&[['g',Bg],['rb',Br],['gs',Bs]].every(([k,b])=>chk(b.sp,v=>u.sp&&u.sp[k]!=null&&u.sp[k]<=v+EPS)&&chk(b.dp,v=>u.dp&&u.dp[k]!=null&&u.dp[k]<=v+EPS))
   &&chk(mc.rb,v=>u.rb>0&&u.g/u.rb<=v+EPS)&&chk(mc.gs,v=>u.bb+u.rb>0&&u.g/(u.bb+u.rb)<=v+EPS);
  // 全軸だけ：指数合格ライン（店舗機種・標準）。同じ種類はどれか1本、両方あれば両方の種類で合格
- let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs','t'].every(k=>!has(l[k])||(k!=='g'&&u[x]&&u[x][k]==null)||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
+ let lok=true;const AL=B.allL;if(AL)for(const x of['tk','hy']){const Ls=AL[x]||[];if(Ls.length){any=true;if(!Ls.some(l=>['g','rb','gs','ok','t'].every(k=>!has(l[k])||(k!=='g'&&u[x]&&u[x][k]==null)||(u[x]&&u[x][k]!=null&&u[x][k]>=+l[k]))))lok=false}}
  return any&&ok&&lok}
 // ===== 当日の数値表示（窓ごとの合計） =====
 function winIdx(rows,set){const by=new Map();
@@ -299,6 +306,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),parts:a,mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);

@@ -62,16 +62,17 @@ window.autoModel=(s,day)=>{const N=NPV().autoN||60;const key='M|'+s+'|'+day+'|'+
 // 狙う日の台ごとの点数
 window.autoDay=(s,day)=>{const key='D|'+s+'|'+day+'|'+(NPV().autoN||60);if(AC.m.has(key))return AC.m.get(key);const M=autoModel(s,day);let R=null;
  if(M&&Object.keys(M.W).length){const o=grid(s);let di=o.D.findIndex(d=>d>=day);if(di<0)di=o.D.length;const src=o.G.get(day)||o.G.get(o.D[di-1]);
-  if(src){const F=feats(o,day,di,[...src].filter(([t,c])=>!nxHas(c.g)).map(([t,c])=>[t,c.g]));if(F){rankDay(F,M.W);R=new Map(F.map(x=>[x.t,{S:x.S*10+50,dev:x.dev,mr:x.mr}]))}}}
+  if(src){const F=feats(o,day,di,[...src].filter(([t,c])=>!nxHas(c.g)).map(([t,c])=>[t,c.g]));if(F){rankDay(F,M.W);R=new Map(F.map(x=>[x.t,{S:x.S*10+50,dev:x.dev,mr:x.mr}]))}
+   const nxs=new Set([...src].filter(([t,c])=>nxHas(c.g)).map(([t])=>t));if(R&&nxs.size){const F2=feats(o,day,di,[...src].map(([t,c])=>[t,c.g]));if(F2){rankDay(F2,M.W);for(const x of F2)if(nxs.has(x.t))R.set(x.t,{S:x.S*10+50,dev:x.dev,mr:x.mr,nx:1})}}}}
  AC.m.set(key,R);return R};
 // 狙いの行に自動の点数を入れる（元の行は書き換えない）
 window.autoApply=(u)=>{const M=autoModel(u.s,u.date),A=autoDay(u.s,u.date);const seen=new Set();
  // 候補にない台も自動では対象（狙わない機種・件数%未満は除く）
  const have=new Set(u.T.filter(x=>x.kind==='t').map(x=>String(x.t)));const tpl=u.T.find(x=>x.kind==='t');const add=[];
- if(A&&tpl){const set=setObj();const rs=new Map();for(const r of (u.day||[]))rs.set(String(r.t),r);for(const[t]of A){if(have.has(t))continue;const r=rs.get(t);const m=r?r.m:null;const g=r?NC.groupOf(r.m,set):null;if(!g||nxHas(g)||(u.dropT&&u.dropT.has(t)))continue;
-   const seg={};for(const sg of NC.SEGS)seg[sg]={u:null,o:false,mv:null};add.push(Object.assign({},tpl,{t:isFinite(+t)?+t:t,m,g,seg,ev:{},prev:false,mlist:null,parts:null,label:'台番',miss:0,tti:null,drop:false}))}}
+ if(A&&tpl){const set=setObj();const rs=new Map();for(const r of (u.day||[]))rs.set(String(r.t),r);for(const[t]of A){if(have.has(t))continue;const r=rs.get(t);const m=r?r.m:null;const g=r?NC.groupOf(r.m,set):null;if(!g||(u.dropT&&u.dropT.has(t)))continue;
+   const seg={};for(const sg of NC.SEGS)seg[sg]={u:null,o:false,mv:null};add.push(Object.assign({},tpl,{t:isFinite(+t)?+t:t,m,g,seg,ev:{},prev:false,mlist:null,parts:null,label:'台番',miss:0,tti:null,drop:false,nx:nxHas(g)?1:0}))}}
  let AA=A;if(A){const keys=new Set();for(const x of u.T.concat(add)){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t&&A.has(t))keys.add(t)}
-  const L=[...keys].map(t=>Object.assign({t},A.get(t)));const v=L.map(x=>x.S),m=mean(v)||0,sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/Math.max(1,v.length))||1;const gs=new Map();
+  const L=[...keys].map(t=>Object.assign({t},A.get(t)));const v=L.filter(x=>!x.nx).map(x=>x.S),m=mean(v)||0,sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/Math.max(1,v.length))||1;const gs=new Map();
   for(const x of u.T.concat(add)){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t&&!gs.has(t))gs.set(t,x.g)}
   const G={};for(const x of L){x.dev=50+10*(x.S-m)/sd;(G[gs.get(x.t)]||(G[gs.get(x.t)]=[])).push(x)}for(const g in G)G[g].sort((a,b)=>b.S-a.S).forEach((x,i)=>x.mr=i+1);AA=new Map(L.map(x=>[x.t,x]))}
  const T=u.T.concat(add).map(x=>{const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;const a=t&&AA?AA.get(t):null;const y=Object.assign({},x,{auto:1,score:a?a.S:-999,asdv:a?a.dev:null,alim:M?{k:M.k,dv:M.dv}:{k:0,dv:null}});
