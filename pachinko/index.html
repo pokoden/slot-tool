@@ -33,7 +33,8 @@ table.nt td,table.nt th{padding:3px 2px}table.nt th{line-height:1.2}</style><sty
 #r166bar button:disabled{opacity:.35}
 #r166fail{background:#d62828;color:#fff;font-weight:700;font-size:16px;padding:8px 10px;text-align:center}
 body>#r166fail{position:fixed;left:0;right:0;top:0;z-index:1000;padding-top:max(8px,env(safe-area-inset-top))}
-</style><script>/* r166 共通：全角数字→半角／保存失敗の表示／日ごとの控え／戻る・進む */
+</style><script>
+function iDt(m){const x=/(\d{4})年(\d{1,2})月(\d{1,2})日/.exec((m&&m.intro)||'');return x?+x[1]*10000+ +x[2]*100+ +x[3]:0}/* r166 共通：全角数字→半角／保存失敗の表示／日ごとの控え／戻る・進む */
 (function(){const W=window,L=localStorage;
 const z2h=s=>s==null?s:String(s).replace(/[０-９．－＋，]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));W.z2h=z2h;
 const fx=e=>{const t=e.target;if(!t||t.tagName!=='INPUT'||(t.type!=='text'&&t.type!=='search'&&t.type!=='tel'))return;const v=t.value;if(!/[０-９．－＋，]/.test(v)||!/^[\s0-9０-９.．\-－+＋,，]*$/.test(v))return;t.value=z2h(v)};
@@ -482,7 +483,7 @@ function todayCard(){// 同じ記録の再保存は最新の1件だけ数える�
 function home(){setRate(null);$('mach').classList.add('hidden');$('home').classList.remove('hidden');
  if(location.hash==='#hist')return histPage();if(location.hash.startsWith('#an'))return anPage();
  const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}
- const ms=MACHINES.map((m,i)=>[m,L[m.id]||'',i]).sort((a,b)=>a[1]&&b[1]?(a[1]<b[1]?1:a[1]>b[1]?-1:0):a[1]?-1:b[1]?1:a[2]-b[2]);
+ const ms=MACHINES.map((m,i)=>[m,L[m.id]||'',i]).sort((a,b)=>a[1]&&b[1]?(a[1]<b[1]?1:a[1]>b[1]?-1:0):a[1]?-1:b[1]?1:iDt(b[0])-iDt(a[0])||a[2]-b[2]);
  $('home').innerHTML=`<h1>パチンコ判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${ms.map(([m])=>homeItem(m)).join('')}</div></div>
  <div class="card"><h2>店舗</h2><p class="note">店舗ごとのレート。未登録の店舗は 貸玉250玉・1玉3.57円・回数表記(125玉) で計算します。</p><div id="slist"></div>
  <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
