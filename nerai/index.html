@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=88"></script><script src="auto.js?v=88"></script>
+<script src="core.js?v=89"></script><script src="auto.js?v=89"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -429,10 +429,11 @@ function rankT(T){const rk=x=>!!x.mark&&x.mark!=='×';
   if(!lim(0,a0,x)||!lim(1,a1,x)||!lim(2,a2,x))continue;if(x.seat!=null)seen.add(x.s+'|'+x.seat);nn=a0;c2[x.s]=a1;c3[k3]=a2;if(x.nx)continue;d0++;e2[x.s]=(e2[x.s]||0)+1;e3[k3]=(e3[k3]||0)+1;x.r3=[d0,e2[x.s],e3[k3]];x.p3=[a0,a1,a2];R.set(x,d0)}
  return R}
 
-function unitsAll(d,stores,R,set,man){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};const AU=!man&&autoOn();const KD=d+(AU?'|A':'')+'|'+stores.join(',');if(NRG.m[KD])return NRG.m[KD];const out=[];
- for(const s of stores){let day,rk,virt=false,date;
-  if(d==='next'){const nx=NC.nextDay(R,set,s);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true;date=nx.date}
-  else{date=d;day=R.filter(r=>r.s===s&&r.d===date);if(!day.length){const nx=NC.nextDay(R,set,s,date);if(!nx)continue;day=nx.rows;rk=nx.ranks;virt=true}else rk=((S.agg[date.slice(0,7)]||{}).ranks||{})[date]||{}}
+function unitsAll(d,stores,R,set,man){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};const AU=!man&&autoOn();const KD=d+(AU?'|A':'')+'|'+stores.join(',')+'|sm';if(NRG.m[KD])return NRG.m[KD];const out=[];
+ // 台番は店舗全体の最終日ではなく、機種ごとの最終履歴日（指定日以前）から集める
+ for(const s of stores){const nx=d==='next'?NC.storeMembers(R,set,s):NC.storeMembers(R,set,s,d);if(!nx)continue;
+  const date=nx.date,day=nx.rows,virt=!!nx.virt;let rk=nx.ranks;
+  if(!rk){rk={};const ds=[...nx.days].sort();for(const dd of ds)Object.assign(rk,((S.agg[dd.slice(0,7)]||{}).ranks||{})[dd]||{})}
   const L=nerFor(s,date,day,rk);const T0=L.targets||[];out.push({s,day,rk,virt,date,L,T:AU?autoApply({s,date,T:T0,day,dropT:L.dropT}):T0,dropT:L.dropT})}
  // 狙い順は、狙い印が付いていて×じゃない台だけに付ける。rank＝全店舗の通し、srank＝店舗の中
  const all=[];for(const u of out)for(const x of u.L)if(isRk(x))all.push([u,x]);

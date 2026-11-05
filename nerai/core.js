@@ -150,10 +150,19 @@ function monthFiles(rows,set){rows=[...rows].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.
  return out}
 function rowsFromFile(j){if(!j||!Array.isArray(j.rows))throw new Error('形式が違う');return j.rows.map(a=>({d:a[0],s:a[1],m:a[2],t:String(a[3]),g:a[4],bb:a[5],rb:a[6]}))}
 const fmtP=v=>v===Infinity||!Number.isFinite(v)?'-':String(Math.round(v));
-// 次の日（まだデータがない日）の状態順。台の並びは最後の日と同じとみなす
+// 次の日（まだデータがない日）の状態順。台の並びは機種ごとの最終日と同じとみなす
 function addDay(d,n){const t=new Date(d+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)}
+// 店舗の台番：機種（グループ）ごとの最終履歴日（指定日以前）から集める。指定日が全機種の最終日より後なら仮想（回転0）
+function storeMembers(rows,set,store,date){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let storeMax='0';for(const r of R)if(r.d>storeMax)storeMax=r.d;
+ const target=date||addDay(storeMax,1);const best=new Map();
+ for(const r of R){if(r.d>target)continue;const g=groupOf(r.m,set);if(!best.has(g)||r.d>best.get(g))best.set(g,r.d)}
+ if(!best.size)return null;const byT=new Map(),days=new Set();
+ for(const r of R){const g=groupOf(r.m,set);if(best.get(g)!==r.d)continue;days.add(r.d);const t=String(r.t);const p=byT.get(t);if(!p||r.d>p.d)byT.set(t,r)}
+ let mem=[...byT.values()];let maxB='0';for(const d of days)if(d>maxB)maxB=d;const virt=target>maxB;
+ if(virt){mem=mem.map(r=>Object.assign({},r,{d:target,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(mem),set);return{date:target,base:maxB,rows:mem,ranks:b.ranks[target]||{},virt:true,days}}
+ return{date:target,base:maxB,rows:mem,ranks:null,virt:false,days}}
 function nextDay(rows,set,store,date){const R=rows.filter(r=>r.s===store);if(!R.length)return null;let L='0';for(const r of R)if(r.d>L)L=r.d;
- if(date&&date<=L)return null;const d=date||addDay(L,1);const v=R.filter(r=>r.d===L).map(r=>Object.assign({},r,{d,g:0,bb:0,rb:0,virt:1}));const b=build(R.concat(v),set);return{date:d,base:L,rows:v,ranks:b.ranks[d]||{}}}
+ if(date&&date<=L)return null;return storeMembers(rows,set,store,date||addDay(L,1))}
 // ===== 分析 =====
 function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x of a)s+=x;const m=s/n;let v=0;for(const x of a)v+=(x-m)*(x-m);return{m,sd:Math.sqrt(v/n),n}}
 // 指数。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
@@ -313,6 +322,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),parts:a,mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,storeMembers,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
