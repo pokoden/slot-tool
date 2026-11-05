@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=80"></script><script src="auto.js?v=80"></script>
+<script src="core.js?v=81"></script><script src="auto.js?v=81"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -141,7 +141,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const API='https://api.github.com/repos/pokoden/slot-data/';
 const tok=()=>LS.get('v2_token','');
-const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['sa','店舗分析'],['ana','台分析'],['np','各種数値設定'],['sc','標準指数チェック'],['set','設定']];
+const TABS=[['imp','取り込み'],['ken','日別集計'],['kb','項目別集計'],['tou','当日'],['zu','図面'],['ner','狙い'],['ac','精度'],['sa','店舗分析'],['ana','台分析'],['np','各種数値設定'],['sc','標準指数チェック'],['set','設定']];
 let tab=LS.get('nr_tab','imp');if(!TABS.some(t=>t[0]===tab&&!t[2]))tab='imp';
 // 状態
 let anDirty=false,zuDirty=false;
@@ -187,7 +187,7 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{if(t!==tab&&anDirty){clearTimeout(asT);asRun()}if(zuDirty&&t!==tab&&!confirm('図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);bust();render()};
 function render(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='sa')return saPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
+ if(tab==='ac')return acPage();if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='sa')return saPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -1025,7 +1025,7 @@ window.zuSave=async()=>{const sv=$('sv');try{const out={'nerai/zumen.json':JSON.
 
 // ===== 検索 =====
 const KN0=()=>({v:107,st:[],g:'',ty:'',from:'',to:'',mt:[],hi:'',yo:[],tai:'',gmin:'',gmax:'',bmin:'',bmax:'',rmin:'',rmax:'',smin:'',smax:'',sw:[],sm:[],cm:'',so:'def'});
-let kn=Object.assign(KN0(),LS.get('nr_kn',{}));if(kn.v!==107){kn.v=107;kn.so='def';kn.sw=[];kn.sm=[]}kn.so={'s+':'ps-','s-':'ps+','t':'t-'}[kn.so]||kn.so;
+let kn=Object.assign(KN0(),LS.get('nr_kn',{}));if(kn.v!==107){kn.v=107;kn.so='def';kn.sw=[];kn.sm=[]}kn.so={'s+':'ps-','s-':'ps+','t':'t-'}[kn.so]||kn.so;kn.gmin=kn.gmax='';
 function kenParse(txt){const o=new Set();for(const w of NC.nz(String(txt).replace(/[\n,、]/g,' ')).split(' ')){if(!w)continue;const m=w.match(/^(\d+)[-~〜](\d+)$/);if(m&&Math.abs(+m[2]-+m[1])<=NPV().taiMax){const a=Math.min(+m[1],+m[2]),b=Math.max(+m[1],+m[2]);for(let i=a;i<=b;i++)o.add(String(i))}else o.add(w)}return o}
 const KCOL=new Intl.Collator('ja',{numeric:true}).compare;
 // 全データを「店舗→機種（最終日の全店舗の台数が多い順）→日付が新しい順→台番」に並べた索引。1日・1機種ごとの区切りも持つ
@@ -1072,14 +1072,16 @@ function kenRun(){const R=S.rows,set=setObj();const X=kenIx();const nn=v=>v===''
 let KBC=null;function kenBase(){if(!KBC||KBC.r!==S.rows){let hi='0';for(const r of S.rows)if(r.d>hi)hi=r.d;KBC={r:S.rows,b:NC.stdBase(S.rows,setObj(),hi)}}return KBC.b}
 const todayS=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const knMon=(t,n)=>{const[y,m,d]=t.split('-').map(Number);const x=new Date(Date.UTC(y,m-1-n,d));return x.toISOString().slice(0,10)};
-const kenPer=()=>{const t=todayS();return{1:[NC.addDay(t,-1),NC.addDay(t,-1)],2:[NC.addDay(t,-2),NC.addDay(t,-1)],3:[NC.addDay(t,-3),NC.addDay(t,-1)],6:[NC.addDay(t,-6),NC.addDay(t,-1)],m1:[knMon(t,1),NC.addDay(t,-1)],m2:[knMon(t,2),NC.addDay(t,-1)],m3:[knMon(t,3),NC.addDay(t,-1)],m6:[knMon(t,6),NC.addDay(t,-1)]}};
+const kenPer=()=>{const t=todayS();return{1:[NC.addDay(t,-1),NC.addDay(t,-1)],2:[NC.addDay(t,-2),NC.addDay(t,-1)],3:[NC.addDay(t,-3),NC.addDay(t,-1)],6:[NC.addDay(t,-6),NC.addDay(t,-1)],m1:[knMon(t,1),NC.addDay(t,-1)],m2:[knMon(t,2),NC.addDay(t,-1)],m3:[knMon(t,3),NC.addDay(t,-1)],m6:[knMon(t,6),NC.addDay(t,-1)],tm:[t.slice(0,8)+'01',t]}};
 // 月のカレンダー（タップした日だけを検索）
-function kenCal(){const X=kenIx();let hi='0';for(const d of X.days)if(d>hi)hi=d;
+function kenCal(){return calX('kn')}
+const CALO={kn:()=>kn,kb:()=>kb,ac:()=>ac},CALR={kn:()=>kenPage(),kb:()=>kbPage(),ac:()=>acPage()};
+function calX(nm){const kn=CALO[nm]();const X=kenIx();let hi='0';for(const d of X.days)if(d>hi)hi=d;
  if(!/^\d{4}-\d{2}$/.test(kn.cm||''))kn.cm=(kn.from&&kn.from===kn.to?kn.from:hi==='0'?todayS():hi).slice(0,7);
  const[y,m]=kn.cm.split('-').map(Number);const w0=new Date(Date.UTC(y,m-1,1)).getUTCDay(),dim=new Date(Date.UTC(y,m,0)).getUTCDate();
- let h=`<div class="calh"><button onclick="knCm(-1)">‹</button><b>${y}年${m}月</b><button onclick="knCm(1)">›</button></div><div class="cal">`+[...'日月火水木金土'].map((c,i)=>`<i class="${i===0?'su':i===6?'sa':''}">${c}</i>`).join('');
+ let h=`<div class="calh"><button onclick="calCm('${nm}',-1)">‹</button><b>${y}年${m}月</b><button onclick="calCm('${nm}',1)">›</button></div><div class="cal">`+[...'日月火水木金土'].map((c,i)=>`<i class="${i===0?'su':i===6?'sa':''}">${c}</i>`).join('');
  for(let i=0;i<w0;i++)h+='<span></span>';
- for(let d=1;d<=dim;d++){const ds=kn.cm+'-'+String(d).padStart(2,'0');const wd=(w0+d-1)%7;h+=`<button class="${kn.from===ds&&kn.to===ds?'on':X.days.has(ds)?'dd':''} ${wd===0?'su':wd===6?'sa':''}" onclick="knDay('${ds}')">${d}</button>`}
+ for(let d=1;d<=dim;d++){const ds=kn.cm+'-'+String(d).padStart(2,'0');const wd=(w0+d-1)%7;h+=`<button class="${kn.from===ds&&kn.to===ds?'on':X.days.has(ds)?'dd':''} ${wd===0?'su':wd===6?'sa':''}" onclick="calDay('${nm}','${ds}')">${d}</button>`}
  return h+'</div>'}
 function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))].sort((a,b)=>a.localeCompare(b,'ja'));
@@ -1088,7 +1090,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
  const num=(id,ph,w=70)=>`<input inputmode="decimal" type="text" step="any" value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const txt=(id,ph,w=140)=>`<input value="${esc(kn[id])}" placeholder="${ph}" style="width:${w}px" onchange="kn.${id}=this.value;kenRes()">`;
  const per=kenPer();
- const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間']].map(([n,t])=>`<button class="${kn.from===per[n][0]&&kn.to===per[n][1]?'on':''}" onclick="knPer('${n}')">${t}</button>`).join('');
+ const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間'],['tm','今月']].map(([n,t])=>`<button class="${kn.from===per[n][0]&&kn.to===per[n][1]?'on':''}" onclick="knPer('${n}')">${t}</button>`).join('');
  $('main').innerHTML=`<div class="card"><h2>🔎 データ検索 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="knReset()">条件をリセット</button></h2>
 <p class="note">店舗</p>${chip('st',stores.map(s=>[s,stShort(s)]))}<div class="chips"><button class="${kn.sa?'on':''}" onclick="kn.sa=kn.sa?0:1;kenPage()">全店舗合算</button></div>
 <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),kn.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kn.ty)}</div>
@@ -1097,8 +1099,7 @@ function kenPage(){LS.set('nr_kn',kn);const R=S.rows,set=setObj();const stores=[
 ${kenCal()}
 <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
 <p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
-<div class="row"><label>日 ${txt('hi','例 7,17,27',110)}</label></div>
-<p class="note">回転数</p><div class="row">${num('gmin','以上')}〜${num('gmax','以下')}</div>
+<p class="note">日</p>${hiChips('kn')}
 <p class="note">確率</p>
 <div class="row"><label>BB ${num('bmin','以上',64)}〜${num('bmax','以下',64)}</label></div><div class="row"><label>RB ${num('rmin','以上',64)}〜${num('rmax','以下',64)}</label></div><div class="row"><label>合算 ${num('smin','以上',64)}〜${num('smax','以下',64)}</label></div>
 <p class="note">台番</p><div class="row"><label>${txt('tai','例 401 405-410',150)}</label>${taiSel(kn,'kn','kenPage')}</div>
@@ -1146,6 +1147,12 @@ window.knSo=k=>{kn.so=k==='def'?k:(kn.so===k+'-'?k+'+':k+'-');kenRes()};
 window.knTog=(id,k)=>{const a=kn[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);kenPage()};
 window.knPer=n=>{const p=kenPer()[n];kn.from=p[0];kn.to=p[1];kenPage()};
 window.knAllP=()=>{kn.from='';kn.to='';kenPage()};
+window.calDay=(nm,v)=>{if(!isDate(v))return;const o=CALO[nm]();o.from=v;o.to=v;o.cm=v.slice(0,7);CALR[nm]()};
+window.calCm=(nm,n)=>{const o=CALO[nm]();const[y,m]=o.cm.split('-').map(Number);const d=new Date(Date.UTC(y,m-1+n,1));o.cm=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');CALR[nm]()};
+// 日：丸ボタン（中身は「1,17」のような文字で持つ）
+const hiSet=o=>new Set(String(o.hi||'').split(/[^0-9]+/).filter(Boolean).map(Number));
+const hiChips=nm=>{const o=CALO[nm](),H=hiSet(o);return`<div class="chips">${[...Array(31)].map((_,i)=>`<button class="${H.has(i+1)?'on':''}" onclick="hiTog('${nm}',${i+1})">${i+1}</button>`).join('')}</div>`};
+window.hiTog=(nm,d)=>{const o=CALO[nm](),H=hiSet(o);H.has(d)?H.delete(d):H.add(d);o.hi=[...H].sort((a,b)=>a-b).join(',');CALR[nm]()};
 window.knDay=v=>{if(!isDate(v))return;kn.from=v;kn.to=v;kn.cm=v.slice(0,7);kenPage()};
 window.knCm=n=>{const[y,m]=kn.cm.split('-').map(Number);const d=new Date(Date.UTC(y,m-1+n,1));kn.cm=d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');kenPage()};
 window.knReset=()=>{kn=per1(KN0());kenPage()};
@@ -1157,7 +1164,7 @@ function taiList(o){const set=setObj();const R=S.rows;const last={};for(const r 
 const taiSel=(o,nm,pg)=>`<select onchange="if(this.value){${nm}.tai=this.value;${pg}()}"><option value="">台番を選ぶ</option>${taiList(o).map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')}</select>`;
 // ===== 項目別集計 =====
 const KB0=()=>({v:1,st:[],g:'',ty:'',from:'',to:'',mt:[],yo:[],hi:'',tai:'',gmin:'',gmax:'',sw:[],sm:[],vw:'t',so:{}});
-let kb=Object.assign(KB0(),LS.get('nr_kb',{}));if(!kb.so||typeof kb.so!=='object')kb.so={};
+let kb=Object.assign(KB0(),LS.get('nr_kb',{}));kb.gmin=kb.gmax='';if(!kb.so||typeof kb.so!=='object')kb.so={};
 const kbMore=new Set();
 // 日別集計・項目別集計の期間は開いたときは前日
 const per1=o=>{const p=kenPer()[1];o.from=p[0];o.to=p[1];return o};per1(kn);per1(kb);
@@ -1180,7 +1187,7 @@ function kbSort(L,id,ty,so0){const o=(so0||kb.so)[id];const c=o?o.c:'k',up=o?o.u
 window.kbSoT=(id,c)=>{const o=kb.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';kb.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};LS.set('nr_kb',kb);const y=scrollY;kbRes();scrollTo(0,y)};
 window.kbTgl=id=>{kbMore.has(id)?kbMore.delete(id):kbMore.add(id);const y=scrollY;kbRes();scrollTo(0,y)};
 const kbF=(x,d=0)=>x==null||!isFinite(x)?'':(+x).toFixed(d);
-let KBPP=0;function kbTable(T,out,set,base,px){const[id,title,kf,lab]=T;KBPP=px?0:(+kb.pp||0);const L=kbGroups(out,set,base,kf);const SO=kb.so,MR=kbMore,fs='kbSoT',ft='kbTgl';const so=kbSort(L,id,id,SO);const COL=px?KBCOL.concat([['lb','下限']]):KBCOL;const all=MR.has(id);const show=all?L:L.slice(0,NPV().topN);
+let KBPP=0;function kbTable(T,out,set,base,px,cx){const[id,title,kf,lab]=T;KBPP=px?0:(+kb.pp||0);const L=kbGroups(out,set,base,kf);const SO=cx?cx.so:kb.so,MR=cx?cx.more:kbMore,fs=cx?cx.fs:'kbSoT',ft=cx?cx.ft:'kbTgl';const so=kbSort(L,id,id,SO);const COL=px?KBCOL.concat([['lb','下限']]):KBCOL;const all=MR.has(id);const show=all?L:L.slice(0,NPV().topN);
  const ic=v=>v!=null&&v>=NPV().blue?` style="background:${IB}"`:'';
  return`<div class="card"><h2>${title} ${L.length}件</h2><div class="tw"><table class="kbt"><tr>${COL.map(([c,t])=>`<th class="${c==='k'?'l fix ':''}s ${so.c===c?'on':''}" onclick="${fs}('${id}','${c}')">${t}${so.c===c?(so.up?'▲':'▼'):''}</th>`).join('')}</tr>
 ${show.map(x=>`<tr><td class="l fix">${esc(lab(x.k))}</td><td>${x.n.toLocaleString()}</td><td>${Math.round(x.aG).toLocaleString()}</td><td>${NC.fmtP(x.pb)}</td><td>${NC.fmtP(x.pr)}</td><td>${NC.fmtP(x.ps)}</td><td${ic(x.ig)}>${kbF(x.ig,0)}</td><td${ic(x.irb)}>${kbF(x.irb,0)}</td><td${ic(x.igs)}>${kbF(x.igs,0)}</td><td>${(x.ok*100).toFixed(0)}%</td>${px?`<td>${(x.lb*100).toFixed(0)}%</td>`:''}</tr>`).join('')}</table></div>
@@ -1200,23 +1207,67 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
  const num=(id,ph,w=70)=>`<input inputmode="decimal" type="text" value="${esc(kb[id])}" placeholder="${ph}" style="width:${w}px" onchange="kb.${id}=this.value;kbRes()">`;
  const txt=(id,ph,w=140)=>`<input value="${esc(kb[id])}" placeholder="${ph}" style="width:${w}px" onchange="kb.${id}=this.value;kbRes()">`;
  const per=kenPer();
- const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間']].map(([n,t])=>`<button class="${kb.from===per[n][0]&&kb.to===per[n][1]?'on':''}" onclick="kbPer('${n}')">${t}</button>`).join('');
+ const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間'],['tm','今月']].map(([n,t])=>`<button class="${kb.from===per[n][0]&&kb.to===per[n][1]?'on':''}" onclick="kbPer('${n}')">${t}</button>`).join('');
  $('main').innerHTML=`<div class="card"><h2>📊 項目別集計 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="kbReset()">条件をリセット</button></h2>
 <p class="note">店舗</p>${chip('st',stores.map(s=>[s,stShort(s)]))}
 <div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),kb.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],kb.ty)}</div>
 <div class="row"><button class="b sub" onclick="kb.so={};kbRes()">標準の並びに戻す</button></div>
 <p class="note">期間</p><div class="chips">${pb}<button class="${!kb.from&&!kb.to?'on':''}" onclick="kb.from='';kb.to='';kbPage()">全期間</button></div>
-<div class="row"><input type="date" value="${esc(kb.from)}" onchange="kb.from=this.value;kbPage()" style="width:136px">〜<input type="date" value="${esc(kb.to)}" onchange="kb.to=this.value;kbPage()" style="width:136px"></div>
+<div class="row"><input type="date" value="${esc(kb.from)}" onchange="kb.from=this.value;kbPage()" style="width:136px">〜<input type="date" value="${esc(kb.to)}" onchange="kb.to=this.value;kbPage()" style="width:136px"></div>${calX('kb')}
 <p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
 <p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
-<div class="row"><label>日 ${txt('hi','例 7,17,27',110)}</label></div>
-<p class="note">回転数</p><div class="row">${num('gmin','以上')}〜${num('gmax','以下')}</div>
+<p class="note">日</p>${hiChips('kb')}
 <p class="note">台番</p><div class="row"><label>${txt('tai','例 401 405-410',150)}</label>${taiSel(kb,'kb','kbPage')}</div>
 <p class="note">状態の期間</p>${chip('sw',NC.WIN.map(w=>[w[0],w[1]]))}
 <p class="note">状態の指標</p>${chip('sm',[['g','回転'],['gs','合算']])}
 <p class="note">表示</p><div class="chips">${[['t','台番別のみ'],['s','状態別のみ'],['','両方']].map(([k,x])=>`<button class="${kb.vw===k?'on':''}" onclick="kb.vw='${k}';kbPage()">${x}</button>`).join('')}</div></div>
 <div id="kbres"></div>`;kbRes()}
 
+
+// ===== 精度：過去の日の狙い（当日履歴と同じ作り方）で、選んだ目印が付いた台のその日の結果を集計 =====
+const AC0=()=>({v:1,st:[],g:'',ty:'',from:'',to:'',mt:[],yo:[],hi:'',kbn:'全',mk:'',so:{},cm:''});
+let ac=Object.assign(AC0(),LS.get('nr_ac',{}));if(!ac.so||typeof ac.so!=='object')ac.so={};{const p=kenPer().tm;ac.from=p[0];ac.to=p[1]}
+const acMore=new Set();const ACH=new Map();
+const ACT=[['all','トータル',r=>'all',k=>'トータル'],['ym','年月別',r=>r.d.slice(0,7),k=>k.replace('-','年')+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
+// その日の狙い：台番ごとに 目印・狙い区分（着席台番が同じ行は一番上の1行）
+function acDay(d){const k=d+'|'+NRC+'|'+JSON.stringify(npObj().rm||null);if(ACH.has(k))return ACH.get(k);const set=setObj();const stores=[...new Set(S.rows.map(r=>r.s))].sort(storeCmp);
+ const U=unitsAll(d,stores,S.rows,set);const L=[];for(const u of U){if(u.virt)continue;const rs=new Map();for(const r of u.day)rs.set(String(r.t),r);const seen=new Set();
+  const T=u.T.filter(x=>!x.nx&&inR(x)).sort((a,b)=>a.r3[0]-b.r3[0]);
+  for(const x of T){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null||seen.has(t))continue;const r=rs.get(t);if(!r)continue;seen.add(t);L.push({r,mk:dMk(x),kb:neraiKbn(x,d)})}}
+ if(ACH.size>400)ACH.clear();ACH.set(k,L);return L}
+function acRun(){const set=setObj();const X=kenIx();const H=hiSet(ac);const out=[];const tyC=new Map();
+ const days=[...X.days].filter(d=>(!ac.from||d>=ac.from)&&(!ac.to||d<=ac.to)).sort();
+ for(const d of days){const dd=+d.slice(8);if(ac.mt.length&&!ac.mt.includes(String(dd%10)))continue;if(H.size&&!H.has(dd))continue;if(ac.yo.length&&!ac.yo.includes(String(NC.dow(d))))continue;
+  for(const x of acDay(d)){if(ac.mk&&x.mk!==ac.mk)continue;if(!ac.mk&&!x.mk)continue;if(ac.kbn!=='全'&&x.kb!==ac.kbn)continue;const r=x.r;
+   if(ac.st.length&&!ac.st.includes(r.s))continue;if(ac.g&&NC.groupOf(r.m,set)!==ac.g)continue;if(ac.ty){let t=tyC.get(r.m);if(t==null)tyC.set(r.m,t=NC.typeOf(r.m,set));if(t!==ac.ty)continue}out.push({r,k:null})}}
+ return out}
+window.acSoT=(id,c)=>{const o=ac.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';ac.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};const y=scrollY;acRes();scrollTo(0,y)};
+window.acTgl=id=>{acMore.has(id)?acMore.delete(id):acMore.add(id);const y=scrollY;acRes();scrollTo(0,y)};
+function acRes(){LS.set('nr_ac',ac);const el=$('acres');if(!el)return;const set=setObj();const out=acRun();
+ if(!out.length){el.innerHTML='<div class="card"><h2>データなし</h2></div>';return}const base=kenBase();const cx={so:ac.so,more:acMore,fs:'acSoT',ft:'acTgl'};
+ el.innerHTML=ACT.map(T=>kbTable(T,out,set,base,false,cx)).join('')}
+window.acTog=(id,k)=>{const a=ac[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);acPage()};
+window.acPer=n=>{const p=kenPer()[n];ac.from=p[0];ac.to=p[1];acPage()};
+window.acReset=()=>{ac=AC0();const p=kenPer().tm;ac.from=p[0];ac.to=p[1];acMore.clear();acPage()};
+function acPage(){LS.set('nr_ac',ac);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
+ const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))];if(ac.g&&!groups.includes(ac.g))ac.g='';
+ const mks=[...new Set(rmL().map(m=>String(m.t||'').trim()).filter(Boolean))];if(ac.mk&&!mks.includes(ac.mk))ac.mk='';if(!ac.mk&&mks.length)ac.mk=mks[0];
+ const sel=(id,L,v)=>`<select onchange="ac.${id}=this.value;acPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
+ const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${ac[id].includes(k)?'on':''}"${id==='st'&&!ac[id].includes(k)&&stBg(k)?` style="background:${stBg(k)}"`:''} onclick="acTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
+ const per=kenPer();
+ const pb=[[1,'前日'],[2,'2日間'],[3,'3日間'],[6,'6日間'],['m1','1ヶ月間'],['m2','2ヶ月間'],['m3','3ヶ月間'],['m6','6ヶ月間'],['tm','今月']].map(([n,t])=>`<button class="${ac.from===per[n][0]&&ac.to===per[n][1]?'on':''}" onclick="acPer('${n}')">${t}</button>`).join('');
+ $('main').innerHTML=`<div class="card"><h2>🎯 精度 <span style="flex:1"></span><button class="b sub" style="margin:0;padding:6px 10px;font-size:13px" onclick="acReset()">条件をリセット</button></h2>
+<p class="note">店舗</p>${chip('st',stores.map(s=>[s,stShort(s)]))}
+<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),ac.g)}${sel('ty',[['','ノーマル・AT'],['N','ノーマル'],['AT','AT']],ac.ty)}</div>
+<div class="row"><button class="b sub" onclick="ac.so={};acRes()">標準の並びに戻す</button></div>
+<p class="note">期間</p><div class="chips">${pb}<button class="${!ac.from&&!ac.to?'on':''}" onclick="ac.from='';ac.to='';acPage()">全期間</button></div>
+<div class="row"><input type="date" value="${esc(ac.from)}" onchange="ac.from=this.value;acPage()" style="width:136px">〜<input type="date" value="${esc(ac.to)}" onchange="ac.to=this.value;acPage()" style="width:136px"></div>${calX('ac')}
+<p class="note">日末尾</p>${chip('mt',[...Array(10).keys()].map(i=>[String(i),String(i)]))}
+<p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
+<p class="note">日</p>${hiChips('ac')}
+<p class="note">表示区分</p><div class="chips">${['位置','台番末尾','回転','合算','全'].map(k=>`<button class="${ac.kbn===k?'on':''}" onclick="ac.kbn='${k}';acPage()">${k}</button>`).join('')}</div>
+<div class="row"><label>狙い記号 ${sel('mk',mks.map(m=>[m,m]),ac.mk)}</label></div></div>
+<div id="acres"></div>`;acRes()}
 
 const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
 const mEnd=ym=>{const[y,m]=ym.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)};
