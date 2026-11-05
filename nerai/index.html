@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=85"></script><script src="auto.js?v=85"></script>
+<script src="core.js?v=86"></script><script src="auto.js?v=86"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -154,6 +154,14 @@ const setObj=()=>({groups:S.set.groups||{},types:S.set.types||{},alias:S.set.ali
 async function gh(path,opt={}){const r=await fetch(API+path,Object.assign({cache:'no-store'},opt,{headers:Object.assign({Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},opt.headers||{})}));return r}
 function b64dec(b){const bin=atob(b.replace(/\s/g,''));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder().decode(u)}
 function b64enc(s){const u=new TextEncoder().encode(s);let bin='';for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(bin)}
+// ===== 読み込みを速く：GitHubのファイルは中身の番号（sha）ごとに端末へ覚える（同じshaなら中身も同じ）=====
+const IDB=(()=>{let p=null;const db=()=>p||(p=new Promise((ok,ng)=>{try{const q=indexedDB.open('nerai_blobs',1);q.onupgradeneeded=()=>q.result.createObjectStore('b');q.onsuccess=()=>ok(q.result);q.onerror=()=>ng(q.error)}catch(e){ng(e)}}));
+ const tx=async(m,f)=>{const d=await db();return new Promise((ok,ng)=>{const t=d.transaction('b',m);const st=t.objectStore('b');const r=f(st);t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>ng(t.error)})};
+ return{get:k=>tx('readonly',s=>s.get(k)).catch(()=>null),put:(k,v)=>tx('readwrite',s=>s.put(v,k)).catch(()=>null),keep:async ks=>{try{const all=await tx('readonly',s=>s.getAllKeys());const K=new Set(ks);await tx('readwrite',s=>{for(const k of all||[])if(!K.has(k))s.delete(k)})}catch(e){}}}})();
+// 保存のときの「変わったか」判定用（中身の文字は持たずに番号だけ持つ＝メモリを減らす）
+const hs=t=>{let a=2166136261,b=5381;for(let i=0;i<t.length;i++){const c=t.charCodeAt(i);a=Math.imul(a^c,16777619);b=(Math.imul(b,33)+c)|0}return t.length+':'+(a>>>0).toString(36)+':'+(b>>>0).toString(36)};
+const fSame=(f,v)=>!!f&&(f.txt!=null?f.txt===v:f.h!=null&&f.h===hs(v));
+const dropTxt=()=>{for(const k in S.files){const f=S.files[k];if(f&&f.txt!=null){f.h=hs(f.txt);f.txt=null}}};
 async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[];S.agg={};
  if(!tok()){S.loadErr='この画面にはGitHubトークンが入ってないよ。下の欄に、スロ判別ツールと同じトークンを入れてね。';S.needTok=true;return}
  S.needTok=false;const why=st=>st===401?'トークンが違うか期限切れみたい（401）':st===403?'トークンに slot-data の読み書き権限がないか、回数制限（403）':st===404?'slot-data が見えない（404）。トークンの対象リポジトリを確認してね':'通信エラー（'+st+'）';
@@ -161,34 +169,42 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  const all=(await r.json()).filter(f=>f.type==='file');const list=all.filter(f=>/\.json$/.test(f.name));
  for(const f of all)if(!/\.json$/.test(f.name))S.files['nerai/'+f.name]={sha:f.sha,txt:null};
  // iPhoneで重くならないよう3つずつ読む。失敗したら1回だけやり直す
- let done=0;const q=[...list];const one=async f=>{let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
+ let done=0;const q=[...list];const one=async f=>{const c=await IDB.get(f.sha);if(typeof c==='string'){S.files['nerai/'+f.name]={sha:f.sha,txt:c};done++;return}let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
   if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
-  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
+  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};IDB.put(f.sha,txt);done++;const m=$('main');if(m&&!S.loaded&&!SNAP.on)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
  await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
  const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);const zf=S.files['nerai/zumen.json'];S.zu=zf?JSON.parse(zf.txt):{v:1,stores:{}};if(!S.zu.stores)S.zu.stores={};S.zuSaved=JSON.stringify(S.zu);S.zimg={};S.zimgNew={};
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
  for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
- S.loaded=true}
+ S.loaded=true;IDB.keep(list.map(f=>f.sha));setTimeout(dropTxt,3000)}
 // 変わったファイルだけ保存。読み込みに失敗していたら絶対に保存しない
 async function saveFiles(out,msg,prog){try{const n=await saveFiles0(out,msg,prog);R166.ok();return n}catch(e){R166.fail(e.message);throw e}}
 async function saveFiles0(out,msg,prog){if(!S.loaded)throw new Error('読み込みに失敗してるので保存しないよ（データを守るため）');
- const keys=Object.keys(out).filter(k=>!S.files[k]||S.files[k].txt!==out[k]).sort((a,b)=>(/agg-|settings/.test(a)?1:0)-(/agg-|settings/.test(b)?1:0)||a.localeCompare(b));
+ const keys=Object.keys(out).filter(k=>!fSame(S.files[k],out[k])).sort((a,b)=>(/agg-|settings/.test(a)?1:0)-(/agg-|settings/.test(b)?1:0)||a.localeCompare(b));
  let n=0;for(const k of keys){prog&&prog(`保存中 ${++n}/${keys.length}（${k.slice(6)}）`);
   const body={message:msg+' '+k,content:b64enc(out[k])};if(S.files[k])body.sha=S.files[k].sha;
   const r=await gh('contents/'+k,{method:'PUT',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}});
   if(!r.ok){const e=r.status===409||r.status===422?'他の端末で先に更新されたみたい。読み直してからもう一度やってね':'保存失敗（'+r.status+'）';throw new Error(k.slice(6)+'：'+e+(n>1?`\n※${n-1}件は保存済み。読み直すと続きから直せるよ`:''))}
-  const j=await r.json();S.files[k]={sha:j.content.sha,txt:out[k]}}
+  const j=await r.json();S.files[k]={sha:j.content.sha,txt:null,h:hs(out[k])};IDB.put(j.content.sha,out[k])}
  return keys.length}
 function allFiles(rows){const out=NC.monthFiles(rows,setObj());out['nerai/settings.json']=JSON.stringify({v:1,groups:S.set.groups||{},types:S.set.types||{},alias:S.set.alias||NC.DEF_ALIAS});return out}
 function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(out[k])}
 
 function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
 window.go=t=>{if(t!==tab&&anDirty){clearTimeout(asT);asRun()}if(zuDirty&&t!==tab&&!confirm('図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);bust();render()};
-function render(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
+// ===== 画面の写し：別アプリから戻ってページが作り直されたとき、前の画面をすぐ出す（計算が終わったら本物に入れ替え）=====
+const SNAP={on:false,ac:null,y:0,x:0};const SNK='nr_snap';
+const snapSave=()=>{try{if(!S.loaded||SNAP.on)return;const m=$('main');if(!m)return;const tw=m.querySelector('.tw');const h=m.innerHTML;if(h.length>1500000){localStorage.removeItem(SNK);return}localStorage.setItem(SNK,JSON.stringify({tab,h,nav:$('nav').innerHTML,y:scrollY,x:tw?tw.scrollLeft:0,t:Date.now()}))}catch(e){try{localStorage.removeItem(SNK)}catch(_){}}};
+let snapT=0;const snapLater=()=>{clearTimeout(snapT);snapT=setTimeout(snapSave,800)};addEventListener('scroll',()=>{if(S.loaded&&!SNAP.on)snapLater()},{passive:true});
+const snapShow=()=>{try{const o=JSON.parse(localStorage.getItem(SNK)||'null');if(!o||o.tab!==tab||Date.now()-o.t>36*3600e3)return;$('main').innerHTML=o.h;$('nav').innerHTML=o.nav;$('main').style.pointerEvents='none';SNAP.on=true;SNAP.y=o.y;SNAP.x=o.x;
+ if(tab==='ac'){const a=$('acres');SNAP.ac=a?a.innerHTML:null}requestAnimationFrame(()=>{scrollTo(0,o.y);const tw=document.querySelector('#main .tw');if(tw)tw.scrollLeft=o.x})}catch(e){}};
+const snapEnd=()=>{if(!SNAP.on)return;performance.mark('nr_real');SNAP.on=false;$('main').style.pointerEvents='';const y=SNAP.y,x=SNAP.x;requestAnimationFrame(()=>{scrollTo(0,y);const tw=document.querySelector('#main .tw');if(tw&&x)tw.scrollLeft=x;if(tab==='ana'&&window.avPaint)avPaint(true);if(tab==='ken'&&window.knPaint)knPaint(true)})};
+function render(){const sn=SNAP.on;render0();if(sn)snapEnd();snapLater()}
+function render0(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
  if(tab==='ac')return acPage();if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='sa')return saPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
-window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
+window.reload=async()=>{if(!SNAP.on)$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
 function tokCard(){return`<div class="card"><h2>🔑 同期トークン <span class="${tok()?'ok':'ng'}" style="font-size:13px">${tok()?'保存済み':'未設定'}</span></h2>
@@ -1277,7 +1293,7 @@ function acPage(){LS.set('nr_ac',ac);const R=S.rows,set=setObj();const stores=[.
 <p class="note">日</p>${hiChips('ac')}
 <p class="note">表示区分</p><div class="chips">${['位置','台番末尾','回転','合算','全'].map(k=>`<button class="${ac.kbn===k?'on':''}" onclick="ac.kbn='${k}';acPage()">${k}</button>`).join('')}</div>
 <div class="row"><label>狙い記号 ${sel('mk',[['','選択なし']].concat(mks.map(m=>[m,m])),ac.mk)}</label></div></div>
-<div id="acres"></div>`;setTimeout(acRes,0)}
+<div id="acres">${SNAP.ac||''}</div>`;SNAP.ac=null;setTimeout(()=>{acRes();snapLater()},30)}
 
 const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
 const mEnd=ym=>{const[y,m]=ym.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)};
@@ -1404,7 +1420,8 @@ window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups=
  catch(e){S.set=old;sv.className='st ng';sv.textContent=e.message}};
 
 window.addEventListener('beforeunload',e=>{if(anDirty||zuDirty){e.preventDefault();e.returnValue=''}});
-reload();
+// 写しを先に画面に出してから（1コマ描かせてから）読み込み・計算を始める
+snapShow();if(SNAP.on)requestAnimationFrame(()=>{performance.mark('nr_snap');setTimeout(reload,30)});else reload();
 
 (function(){const T=`添付の動画またはスクショは、パチスロのデータサイトの画面です。画面に出てくる台のデータを読み取って、表にしてください。
 
@@ -1446,7 +1463,11 @@ window.bust=()=>{if(window.autoBust)autoBust();NRC={};NRG={nrc:null,m:{}};TKC=nu
  for(const k of['input','change','click'])document.addEventListener(k,ev,true)}
 const VER=(document.querySelector('script[src^="core.js?v="]')||{}).src||'';
 const verChk=async()=>{try{const r=await fetch('index.html?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/core\.js\?v=(\d+)/);if(m&&VER&&!VER.endsWith('v='+m[1])&&!anDirty&&!zuDirty)location.reload()}catch(e){}};
-const wake=()=>{if(document.visibilityState!=='visible')return;if(S.loaded){bust();render()}verChk()};
+// 戻ってきたとき：日付が変わったときだけ計算し直す（前は毎回ぜんぶ計算し直していて重かった）
+let wakeDay=todayS();const wake=()=>{if(document.visibilityState!=='visible')return;if(S.loaded&&todayS()!==wakeDay){wakeDay=todayS();bust();render()}verChk()};
+// 隠れるとき：画面の写しを残し、精度の覚え（ほかのページでは使わない）を捨ててメモリを減らす
+const hideF=e=>{if(document.visibilityState==='hidden'||e&&e.type==='pagehide'){clearTimeout(snapT);snapSave();if(tab!=='ac'&&typeof ACH!=='undefined')ACH.clear()}};
+document.addEventListener('visibilitychange',hideF);window.addEventListener('pagehide',hideF);
 document.addEventListener('visibilitychange',wake);window.addEventListener('pageshow',e=>{if(e.persisted)wake()});window.addEventListener('focus',wake);setInterval(verChk,300000);
 </script>
 <script>
