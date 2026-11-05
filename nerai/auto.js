@@ -75,7 +75,7 @@ window.autoApply=(u)=>{const M=autoModel(u.s,u.date),A=autoDay(u.s,u.date);const
   const L=[...keys].map(t=>Object.assign({t},A.get(t)));const v=L.filter(x=>!x.nx).map(x=>x.S),m=mean(v)||0,sd=Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/Math.max(1,v.length))||1;const gs=new Map();
   for(const x of u.T.concat(add)){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t&&!gs.has(t))gs.set(t,x.g)}
   const G={};for(const x of L){x.dev=50+10*(x.S-m)/sd;(G[gs.get(x.t)]||(G[gs.get(x.t)]=[])).push(x)}for(const g in G)G[g].sort((a,b)=>b.S-a.S).forEach((x,i)=>x.mr=i+1);AA=new Map(L.map(x=>[x.t,x]))}
- const T=u.T.concat(add).map(x=>{const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;const a=t&&AA?AA.get(t):null;const y=Object.assign({},x,{auto:1,score:a?a.S:-999,asdv:a?a.dev:null,alim:M?{k:M.k,dv:M.dv}:{k:0,dv:null}});
+ const T=u.T.concat(add).map(x=>{const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;const a=t&&AA?AA.get(t):null;const y=Object.assign({},x,{auto:1,score:a?a.S:-999,rs:a?a.S:-999,asdv:a?a.dev:null,alim:M?{k:M.k,dv:M.dv}:{k:0,dv:null}});
   y.mark=a&&x.mark!==undefined&&!seen.has(t)?'○':'';if(y.mark)seen.add(t);return y});
  T.sort((a,b)=>(a.kind==='t'?0:1)-(b.kind==='t'?0:1));const s2=new Set();for(const y of T){const t=y.kind==='t'?String(y.t):y.seat!=null?String(y.seat):null;if(!y.mark)continue;if(s2.has(t))y.mark='';else s2.add(t)}
  return T};
