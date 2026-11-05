@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=84"></script><script src="auto.js?v=84"></script>
+<script src="core.js?v=85"></script><script src="auto.js?v=85"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -439,8 +439,11 @@ function unitsAll(d,stores,R,set,man){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};const 
    for(const x of T)x.n3=[all.size,(st[x.s]||new Set()).size,(sm[x.s+'|'+x.g]||new Set()).size]}
   const R=rankT(T);
   for(const u of out){const M=new Map();for(const x of u.T){if(x.kind!=='t')continue;const t=String(x.t);let b=x;
-    for(const y of u.T)if(y.kind==='s'&&y.seat===t&&R.has(y)&&!R.has(b))b=y;
-    M.set(t,Object.assign({},b,{t,rank:R.get(b)||''}))}u.TM=M}}
+    for(const y of u.T)if(y.kind==='s'&&y.seat!=null&&String(y.seat)===t&&R.has(y)&&!R.has(b))b=y;
+    M.set(t,Object.assign({},b,{t,rank:R.get(b)||''}))}
+   // 台番の行がない台でも、狙い順が付いた状態の行（着席台番あり）は当日にも出す（狙いページと同じ印にする）
+   for(const y of u.T){if(y.kind!=='s'||y.seat==null||!R.has(y))continue;const t=String(y.seat);const o=M.get(t);if(!o||!inR(o))M.set(t,Object.assign({},y,{t,rank:R.get(y)||''}))}
+   u.TM=M}}
  return NRG.m[KD]=out}
 // 店舗の並び：弘前石渡→五所川原→青森柏→弘前→弘前安原、それ以外は名前順であと
 const ST_ORD=['弘前石渡','五所川原','青森柏','弘前','弘前安原'];
@@ -1234,9 +1237,11 @@ const acMore=new Set();const ACH=new Map();
 const ACT=[['all','トータル',r=>'all',k=>'トータル'],['ym','年月別',r=>r.d.slice(0,7),k=>k.replace('-','年')+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
 // その日の狙い：台番ごとに 目印・狙い区分（着席台番が同じ行は一番上の1行）
 let ACN=null;function acDay(d){if(ACN!==NRC||ACH.nrg!==NRG){ACH.clear();ACN=NRC;ACH.nrg=NRG}const k=d+'|'+(autoOn()?'A':'')+'|'+JSON.stringify(npObj().rm||null)+'|'+JSON.stringify(npObj().nx||null);if(ACH.has(k))return ACH.get(k);const set=setObj();const stores=[...new Set(S.rows.map(r=>r.s))].sort(storeCmp);
- const U=unitsAll(d,stores,S.rows,set);const L=[];for(const u of U){if(u.virt)continue;const rs=new Map();for(const r of u.day)rs.set(String(r.t),r);const seen=new Set();
+ ACNEW++;const had=new Set(Object.keys(NRG.m));const U=unitsAll(d,stores,S.rows,set);const L=[];for(const u of U){if(u.virt)continue;const rs=new Map();for(const r of u.day)rs.set(String(r.t),r);const seen=new Set();
   const T=u.T.filter(x=>!x.nx&&inR(x)).sort((a,b)=>a.r3[0]-b.r3[0]);
   for(const x of T){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null||seen.has(t))continue;const r=rs.get(t);if(!r)continue;seen.add(t);L.push({r,mk:dMk(x),kb:neraiKbn(x,d)})}}
+ // 精度のために作った日の狙い（全部の行）は覚えておかない（ほかのページが重くならないように）。結果（小さい表）だけ ACH に残す
+ for(const k of Object.keys(NRG.m))if(!had.has(k))delete NRG.m[k];
  if(ACH.size>800){const n=ACH.nrg;ACH.clear();ACH.nrg=n}ACH.set(k,L);return L}
 function acRun(){const MK=new Set(rmL().map(m=>String(m.t||'').trim()).filter(Boolean));const set=setObj();const X=kenIx();const H=hiSet(ac);const out=[];const tyC=new Map();
  const days=[...X.days].filter(d=>(!ac.from||d>=ac.from)&&(!ac.to||d<=ac.to)).sort();
@@ -1246,7 +1251,9 @@ function acRun(){const MK=new Set(rmL().map(m=>String(m.t||'').trim()).filter(Bo
  return out}
 window.acSoT=(id,c)=>{const o=ac.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';ac.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};const y=scrollY;acRes();scrollTo(0,y)};
 window.acTgl=id=>{acMore.has(id)?acMore.delete(id):acMore.add(id);const y=scrollY;acRes();scrollTo(0,y)};
-function acRes(){LS.set('nr_ac',ac);const el=$('acres');if(!el)return;const set=setObj();const out=acRun();
+let ACNEW=0;function acRes(){LS.set('nr_ac',ac);const el=$('acres');if(!el)return;const set=setObj();ACNEW=0;const out=acRun();
+ // 新しく日の狙いを作ったときは、その途中で増えた計算用の覚え（日ごとの指数の母集団など）を捨ててメモリを戻す。精度の結果は ACH に残る
+ if(ACNEW){NC.clr();SAC=new Map()}
  if(!out.length){el.innerHTML='<div class="card"><h2>データなし</h2></div>';return}const base=kenBase();const cx={so:ac.so,more:acMore,fs:'acSoT',ft:'acTgl'};
  el.innerHTML=ACT.map(T=>kbTable(T,out,set,base,false,cx)).join('')}
 window.acTog=(id,k)=>{const a=ac[id];const i=a.indexOf(k);if(i>=0)a.splice(i,1);else a.push(k);acPage()};
