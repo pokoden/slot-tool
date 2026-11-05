@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=81"></script><script src="auto.js?v=81"></script>
+<script src="core.js?v=82"></script><script src="auto.js?v=82"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -1226,7 +1226,7 @@ function kbPage(){LS.set('nr_kb',kb);const R=S.rows,set=setObj();const stores=[.
 
 // ===== 精度：過去の日の狙い（当日履歴と同じ作り方）で、選んだ目印が付いた台のその日の結果を集計 =====
 const AC0=()=>({v:1,st:[],g:'',ty:'',from:'',to:'',mt:[],yo:[],hi:'',kbn:'全',mk:'',so:{},cm:''});
-let ac=Object.assign(AC0(),LS.get('nr_ac',{}));if(!ac.so||typeof ac.so!=='object')ac.so={};{const p=kenPer().tm;ac.from=p[0];ac.to=p[1]}
+let ac=Object.assign(AC0(),LS.get('nr_ac',{}));if(!ac.so||typeof ac.so!=='object')ac.so={};{const p=kenPer().tm;ac.from=p[0];ac.to=p[1];ac.mk=''}
 const acMore=new Set();const ACH=new Map();
 const ACT=[['all','トータル',r=>'all',k=>'トータル'],['ym','年月別',r=>r.d.slice(0,7),k=>k.replace('-','年')+'月'],['t','日末尾別',r=>String(+r.d.slice(8)%10),k=>k+'のつく日'],['d','日別',r=>String(+r.d.slice(8)),k=>k+'日'],['w','曜日別',r=>String(NC.dow(r.d)),k=>'日月火水木金土'[+k]+'曜']];
 // その日の狙い：台番ごとに 目印・狙い区分（着席台番が同じ行は一番上の1行）
@@ -1235,10 +1235,10 @@ function acDay(d){const k=d+'|'+NRC+'|'+JSON.stringify(npObj().rm||null);if(ACH.
   const T=u.T.filter(x=>!x.nx&&inR(x)).sort((a,b)=>a.r3[0]-b.r3[0]);
   for(const x of T){const t=x.kind==='t'?String(x.t):x.seat!=null?String(x.seat):null;if(t==null||seen.has(t))continue;const r=rs.get(t);if(!r)continue;seen.add(t);L.push({r,mk:dMk(x),kb:neraiKbn(x,d)})}}
  if(ACH.size>400)ACH.clear();ACH.set(k,L);return L}
-function acRun(){const set=setObj();const X=kenIx();const H=hiSet(ac);const out=[];const tyC=new Map();
+function acRun(){const MK=new Set(rmL().map(m=>String(m.t||'').trim()).filter(Boolean));const set=setObj();const X=kenIx();const H=hiSet(ac);const out=[];const tyC=new Map();
  const days=[...X.days].filter(d=>(!ac.from||d>=ac.from)&&(!ac.to||d<=ac.to)).sort();
  for(const d of days){const dd=+d.slice(8);if(ac.mt.length&&!ac.mt.includes(String(dd%10)))continue;if(H.size&&!H.has(dd))continue;if(ac.yo.length&&!ac.yo.includes(String(NC.dow(d))))continue;
-  for(const x of acDay(d)){if(ac.mk&&x.mk!==ac.mk)continue;if(!ac.mk&&!x.mk)continue;if(ac.kbn!=='全'&&x.kb!==ac.kbn)continue;const r=x.r;
+  for(const x of acDay(d)){if(ac.mk?x.mk!==ac.mk:!MK.has(x.mk))continue;if(ac.kbn!=='全'&&x.kb!==ac.kbn)continue;const r=x.r;
    if(ac.st.length&&!ac.st.includes(r.s))continue;if(ac.g&&NC.groupOf(r.m,set)!==ac.g)continue;if(ac.ty){let t=tyC.get(r.m);if(t==null)tyC.set(r.m,t=NC.typeOf(r.m,set));if(t!==ac.ty)continue}out.push({r,k:null})}}
  return out}
 window.acSoT=(id,c)=>{const o=ac.so[id];const lowGood=c==='pb'||c==='pr'||c==='ps';ac.so[id]=o&&o.c===c?{c,up:o.up?0:1}:{c,up:c==='k'?1:lowGood?1:0};const y=scrollY;acRes();scrollTo(0,y)};
@@ -1251,7 +1251,7 @@ window.acPer=n=>{const p=kenPer()[n];ac.from=p[0];ac.to=p[1];acPage()};
 window.acReset=()=>{ac=AC0();const p=kenPer().tm;ac.from=p[0];ac.to=p[1];acMore.clear();acPage()};
 function acPage(){LS.set('nr_ac',ac);const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=>r.s))].sort(storeCmp);
  const groups=[...new Set(R.map(r=>NC.groupOf(r.m,set)))];if(ac.g&&!groups.includes(ac.g))ac.g='';
- const mks=[...new Set(rmL().map(m=>String(m.t||'').trim()).filter(Boolean))];if(ac.mk&&!mks.includes(ac.mk))ac.mk='';if(!ac.mk&&mks.length)ac.mk=mks[0];
+ const mks=[...new Set(rmL().map(m=>String(m.t||'').trim()).filter(Boolean))];if(ac.mk&&!mks.includes(ac.mk))ac.mk='';
  const sel=(id,L,v)=>`<select onchange="ac.${id}=this.value;acPage()">${L.map(([k,x])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
  const chip=(id,L)=>`<div class="chips">${L.map(([k,x])=>`<button class="${ac[id].includes(k)?'on':''}"${id==='st'&&!ac[id].includes(k)&&stBg(k)?` style="background:${stBg(k)}"`:''} onclick="acTog('${id}','${esc(k).replace(/'/g,'')}')">${esc(x)}</button>`).join('')}</div>`;
  const per=kenPer();
@@ -1266,7 +1266,7 @@ function acPage(){LS.set('nr_ac',ac);const R=S.rows,set=setObj();const stores=[.
 <p class="note">曜日</p>${chip('yo',[...'日月火水木金土'].map((c,i)=>[String(i),c]))}
 <p class="note">日</p>${hiChips('ac')}
 <p class="note">表示区分</p><div class="chips">${['位置','台番末尾','回転','合算','全'].map(k=>`<button class="${ac.kbn===k?'on':''}" onclick="ac.kbn='${k}';acPage()">${k}</button>`).join('')}</div>
-<div class="row"><label>狙い記号 ${sel('mk',mks.map(m=>[m,m]),ac.mk)}</label></div></div>
+<div class="row"><label>狙い記号 ${sel('mk',[['','選択なし']].concat(mks.map(m=>[m,m])),ac.mk)}</label></div></div>
 <div id="acres"></div>`;acRes()}
 
 const ymOf=(y,m)=>{const t=new Date(Date.UTC(y,m,1));return t.toISOString().slice(0,7)};
