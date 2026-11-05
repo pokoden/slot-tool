@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=87"></script><script src="auto.js?v=87"></script>
+<script src="core.js?v=88"></script><script src="auto.js?v=88"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -171,7 +171,7 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  // iPhoneで重くならないよう3つずつ読む。失敗したら1回だけやり直す
  let done=0;const q=[...list];const one=async f=>{const c=await IDB.get(f.sha);if(typeof c==='string'){S.files['nerai/'+f.name]={sha:f.sha,txt:c};done++;return}let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
   if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
-  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};IDB.put(f.sha,txt);done++;const m=$('main');if(m&&!S.loaded&&!SNAP.on)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
+  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};IDB.put(f.sha,txt);done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
  await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
  const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);const zf=S.files['nerai/zumen.json'];S.zu=zf?JSON.parse(zf.txt):{v:1,stores:{}};if(!S.zu.stores)S.zu.stores={};S.zuSaved=JSON.stringify(S.zu);S.zimg={};S.zimgNew={};
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
@@ -193,18 +193,10 @@ function refreshAgg(out){S.agg={};for(const k in out)if(/agg-/.test(k))S.agg[k.s
 
 function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" ${t[2]?'disabled':''} onclick="go('${t[0]}')">${t[1]}${t[2]?'<small>（準備中）</small>':''}</button>`).join('')}
 window.go=t=>{if(t!==tab&&anDirty){clearTimeout(asT);asRun()}if(zuDirty&&t!==tab&&!confirm('図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);bust();render()};
-// ===== 画面の写し：別アプリから戻ってページが作り直されたとき、前の画面をすぐ出す（計算が終わったら本物に入れ替え）=====
-const SNAP={on:false,y:0,x:0};const SNK='nr_snap';
-const snapSave=()=>{try{if(!S.loaded||SNAP.on)return;const m=$('main');if(!m)return;const tw=m.querySelector('.tw');const h=m.innerHTML;if(h.length>1500000){localStorage.removeItem(SNK);return}localStorage.setItem(SNK,JSON.stringify({tab,h,nav:$('nav').innerHTML,y:scrollY,x:tw?tw.scrollLeft:0,t:Date.now()}))}catch(e){try{localStorage.removeItem(SNK)}catch(_){}}};
-let snapT=0;const snapLater=()=>{clearTimeout(snapT);snapT=setTimeout(snapSave,800)};addEventListener('scroll',()=>{if(S.loaded&&!SNAP.on)snapLater()},{passive:true});
-const snapShow=()=>{try{const o=JSON.parse(localStorage.getItem(SNK)||'null');if(!o||o.tab!==tab||Date.now()-o.t>36*3600e3)return;$('main').innerHTML=o.h;$('nav').innerHTML=o.nav;$('main').style.pointerEvents='none';SNAP.on=true;SNAP.y=o.y;SNAP.x=o.x;
- requestAnimationFrame(()=>{scrollTo(0,o.y);const tw=document.querySelector('#main .tw');if(tw)tw.scrollLeft=o.x})}catch(e){}};
-const snapEnd=()=>{if(!SNAP.on)return;performance.mark('nr_real');SNAP.on=false;$('main').style.pointerEvents='';const y=SNAP.y,x=SNAP.x;requestAnimationFrame(()=>{scrollTo(0,y);const tw=document.querySelector('#main .tw');if(tw&&x)tw.scrollLeft=x;if(tab==='ana'&&window.avPaint)avPaint(true);if(tab==='ken'&&window.knPaint)knPaint(true)})};
-function render(){const sn=SNAP.on;render0();if(sn)snapEnd();snapLater()}
-function render0(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
+function render(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
  if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
-window.reload=async()=>{if(!SNAP.on)$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
+window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
 function tokCard(){return`<div class="card"><h2>🔑 同期トークン <span class="${tok()?'ok':'ng'}" style="font-size:13px">${tok()?'保存済み':'未設定'}</span></h2>
@@ -710,18 +702,18 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
 // 狙わない機種（狙い・図面・当日の印から外す）
 const nxL=()=>Array.isArray(npObj().nx)?npObj().nx:[];const nxHas=g=>nxL().includes(g);
 function nrEval(L,store,date,from,to){const cfg=nerCfg();const MU=cfg.mul;
- // 総合点数＝台分析×4区分（全・日末尾・日・曜日）の総合トータル指数の合計÷4。○の区分だけ倍率。件数不足は0
+ // 総合点数＝台分析×4区分（全・日末尾・日・曜日）の総合トータル指数の合計÷4。○の区分だけ倍率。件数不足・指数なしは0（リストには残す）
  // 狙い順はこの総合点数の順。偏差値の母集団は4枠ぜんぶある台だけ（rankT）
  const RA=bordEff().ratio;const okN=(rt,v)=>rt===''||rt==null||!isFinite(+rt)||(v||0)*100+1e-9>=+rt;
  const one=x=>{const ev={};let sc=0,ttS=0,ttN=0,miss=0,anyO=false;
   for(const sg of NC.SEGS){const ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=ao?'a':'';if(ao)anyO=true;
    const u=x.seg[sg]&&x.seg[sg].u;
+   // 総合トータルがない区分（件数不足・店舗機種指数が出せない等）は0点として足す。リストからは外さない
    if(u&&u.tt!=null&&okN(RA,u.ratio)){sc+=u.tt*(ao?(+MU.a[sg]||1):1);ttS+=u.tt;ttN++}else miss++}
-  x.drop=NC.SEGS.some(sg=>{const u=x.seg[sg]&&x.seg[sg].u;return!!u&&u.tt==null});
-  x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=sc/4;x.full=ttN===4;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
- for(const x of L){one(x);if(nxHas(x.g)||x.drop)x.mark=''}L.dropT=new Set(L.filter(x=>x.drop).map(x=>String(x.t)));const T=(L.targets||[]).map(x=>nxHas(x.g)?Object.assign({},x,{nx:1}):x);for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T.filter(x=>!x.drop);
+  x.drop=false;x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=sc/4;x.full=ttN===4;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
+ for(const x of L){one(x);if(nxHas(x.g))x.mark=''}L.dropT=new Set();const T=(L.targets||[]).map(x=>nxHas(x.g)?Object.assign({},x,{nx:1}):x);for(const x of T){one(x);if(x.parts){for(const p of x.parts)one(p);x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
  L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
-let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];
+let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];nr.ss=[];// 店舗は毎回全店舗から（保存しない）
 const SEGN={all:'全',matsu:'日末尾',hi:'日',you:'曜日'};
 const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'')&&NC.normDate(v)===v;
 // 狙いの日付（当日・分析もこの日付に合わせる）。未設定なら全店舗の最終日の翌日
@@ -1311,8 +1303,8 @@ window.saveSet=async()=>{const ms=window._ms,set=setObj();const types={},groups=
  catch(e){S.set=old;sv.className='st ng';sv.textContent=e.message}};
 
 window.addEventListener('beforeunload',e=>{if(anDirty||zuDirty){e.preventDefault();e.returnValue=''}});
-// 写しを先に画面に出してから（1コマ描かせてから）読み込み・計算を始める
-snapShow();if(SNAP.on)requestAnimationFrame(()=>{performance.mark('nr_snap');setTimeout(reload,30)});else reload();
+try{localStorage.removeItem('nr_snap')}catch(e){}
+reload();
 
 (function(){const T=`添付の動画またはスクショは、パチスロのデータサイトの画面です。画面に出てくる台のデータを読み取って、表にしてください。
 
@@ -1356,9 +1348,6 @@ const VER=(document.querySelector('script[src^="core.js?v="]')||{}).src||'';
 const verChk=async()=>{try{const r=await fetch('index.html?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/core\.js\?v=(\d+)/);if(m&&VER&&!VER.endsWith('v='+m[1])&&!anDirty&&!zuDirty)location.reload()}catch(e){}};
 // 戻ってきたとき：日付が変わったときだけ計算し直す（前は毎回ぜんぶ計算し直していて重かった）
 let wakeDay=todayS();const wake=()=>{if(document.visibilityState!=='visible')return;if(S.loaded&&todayS()!==wakeDay){wakeDay=todayS();bust();render()}verChk()};
-// 隠れるとき：画面の写しを残す
-const hideF=e=>{if(document.visibilityState==='hidden'||e&&e.type==='pagehide'){clearTimeout(snapT);snapSave()}};
-document.addEventListener('visibilitychange',hideF);window.addEventListener('pagehide',hideF);
 document.addEventListener('visibilitychange',wake);window.addEventListener('pageshow',e=>{if(e.persisted)wake()});window.addEventListener('focus',wake);setInterval(verChk,300000);
 </script>
 <script>
