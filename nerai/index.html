@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=78"></script><script src="auto.js?v=78"></script>
+<script src="core.js?v=79"></script><script src="auto.js?v=79"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -363,8 +363,8 @@ let TOUB=null;
 // 同じ種類（標準／店舗機種）はどれか1本合格でOK、両方の種類に行があれば両方合格。RB・合算・総合が出せない機種はそこを見ない
 const lnOn=(p,i)=>!!p&&(i===0?p.on!==false:p.on===true);
 const lnNum=v=>v===''||v==null||!isFinite(+v)?null:+v;
-const LNK=['g','rb','gs','ok'];
-const lnUse=a=>(Array.isArray(a)?a:[]).map((p,i)=>lnOn(p,i)?{g:lnNum(p.g),rb:lnNum(p.rb),gs:lnNum(p.gs),ok:lnNum(p.ok)}:null).filter(l=>l&&LNK.some(k=>l[k]!=null));
+const LNK=['g','rb','gs','ok','t'];
+const lnUse=a=>(Array.isArray(a)?a:[]).map((p,i)=>lnOn(p,i)?{g:lnNum(p.g),rb:lnNum(p.rb),gs:lnNum(p.gs),ok:lnNum(p.ok),t:lnNum(p.t)}:null).filter(l=>l&&LNK.some(k=>l[k]!=null));
 const lnOk=(ix,l)=>!!ix&&LNK.every(k=>l[k]==null||(ix[k]!=null?ix[k]>=l[k]:k!=='g'));
 const lnPass=(tk,hy,LT,LH)=>{if(!LT.length&&!LH.length)return false;return(!LT.length||LT.some(l=>lnOk(tk,l)))&&(!LH.length||LH.some(l=>lnOk(hy,l)))};
 // 1台1日（日別集計・項目別集計・当日）：店舗機種指数がないので標準ラインだけで見る
@@ -1235,7 +1235,10 @@ function npApply(){const v=NPV();const ch=NC.setOk(x=>okHy(x),JSON.stringify(npO
 // r238：合格ラインを4表×2（台分析・店舗分析）に。前の値は1段目からそのまま移す
 const npMig=o=>{if(o.m238)return o;const cp=a=>Array.isArray(a)?JSON.parse(JSON.stringify(a)).slice(0,5).map(p=>{const q=Object.assign({},p);delete q.t;delete q.n;delete q.by;return q}):[];
  o.anAllTk=cp(o.anTk);o.anAllHy=cp(o.anHy);o.anAxTk=cp(o.passTk);o.anAxHy=cp(o.pass);o.saAllTk=cp(o.saTk);o.saAllHy=cp(o.saHy);o.saAxTk=cp(o.saTk);o.saAxHy=cp(o.saHy);o.m238=1;return o};
-const npObj=()=>npMig(S.an.np||(S.an.np={}));
+// r239：総合の列を戻す。r238で外した総合の値を同じ対応で戻す
+const npMig2=o=>{if(o.m239)return o;const M={anAllTk:'anTk',anAllHy:'anHy',anAxTk:'passTk',anAxHy:'pass',saAllTk:'saTk',saAllHy:'saHy',saAxTk:'saTk',saAxHy:'saHy'};
+ for(const k in M){const A=o[k],O=o[M[k]];if(!Array.isArray(A)||!Array.isArray(O))continue;O.slice(0,5).forEach((p,i)=>{if(p&&p.t!==''&&p.t!=null&&A[i]&&(A[i].t===''||A[i].t==null))A[i].t=p.t})}o.m239=1;return o};
+const npObj=()=>npMig2(npMig(S.an.np||(S.an.np={})));
 window.npAuto=v=>{const o=npObj();if(v)o.auto=true;else delete o.auto;anDirty=true;NPC=null;bust();autoSave();npPage()};
 const NPCT=new Set(['wRb','wRot','wPr','wOk','wTk']);
 window.npSet=(k,v)=>{v=String(v).trim();const o=npObj();if(v===''||!isFinite(+v))delete o[k];else o[k]=NPCT.has(k)?+v/100:+v;anDirty=true;npApply();NRG={nrc:null,m:{}};autoSave();npPage()};
@@ -1245,7 +1248,7 @@ window.npL=(a,i,k,v)=>{const o=npObj();if(!Array.isArray(o[a]))o[a]=a==='pass'?J
 const npTbl=(a,nm,X=[])=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return[0,1,2,3,4].map(i=>{const p=A[i]||{};const on=lnOn(A[i]||(i===0?{}:null),i);
  const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npL('${a}',${i},'${k}',this.value)">`;
  return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${nm}${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td>${X.map(k=>`<td>${pi(k)}</td>`).join('')}</tr>`}).join('')};
-const npT5=(a,X=['ok'])=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(()=>'<th>合格</th>').join('')}</tr>${[0,1,2,3,4].map(i=>{const p=A[i]||{};const on=lnOn(A[i]||(i===0?{}:null),i);const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px;text-align:right" onchange="npL('${a}',${i},'${k}',this.value)">`;return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${i+1}段</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td>${X.map(k=>`<td>${pi(k)}</td>`).join('')}</tr>`}).join('')}</table></div>`};
+const npT5=(a,X=['ok','t'])=>{const A=Array.isArray(npObj()[a])?npObj()[a]:[];return`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(k=>`<th>${{ok:'合格',t:'総合'}[k]}</th>`).join('')}</tr>${[0,1,2,3,4].map(i=>{const p=A[i]||{};const on=lnOn(A[i]||(i===0?{}:null),i);const pi=k=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px;text-align:right" onchange="npL('${a}',${i},'${k}',this.value)">`;return`<tr><td><input type="checkbox" ${on?'checked':''} onchange="npL('${a}',${i},'on',this.checked)" style="width:20px;height:20px"></td><td>${i+1}段</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td>${X.map(k=>`<td>${pi(k)}</td>`).join('')}</tr>`}).join('')}</table></div>`};
 const np4=p=>[['All','全台ボーダー'],['Ax','日末尾・日・曜日ボーダー']].map(([a,t])=>[['Hy','標準指数'],['Tk','店舗機種指数']].map(([b,u])=>`<div class="row"><label>${t}　${u}</label></div>${npT5(p+a+b)}`).join('')).join('');
 const npT=(a1,a2,X=['t'])=>`<div class="tw"><table><tr><th></th><th></th><th>回転</th><th>RB</th><th>合算</th>${X.map(k=>`<th>${{p:'確率',ok:'合格',t:'総合'}[k]}</th>`).join('')}</tr>${npTbl(a1,'店舗機種',X)}${npTbl(a2,'標準',X)}</table></div>`;
 // 狙い印を評価印と同じ大きさの枠で
@@ -1275,7 +1278,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
   const pi=(k)=>`<input inputmode="decimal" type="text" value="${esc(p[k]??'')}" style="width:52px;font-size:16px" onchange="npPass(${i},'${k}',this.value)">`;
   return`<tr><td>${i?`<input type="checkbox" ${on?'checked':''} onchange="npPass(${i},'on',this.checked)" style="width:20px;height:20px">`:''}</td><td>ライン${i+1}</td><td>${pi('g')}</td><td>${pi('rb')}</td><td>${pi('gs')}</td></tr>`}).join('');
  $('main').innerHTML=`${asBar()}
-<div class="card"><h2>標準指数ボーダー</h2>${npT5('pass',[])}${row('青色ライン','blue')}</div>
+<div class="card"><h2>標準指数ボーダー</h2>${npT5('pass',['t'])}${row('青色ライン','blue')}</div>
 <div class="card"><h2>台分析</h2>${np4('an')}${row('確率指数のRB配分（合算は残り）','wRb')}${row('総合指数の回転配分','wRot')}${row('総合指数の確率配分','wPr')}${row('総合指数の合格配分','wOk')}${row('総合トータルの店舗機種配分（標準は残り）','wTk')}${row('状態順 何位まで','stMax')}</div>
 <div class="card"><h2>店舗分析</h2>${np4('sa')}</div>
 <div class="card"><h2>狙い</h2>
