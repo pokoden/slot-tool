@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=89"></script><script src="auto.js?v=89"></script>
+<script src="core.js?v=90"></script><script src="auto.js?v=90"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -397,11 +397,14 @@ window.touCh=el=>{if(el.value.trim()===''){el.value=el.dataset.r||'';touPaint(el
 // ===== 当日 =====
 let tu=LS.get('nr_tu',{});
 if(!tu.w)tu.w=NC.WIN.map(w=>w[0]);if(!tu.m)tu.m=['g','gs'];if(!tu.r)tu.r=['w'];if(!tu.so)tu.so='t';if(!tu.vm)tu.vm='r';if(!tu.rev)tu.rev=0;
-// 機種の選択欄の並び：最終更新日（全データの最新日）の全店舗合算台数が多い順、同数は名前順
-// 店舗ごとの機種の並び：その店舗の最終日の台数が多い順→機種名
-let GSC=null;function gS(st,a,b){if(!GSC||GSC.r!==S.rows){const set=setObj();const hi={};for(const r of S.rows)if(!hi[r.s]||r.d>hi[r.s])hi[r.s]=r.d;const c=new Map();for(const r of S.rows)if(r.d===hi[r.s]){const k=r.s+'|'+NC.groupOf(r.m,set);c.set(k,(c.get(k)||0)+1)}GSC={r:S.rows,c}}const c=GSC.c;
- if(st==null){const f=gOrd();return f(a,b)}return(c.get(st+'|'+b)||0)-(c.get(st+'|'+a)||0)||a.localeCompare(b,'ja')}
-let GOC=null;function gOrd(){if(GOC&&GOC.r===S.rows)return GOC.f;let hi='0';for(const r of S.rows)if(r.d>hi)hi=r.d;const set=setObj();const c=new Map();for(const r of S.rows)if(r.d===hi){const g=NC.groupOf(r.m,set);c.set(g,(c.get(g)||0)+1)}const f=(a,b)=>(c.get(b)||0)-(c.get(a)||0)||a.localeCompare(b,'ja');GOC={r:S.rows,f};return f}
+// 機種の選択欄の並び：各店舗×機種の最終履歴日の台数を全店舗で合算し、多い順（同数は名前順）。「すべて／全」は選択肢の先頭のまま
+// 店舗ごとの機種の並び（当日・日別集計の標準など）：その店舗×機種の最終履歴日の台数が多い順→機種名
+let GSC=null;function machCnt(){if(GSC&&GSC.r===S.rows)return GSC;const set=setObj();const best=new Map();
+ for(const r of S.rows){const k=r.s+'|'+NC.groupOf(r.m,set);if(!best.has(k)||r.d>best.get(k))best.set(k,r.d)}
+ const c=new Map(),tot=new Map();for(const r of S.rows){const g=NC.groupOf(r.m,set),k=r.s+'|'+g;if(r.d!==best.get(k))continue;c.set(k,(c.get(k)||0)+1);tot.set(g,(tot.get(g)||0)+1)}
+ GSC={r:S.rows,c,tot};GOC=null;return GSC}
+function gS(st,a,b){const M=machCnt();if(st==null)return gOrd()(a,b);return(M.c.get(st+'|'+b)||0)-(M.c.get(st+'|'+a)||0)||a.localeCompare(b,'ja')}
+let GOC=null;function gOrd(){if(GOC&&GOC.r===S.rows)return GOC.f;const tot=machCnt().tot;const f=(a,b)=>(tot.get(b)||0)-(tot.get(a)||0)||a.localeCompare(b,'ja');GOC={r:S.rows,f};return f}
 const mShort=g=>NC.nz(g).replace(/^(スマスロ|スロット|Lパチスロ|パチスロ|L(?=[^A-Za-z])|S(?=[^A-Za-z]))\s*/,'')||g;
 const sShort=s=>s.replace(/^マルハン/,'');const ST_AB={'マルハン青森柏':'柏','マルハン五所川原':'五所','マルハン弘前石渡':'石渡','マルハン弘前安原':'安原','マルハン弘前':'弘前'};const stS=s=>ST_AB[s]||sShort(String(s??''));
 window.bandTog=el=>{const n=el.querySelector('.bn');if(el.classList.toggle('open'))n.textContent=el.dataset.full;else n.textContent=el.dataset.short};
@@ -527,6 +530,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="row"><button class="b sub" onclick="tuDef()">標準の並びに戻す</button><button class="b sub" onclick="tu.g='';ssAll('tu')">条件リセット</button></div>
   ${units.length?`<div class="tw"><table class="tt">${head}${body}</table></div>`:'<p class="note">データがないよ</p>'}</div>`}
 window.tuTog=(id,k)=>{const a=tu[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);touPage()};
+// 標準の並び＝日別集計と同じ：店舗順→機種（その店の最終台数が多い順）→台番昇順
 window.tuDef=()=>{tu.so='t';tu.rev=0;touPage()};
 window.tuOk=()=>{tu.ok=tu.ok?0:1;touPage()};
 window.tuOnly=()=>{tu.only=tu.only?0:1;touPage()};
