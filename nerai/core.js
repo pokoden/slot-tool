@@ -218,9 +218,16 @@ function finalize(G,B,base,HS){
  return G}
 let AFM=new WeakMap();
 // 標準の合格指数の母集団：全店舗・全機種の台（件数割合のボーダー以上）の合格率
-function hyOk(rows,set,axis,from,to,B,base){if(!base)return null;let m=HOK.get(base);if(!m)HOK.set(base,m=new Map());const k=[rows.length,axis,from,to,B&&B.ratio,JSON.stringify(set.groups||{})].join('~');if(m.has(k))return m.get(k);const cal=calDays(from,to,axis);const M=new Map();
- for(const r of rows){if(r.d<from||r.d>to)continue;const v=segOf(r.d,axis);const kk=r.s+'|'+groupOf(r.m,set)+'|'+v+'|'+r.t;let u=M.get(kk);if(!u)M.set(kk,u={v,c:0,o:0});u.c++;if(okOf(r,set,base))u.o++}
- const a=[];for(const u of M.values()){const nd=cal[u.v]||0;const ra=nd?u.c/nd:0;if(!has(B&&B.ratio)||ra*100+1e-9>=+B.ratio)a.push(u.o/u.c)}const st=stat(a);m.set(k,st);return st}
+// 行の索引（台ごとの番号・日ごとの行番号）。精度など日をまたいで何度も呼ぶときの高速化
+const RXC=new WeakMap();function rowsIx(rows,set){const sig=JSON.stringify(set.groups||{});let m=RXC.get(rows);if(!m)RXC.set(rows,m=new Map());let x=m.get(sig);if(x)return x;
+ const km=new Map(),kid=new Int32Array(rows.length),bd=new Map();for(let i=0;i<rows.length;i++){const r=rows[i];const k=r.s+'|'+groupOf(r.m,set)+'|'+r.t;let id=km.get(k);if(id==null)km.set(k,id=km.size);kid[i]=id;let a=bd.get(r.d);if(!a)bd.set(r.d,a=[]);a.push(i)}
+ x={kid,nk:km.size,bd,days:[...bd.keys()].sort()};m.set(sig,x);return x}
+function hyOk(rows,set,axis,from,to,B,base){if(!base)return null;let m=HOK.get(base);if(!m)HOK.set(base,m=new Map());const k=[rows.length,axis,from,to,B&&B.ratio,JSON.stringify(set.groups||{})].join('~');if(m.has(k))return m.get(k);const cal=calDays(from,to,axis);
+ // 店舗|機種|区分|台番ごとの件数・合格数（もとの行の並びで最初に出た順に集める＝前と同じ結果）
+ const X=rowsIx(rows,set);const vm=new Map(),vl=[];const ent=new Map();
+ for(const d of X.days){if(d<from||d>to)continue;const v=segOf(d,axis);let vi=vm.get(v);if(vi==null){vm.set(v,vi=vl.length);vl.push(v)}
+  for(const i of X.bd.get(d)){const key=X.kid[i]*64+vi;let u=ent.get(key);if(!u)ent.set(key,u={v,c:0,o:0,f:i});else if(i<u.f)u.f=i;u.c++;if(okOf(rows[i],set,base))u.o++}}
+ const U=[...ent.values()].sort((a,b)=>a.f-b.f);const a=[];for(const u of U){const nd=cal[u.v]||0;const ra=nd?u.c/nd:0;if(!has(B&&B.ratio)||ra*100+1e-9>=+B.ratio)a.push(u.o/u.c)}const st=stat(a);m.set(k,st);return st}
 // memo=true のときだけ base ごとに結果を覚える（精度チェック用）
 function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}const HS=hyOk(rows,set,axis,from,to,B,base);if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);
  let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);m.set(k,v)}return v}
