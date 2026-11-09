@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=92"></script><script src="auto.js?v=92"></script>
+<script src="core.js?v=93"></script><script src="auto.js?v=93"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -798,7 +798,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const sel=(id,Lx,v)=>`<select onchange="nr.${id}=this.value;nerPage()">${Lx.map(([k,t])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(t)}</option>`).join('')}</select>`;
 
  // ---- 並べ方と順位：いま選んでいる範囲（店舗・機種・日）の中の全候補で決める ----
- const T=[];for(const u of units)for(const x of u.T)if(!x.nx&&(!nr.g||x.g===nr.g))T.push(Object.assign({date:u.date,virt:u.virt},x));
+ const T=[];for(const u of units)for(const x of u.T)if(!nr.g||x.g===nr.g)T.push(Object.assign({date:u.date,virt:u.virt},x));
  const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
  // 同じ点数（ぴったり同じ）は、店舗→台番の小さい順
  const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
