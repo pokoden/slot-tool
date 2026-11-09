@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=93"></script><script src="auto.js?v=93"></script>
+<script src="core.js?v=94"></script><script src="auto.js?v=94"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -739,14 +739,19 @@ const ceRows=()=>{const bad=new Set(ceL());const cells=k=>CE_ORD.map((_,i)=>`<td
 window.ceToggle=k=>{if(k==='0000')return;const o=npObj();const L=ceL();const i=L.indexOf(k);if(i>=0)L.splice(i,1);else L.push(k);o.ce=L;anDirty=true;NRC={};NRG={nrc:null,m:{}};autoSave();npPage()};
 function nrEval(L,store,date,from,to){const cfg=nerCfg();const MU=cfg.mul;
  // 総合点数＝台分析×4区分（全・日末尾・日・曜日）の総合トータル指数の合計÷4。○の区分だけ倍率。件数不足・指数なしは0（リストには残す）
- // 狙い順はこの総合点数の順。偏差値の母集団は4枠ぜんぶある台だけ（rankT）
+ // 前回日末尾／前回同日／前回曜日の状態順は、構造上無い軸を空白にして、指数がある軸だけ平均する
+ // 狙い順はこの総合点数の順。偏差値の母集団は「必要な軸がそろった台」だけ（rankT の full）
  const RA=bordEff().ratio;const okN=(rt,v)=>rt===''||rt==null||!isFinite(+rt)||(v||0)*100+1e-9>=+rt;
+ // 前回系キー先頭 → 構造上指数が出る軸（全＋その系）。他軸は全台空白なので点数にも full にも入れない
+ const PREV_AX={matsu:['all','matsu'],dou:['all','hi'],you:['all','you']};
  const one=x=>{const ev={};let sc=0,ttS=0,ttN=0,miss=0,anyO=false;
-  for(const sg of NC.SEGS){const ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=ao?'a':'x';if(ao)anyO=true;
-   const u=x.seg[sg]&&x.seg[sg].u;
-   // 総合トータルがない区分（件数不足・店舗機種指数が出せない等）は0点として足す。リストからは外さない
+  const win=(x.kind==='s'&&x.k)?String(x.k).split('~')[0].split('_')[0]:'';
+  const exp=PREV_AX[win]||null;const axes=exp||NC.SEGS;
+  for(const sg of NC.SEGS){const ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=ao?'a':'x';if(ao)anyO=true}
+  for(const sg of axes){const ao=!!(x.seg[sg]&&x.seg[sg].o);const u=x.seg[sg]&&x.seg[sg].u;
    if(u&&u.tt!=null&&okN(RA,u.ratio)){sc+=u.tt*(ao?(+MU.a[sg]||1):1);ttS+=u.tt;ttN++}else miss++}
-  x.drop=false;x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=sc/4;x.full=ttN===4;const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
+  x.drop=false;x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=exp?(ttN?sc/ttN:0):sc/4;x.full=ttN===axes.length;
+  const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
  const ban=x=>nxHas(x.g)||ceHas(x.ev);
  for(const x of L){one(x);if(ban(x))x.mark=''}L.dropT=new Set();const T=(L.targets||[]).map(x=>{one(x);return ban(x)?Object.assign({},x,{nx:1,mark:''}):x});for(const x of T){if(x.parts){for(const p of x.parts){one(p);if(ban(p)){p.nx=1;p.mark=''}}x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
  L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
