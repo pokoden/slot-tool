@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>パチンコ判別ツール</title>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="パチンコ判別">
-<link rel="apple-touch-icon" href="icon.png?v=4"><link rel="icon" href="icon.png?v=4">
+<link rel="apple-touch-icon" href="icon.png?v=5"><link rel="icon" href="icon.png?v=5">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -490,8 +490,10 @@ function todayCard(){// 同じ記録の再保存は最新の1件だけ数える�
 function home(){setRate(null);$('mach').classList.add('hidden');$('home').classList.remove('hidden');
  if(location.hash==='#hist')return histPage();if(location.hash.startsWith('#an'))return anPage();
  const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}
- const ms=MACHINES.map((m,i)=>[m,L[m.id]||'',i]).sort((a,b)=>a[1]&&b[1]?(a[1]<b[1]?1:a[1]>b[1]?-1:0):a[1]?-1:b[1]?1:iDt(b[0])-iDt(a[0])||a[2]-b[2]);
- $('home').innerHTML=`<h1>パチンコ判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${ms.map(([m])=>homeItem(m)).join('')}</div></div>
+ const hid=new Set(hideList());
+ const ms=MACHINES.filter(m=>!hid.has(m.id)).map((m,i)=>[m,L[m.id]||'',i]).sort((a,b)=>a[1]&&b[1]?(a[1]<b[1]?1:a[1]>b[1]?-1:0):a[1]?-1:b[1]?1:iDt(b[0])-iDt(a[0])||a[2]-b[2]);
+ const H=hideList();if(!H.length)homeHidOpen=false;
+ $('home').innerHTML=`<h1>パチンコ判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${ms.map(([m])=>homeItem(m)).join('')}</div>${H.length?`<button class="sub" style="width:100%;margin-top:8px" onclick="homeHidToggle()">${homeHidOpen?'閉じる':'非表示の機種を見る'}</button>`:''}${homeHidOpen&&H.length?`<div id="homeHid" style="margin-top:8px">${H.map(k=>homeItem(M[k],1)).join('')}</div>`:''}</div>
  <div class="card"><h2>店舗</h2><p class="note">店舗ごとのレート。未登録の店舗は 貸玉250玉・1玉3.57円・回数表記(125玉) で計算します。</p><div id="slist"></div>
  <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
  <div class="row"><label>貸玉数<small>1000円あたりの玉数（例：250）</small></label><input inputmode="decimal" id="s_lend" type="text" step="any" placeholder="250"></div>
@@ -503,7 +505,7 @@ function home(){setRate(null);$('mach').classList.add('hidden');$('home').classL
  <div class="card"><h2>同期設定（2台で共有）</h2><p class="note">スロット版で保存したGitHubトークンをそのまま使います（パチンコのデータは pachinko.json に別保存）。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div>
  <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button>${R166.bkHtml('pachinko')}
- <p class="note" id="sy_st"></p><p class="note"><a href="../">← スロ設定判別ツールへ</a></p></div>`;renderStores();banner();syncStatus()}
+ <p class="note" id="sy_st"></p><p class="note"><a href="../">← スロ設定判別ツールへ</a></p></div>`;renderStores();banner();syncStatus();homeBindLP()}
 const rateTxt=x=>{const r=Object.assign({},DEF_RATE,x);return`貸玉${r.lend||250}玉/1000円・1玉${r.val||3.57}円・${r.mode==='ball'?'玉数表記':'回数表記（1回'+(r.per||125)+'玉）'}`};
 globalThis.storeRate=name=>{const s=stores().find(x=>x.name===String(name||'').trim());return s?{lend:s.lend,val:s.val,mode:s.mode,per:s.per}:null};
 function renderStores(){const s=stores();$('slist').innerHTML=s.map((x,i)=>`<div class="row" style="border-bottom:1px solid #eee;padding-bottom:6px"><label><b>${esc(x.name)}</b><small>${esc(rateTxt(x))}</small></label><button class="sub sm" onclick="editStore(${i})">編集</button><button class="sub sm" onclick="delStore(${i})">削除</button></div>`).join('')||'<p class="note">店舗未登録</p>'}
@@ -683,10 +685,32 @@ window.exportCSV=async all=>{const h=hist(),list=all?h:h.filter(e=>!e.exported);
  if(!ok){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
  const ids=new Set(list.map(e=>e.id));putHist(h.map(e=>ids.has(e.id)?{...e,exported:true}:e));banner();if(mid&&!$('mach').classList.contains('hidden'))renderH();else home()};
 // ===== r86：未登録台（機種名を手入力・判別情報なし。収支だけ記録） =====
-window.homeQs=v=>{const w=nz(v).trim();document.querySelectorAll('#homeML>div').forEach(b=>b.style.display=!w||(b.dataset.n||'').includes(w)?'':'none')};
-function homeItem(m){const B=borders(m,defRatio(m)/100),k=m.id;
- const bt=`<button class="mbtn${m.yt?' ytm':''}" onclick="location.hash='m=${k}'" style="display:flex;gap:10px;align-items:center;text-align:left">${thumb(k,44)}<span>${esc(m.name)}<br><small class="note">${m.custom?esc(m.sub):esc(m.sub)+' ・導入日 '+esc(m.intro)}<br>${m.custom?'':'初当たり1/'+m.first+'・'}トータル1/${m.total}・1R ${m.r1}玉・${m.R.map(r=>r+'R').join('/')}<br>ボーダー 現金${f2(B.cash)}／持ち玉${f2(B.ball)}${m.yt?`<br><span class="ytb">遊タイム有り・天井 ${m.yt}回転</span>`:''}</small></span></button>`;
- return`<div data-n="${esc(nz(m.name))}">${bt}${m.reg?`<div style="display:flex;gap:6px;margin:4px 0 0"><button class="sub sm" style="flex:1;margin:0" onclick="location.hash='m=${k}'">編集</button><button class="sub sm" style="flex:1;margin:0" onclick="cmDel('${k}')">削除</button></div>`:''}</div>`}
+
+// ===== r171：機種の非表示（ホーム選択のみ・データは消さない） =====
+const HIDEK='p1_hide';let homeHidOpen=false;
+const hideList=()=>{const a=LS.get(HIDEK,[]);return Array.isArray(a)?a.filter(k=>M[k]):[]};
+const isHid=k=>hideList().includes(k);
+function hideDlg(html){let d=$('hideDlg');if(!d){d=document.createElement('div');d.id='hideDlg';document.body.appendChild(d)}d.innerHTML=html}
+window.hideDlgClose=()=>{const d=$('hideDlg');if(d)d.innerHTML=''};
+window.hideAsk=(k,un)=>{const m=M[k];if(!m)return;hideDlg(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)hideDlgClose()"><div class="card" style="width:100%;max-width:360px;margin:0"><h2 style="margin-bottom:12px">${esc(m.name)}</h2><button style="width:100%" onclick="${un?'unhideGo':'hideGo'}('${k}')">${un?'表示に戻す':'非表示にする'}</button><button class="sub" style="width:100%" onclick="hideDlgClose()">やめる</button></div></div>`)};
+window.hideGo=k=>{if(!M[k])return;const a=hideList();if(!a.includes(k))a.push(k);LS.set(HIDEK,a);hideDlgClose();home()};
+window.unhideGo=k=>{LS.set(HIDEK,hideList().filter(x=>x!==k));hideDlgClose();if(!hideList().length)homeHidOpen=false;home()};
+window.homeHidToggle=()=>{homeHidOpen=!homeHidOpen;home()};
+function attachLP(el,onLP){if(!el||el._lp)return;el._lp=1;let timer=null,fired=false,sx=0,sy=0;const clear=()=>{if(timer){clearTimeout(timer);timer=null}};
+ el.style.webkitTouchCallout='none';el.style.webkitUserSelect='none';el.style.userSelect='none';el.style.touchAction='manipulation';
+ el.addEventListener('contextmenu',e=>{e.preventDefault()});
+ const down=e=>{if(e.type==='mousedown'&&e.button!==0)return;fired=false;const p=e.touches?e.touches[0]:e;sx=p.clientX;sy=p.clientY;clear();timer=setTimeout(()=>{timer=null;fired=true;try{if(navigator.vibrate)navigator.vibrate(10)}catch(err){}onLP()},500)};
+ const move=e=>{const p=e.touches?e.touches[0]:e;if(Math.abs(p.clientX-sx)>12||Math.abs(p.clientY-sy)>12)clear()};
+ const up=e=>{const was=!!timer;clear();if(fired){e.preventDefault();e.stopPropagation()}};
+ el.addEventListener('touchstart',down,{passive:true});el.addEventListener('touchmove',move,{passive:true});el.addEventListener('touchend',up,{passive:false});el.addEventListener('touchcancel',clear);
+ el.addEventListener('mousedown',down);el.addEventListener('mousemove',move);el.addEventListener('mouseup',up);el.addEventListener('mouseleave',clear);
+ el.addEventListener('click',e=>{if(fired){e.preventDefault();e.stopImmediatePropagation();fired=false}},true)}
+function homeBindLP(){document.querySelectorAll('#homeML [data-hid],#homeHid [data-hid]').forEach(w=>{const k=w.getAttribute('data-hid'),un=w.getAttribute('data-hm')==='u';const btn=w.querySelector('button.mbtn')||w;attachLP(btn,()=>hideAsk(k,un?1:0))})}
+
+window.homeQs=v=>{const w=nz(v).trim();document.querySelectorAll('#homeML>div,#homeHid>div').forEach(b=>b.style.display=!w||(b.dataset.n||'').includes(w)?'':'none')};
+function homeItem(m,un){const B=borders(m,defRatio(m)/100),k=m.id;
+ const bt=`<button class="mbtn${m.yt?' ytm':''}" onclick="location.hash='m=${k}'" style="display:flex;gap:10px;align-items:center;text-align:left;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none">${thumb(k,44)}<span>${esc(m.name)}<br><small class="note">${m.custom?esc(m.sub):esc(m.sub)+' ・導入日 '+esc(m.intro)}<br>${m.custom?'':'初当たり1/'+m.first+'・'}トータル1/${m.total}・1R ${m.r1}玉・${m.R.map(r=>r+'R').join('/')}<br>ボーダー 現金${f2(B.cash)}／持ち玉${f2(B.ball)}${m.yt?`<br><span class="ytb">遊タイム有り・天井 ${m.yt}回転</span>`:''}</small></span></button>`;
+ return`<div data-n="${esc(nz(m.name))}" data-hid="${k}" data-hm="${un?'u':'h'}">${bt}${m.reg?`<div style="display:flex;gap:6px;margin:4px 0 0"><button class="sub sm" style="flex:1;margin:0" onclick="location.hash='m=${k}'">編集</button><button class="sub sm" style="flex:1;margin:0" onclick="cmDel('${k}')">削除</button></div>`:''}</div>`}
 // 機種情報（未登録台＝その場で入力／登録機種＝編集）
 function infoCard(k){if(k!=='free'&&!(M[k]&&M[k].reg))return'';const reg=k!=='free',m=curM(k),fm=reg?{R:m.R.join(',')}:(LS.get('p1_cur_free',null)||{}).fm||{},Rt=reg?m.R.join(','):(fm.R||'10');
  const I=(id,v,ph,mode,w)=>`<input id="${id}" type="text" ${mode==='text'?'inputmode="text"':''} value="${esc(v)}" placeholder="${ph}" autocomplete="off" style="width:${w}px;text-align:${id==='fm_name'?'left':'right'}">`;
