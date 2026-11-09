@@ -131,7 +131,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=91"></script><script src="auto.js?v=91"></script>
+<script src="core.js?v=92"></script><script src="auto.js?v=92"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -713,8 +713,8 @@ function borHtml(){const B=bord();const set=setObj();
 `}
 // ===== 狙いリスト =====
 function nerCfg(){const c=S.an.nerai||(S.an.nerai=JSON.parse(JSON.stringify(NC.DEF_CFG)));c.marks=Object.assign({},NC.DEF_CFG.marks,c.marks);c.combo=c.combo||{};c.prevX=c.prevX==null?true:!!c.prevX;c.seatMerge=!!c.seatMerge;c.sub=Object.assign({metric:'t'},c.sub);c.sub.w=Object.assign({},NC.DEF_CFG.sub.w,c.sub.w);c.axp=Object.assign({matsu:1,hi:1,you:1,all:1},c.axp);delete c.autoP;delete c.autoS;c.sub.metric='tt';
- // 評価の印：台分析で○のときの印と色だけ（店舗分析の印はやめた）
- const EV0={a:{o:'○',c:''}};c.evs=c.evs||{};{const e=c.evs.a;if(e&&e.o==null&&e.t!=null){e.o=(e.t==='◎'||e.t==='○')?e.t:'○';delete e.t}c.evs={a:Object.assign({},EV0.a,c.evs.a||{})}}
+ // 評価の印：台分析で○／×の印と色（○が無い軸・件数不足も×）
+ const EV0={a:{o:'○',c:''},x:{o:'×',c:'#C0C0C0'}};c.evs=c.evs||{};{const e=c.evs.a;if(e&&e.o==null&&e.t!=null){e.o=(e.t==='◎'||e.t==='○')?e.t:'○';delete e.t}c.evs={a:Object.assign({},EV0.a,c.evs.a||{}),x:Object.assign({},EV0.x,c.evs.x||{})}}
  const MU0={matsu:1.5,hi:1.25,you:1.5,all:1.35};c.mul=c.mul||{};c.mul.a=Object.assign({},MU0,c.mul.a);delete c.mul.s;delete c.ew;return c}
 // 分析タブの期間を使う。終わりは狙う日の前日まで
 function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])return NRC[k];const set=setObj();
@@ -742,7 +742,7 @@ function nrEval(L,store,date,from,to){const cfg=nerCfg();const MU=cfg.mul;
  // 狙い順はこの総合点数の順。偏差値の母集団は4枠ぜんぶある台だけ（rankT）
  const RA=bordEff().ratio;const okN=(rt,v)=>rt===''||rt==null||!isFinite(+rt)||(v||0)*100+1e-9>=+rt;
  const one=x=>{const ev={};let sc=0,ttS=0,ttN=0,miss=0,anyO=false;
-  for(const sg of NC.SEGS){const ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=ao?'a':'';if(ao)anyO=true;
+  for(const sg of NC.SEGS){const ao=!!(x.seg[sg]&&x.seg[sg].o);ev[sg]=ao?'a':'x';if(ao)anyO=true;
    const u=x.seg[sg]&&x.seg[sg].u;
    // 総合トータルがない区分（件数不足・店舗機種指数が出せない等）は0点として足す。リストからは外さない
    if(u&&u.tt!=null&&okN(RA,u.ratio)){sc+=u.tt*(ao?(+MU.a[sg]||1):1);ttS+=u.tt;ttN++}else miss++}
@@ -843,7 +843,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   return c.map((v,i)=>`<td class="${i===0?'gl':''}${i===5?' gr':''}">${v}</td>`).join('')};
  window._ml=[];
  const EVS=['all','matsu','hi','you'];
- const evTd=v=>{const e=v&&cfg.evs[v];if(!e)return'<td class="ox3"></td>';return`<td class="ox3" style="text-align:center${e.c?';background:'+e.c:''}">${esc(e.o||'')}</td>`};
+ const evTd=v=>{const k=(v==='a')?'a':'x';const e=cfg.evs[k]||{};return`<td class="ox3" style="text-align:center${e.c?';background:'+e.c:''}">${esc(e.o||(k==='a'?'○':'×'))}</td>`};
  const body=shown.map(x=>{
   const seat=x.seat==null?'<td class="seat un">未定</td>':`<td class="seat">${esc(x.seat)}</td>`;
   let lab=x.kind==='t'?'台番':esc(x.label),mi=-1;if(x.mlist&&x.mlist.length>1){mi=_ml.push(x.mlist)-1;lab=esc(x.mlist[0].l)+`<b style="color:#111"> +${x.mlist.length-1}</b>`}const bg=stBg(x.s);
@@ -863,7 +863,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
  <div class="tw"><table>${head}${body}</table></div>${T.length?'':`<div class="row">${units.length?'狙いがないよ':'その日のデータがないよ'}</div>`}
 </div>`}
-window.nrEvs=(k,f,v)=>{const c=nerCfg();c.evs[k][f]=String(v).trim().slice(0,f==='c'?9:2);anDirty=true;autoSave();nrRe()};
+window.nrEvs=(k,f,v)=>{const c=nerCfg();if(!c.evs[k])c.evs[k]={o:'',c:''};c.evs[k][f]=String(v).trim().slice(0,f==='c'?9:2);anDirty=true;NRC={};autoSave();nrRe()};
 window.nrSeatM=v=>{nerCfg().seatMerge=!!v;anDirty=true;NRC={};NRG={m:{}};autoSave();nrRe()};
 window.nrPrevX=v=>{nerCfg().prevX=!!v;anDirty=true;NRC={};autoSave();nrRe()};
 window.nrTog=(id,k)=>{const a=nr[id];const i=a.indexOf(k);if(i>=0){if(a.length>1)a.splice(i,1)}else a.push(k);nerPage()};
@@ -1296,7 +1296,7 @@ function npPage(){npApply();const v=NPV(),o=npObj(),cfg=nerCfg();
 <div class="card"><h2>🔖 目印</h2><div class="tw"><table><tr><th>店舗機種<br>順位</th><th>目印</th><th>色</th><th></th></tr>${rmL().map((m,i)=>`<tr><td>${i+1}位</td><td><input type="text" value="${esc(m.t||'')}" style="width:52px;font-size:16px" onchange="rmSet(${i},'t',this.value)"></td><td style="white-space:nowrap">${swH(m.c,'((c)=>rmSet('+i+',\'c\',c))')}</td><td><button class="b sub" onclick="rmDel(${i})">削除</button></td></tr>`).join('')}</table></div><div class="row"><button class="b sub" onclick="rmAdd()">追加</button></div></div>
 <div class="card"><h2>🎯 狙い組み合わせ評価</h2><div class="tw"><table><tr><th>全</th><th>日末尾</th><th>日</th><th>曜日</th><th>狙い</th></tr>${ceRows()}</table></div></div>
 <div class="card"><h2>🎖 ○の倍率</h2><div class="tw"><table><tr><th></th>${['all','matsu','hi','you'].map(sg=>`<th>${SEGN[sg]}</th>`).join('')}</tr><tr><td class="l">台分析</td>${['all','matsu','hi','you'].map(sg=>`<td>${num('mul.a.'+sg,cfg.mul.a[sg])}</td>`).join('')}</tr></table></div></div>
-<div class="card"><h2>🎨 評価の印</h2><div class="tw"><table><tr><th></th><th>印</th><th>色</th></tr><tr><td class="l">台分析で○</td><td><input type="text" value="${esc(cfg.evs.a.o||'')}" style="width:44px;font-size:16px" onchange="nrEvs('a','o',this.value)"></td><td style="white-space:nowrap">${swH(cfg.evs.a.c,"((c)=>nrEvs('a','c',c))")}</td></tr></table></div></div>
+<div class="card"><h2>🎨 評価の印</h2><div class="tw"><table><tr><th></th><th>印</th><th>色</th></tr><tr><td class="l">台分析で○</td><td><input type="text" value="${esc(cfg.evs.a.o||'')}" style="width:44px;font-size:16px" onchange="nrEvs('a','o',this.value)"></td><td style="white-space:nowrap">${swH(cfg.evs.a.c,"((c)=>nrEvs('a','c',c))")}</td></tr><tr><td class="l">台分析で×</td><td><input type="text" value="${esc(cfg.evs.x.o||'')}" style="width:44px;font-size:16px" onchange="nrEvs('x','o',this.value)"></td><td style="white-space:nowrap">${swH(cfg.evs.x.c,"((c)=>nrEvs('x','c',c))")}</td></tr></table></div></div>
 ${(()=>{const set=setObj();const gs=[...new Set(S.rows.map(r=>NC.groupOf(r.m,set)))].sort(gOrd());return`<div class="card"><h2>🚫 狙わない機種</h2>${nxL().map((g,i)=>`<div class="row"><select onchange="nxSet(${i},this.value)"><option value=""></option>${gs.map(x=>`<option value="${esc(x)}" ${x===g?'selected':''}>${esc(mShort(x))}</option>`).join('')}</select><button class="b sub" onclick="nxDel(${i})">削除</button></div>`).join('')}<div class="row"><button class="b sub" onclick="nxAdd()">追加</button></div></div>`})()}
 <div class="card"><h2>🧩 その他考慮</h2>
 <div class="row"><label><input type="checkbox" ${cfg.prevX?'checked':''} onchange="nrPrevX(this.checked)" style="width:20px;height:20px;vertical-align:middle"> 前日○は空白</label></div>${row('前日○の指数','prev')}
