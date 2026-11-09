@@ -797,7 +797,7 @@ const M={
    },
    {
     k:"first",
-    l:"ファーストリコリス",
+    l:"CZ（ファーストリコリス）",
     t:"rate",
     d:[3965,3706.6,3107.3,2925.9,2425.8,2084.8]
    },
@@ -835,9 +835,9 @@ const M={
     [
      ["たきな(制服)","たきなラッシュデフォルト",null],
      ["千束(制服)","千束ラッシュデフォルト",null],
-     ["たきな私服","高設定示唆(弱)／千束ラッシュ終了時は設定4以上",null],
-     ["千束私服","高設定示唆(弱)／たきなラッシュ終了時は設定4以上",null],
-     ["ドレスコード","高設定示唆(強)",null],
+     ["たきな私服","高設定示唆（弱）／千束ラッシュ終了時は設定4以上",null],
+     ["千束私服","高設定示唆（弱）／たきなラッシュ終了時は設定4以上",null],
+     ["ドレスコード","高設定示唆（強）",null],
      ["押上の風景","設定2以上",[2,3,4,5,6]],
      ["ロボ太","設定4以上",[4,5,6]],
      ["ハワイ","設定6",[6]]
@@ -856,21 +856,19 @@ const M={
    ["謎Vストック",[["当選","設定差あり",null]]],
    [
     "プロローグのエピソード",
-    [
-     ["Repay evil with evil（真島がモニター演説）","高設定示唆（弱）",null],
-     ["Time will tell②（真島がビル屋上）","高設定示唆（強）",null]
-    ]
+    [["Repay evil with evil","高設定示唆（弱）",null],["Time will tell②","高設定示唆（強）",null]]
    ],
    [
     "エピソードボーナス",
     [
-     ["Opposites attract（RUSH内1回目）","高設定示唆（弱）",null],
+     ["Opposites attract","高設定示唆（弱）",null],
      ["Recoil of Lycoris -side 千束&真島-","高設定示唆（強）",null],
-     ["Recoil of Lycoris -side リコリコ-（W内1回目）","高設定示唆（弱）",null],
+     ["Recoil of Lycoris -side リコリコ-","高設定示唆（弱）",null],
      ["Recoil of Lycoris -side ハワイ-","高設定示唆（強）",null]
     ]
    ],
-   ["エンディング中レア役時の上部ランプ",[["緑","高設定示唆（弱）",null],["赤","高設定示唆（強）",null]]]
+   ["エンディング中レア役時の上部ランプ",[["緑","高設定示唆（弱）",null],["赤","高設定示唆（強）",null]]],
+   ["CZ",[["CZ（オポジットバトル）","AT期待度約53%",null],["CZ（リコイル オブ リコリス）","上位CZ・上位AT期待度約70%",null]]]
   ],
   src:[
    "https://www.p-world.co.jp/machine/database/10503",
@@ -878,13 +876,42 @@ const M={
    "https://tsumoreru.com/machines/l_lycoris_recoil/",
    "https://slot-toolbox.com/lycoris-recoil-setting/",
    "https://www.slopachi-quest.com/article/rikorisu-rikoiru-settei/",
-   "https://note.com/ao_tenjou/n/n7780cf902275"
+   "https://note.com/ao_tenjou/n/n7780cf902275",
+   "https://nana-press.com/kaiseki/machine/1166/38718/",
+   "https://nana-press.com/kaiseki/machine/1166/38774/",
+   "https://nana-press.com/kaiseki/machine/1166/38727/",
+   "https://nana-press.com/kaiseki/machine/1166/38726/",
+   "https://nana-press.com/kaiseki/machine/1166/38731/",
+   "https://nana-press.com/kaiseki/machine/1166/38732/",
+   "https://nana-press.com/kaiseki/machine/1166/38730/",
+   "https://nana-press.com/kaiseki/machine/1166/38772/"
   ],
-  notes:[
-   "AT・CZ・共通ベル・機械割は複数サイトで一致（ぱちタウン・ツモレール・スロッターの道具箱）。",
-   "CZ・ATの初当たりは重複を含む（CZ経由のATもAT初当たりに入る）。",
-   "エピソード・上部ランプはSLOT QUEST・蒼天井で一致。ボイスによる設定示唆は無し。"
-  ]
+  notes:["示唆・画像はなな徹で確認。トロフィー画像なし。ファーストリコリスはCZ表記。"],
+  ph:{
+   "e:at":[["at_rush","AT「リコリスラッシュ／上位AT」"]],
+   "e:bell":[["cz","共通ベル（右下がり15枚）"]],
+   "e:first":[["first","CZ「ファーストリコリス」"]],
+   "h:6_0":[["cz_opp","CZ「オポジットバトル」"]],
+   "h:6_1":[["cz_ex","上位CZ「リコイル オブ リコリス」"]],
+   "e:choku":[["choku","AT直撃"]],
+   "h:2_0":[["vstock","Vストック"]],
+   "h:0_0":[["atend_takina_uni","たきな(制服)＝たきなラッシュデフォルト"]],
+   "h:0_1":[["atend_chisato_uni","千束(制服)＝千束ラッシュデフォルト"]],
+   "h:0_2":[["atend_takina_civil","たきな私服＝高設定示唆（弱）／千束ラッシュ終了時は設定4以上"]],
+   "h:0_3":[["atend_chisato_civil","千束私服＝高設定示唆（弱）／たきなラッシュ終了時は設定4以上"]],
+   "h:0_4":[["atend_dress","ドレスコード＝高設定示唆（強）"]],
+   "h:0_5":[["atend_oshiage","押上の風景＝設定2以上"]],
+   "h:0_6":[["atend_robota","ロボ太＝設定4以上"]],
+   "h:0_7":[["atend_hawaii","ハワイ＝設定6"]],
+   "h:3_0":[["pro_repay","Repay evil with evil＝高設定示唆（弱）"]],
+   "h:3_1":[["pro_time2","Time will tell②＝高設定示唆（強）"]],
+   "h:4_0":[["ep_opp","エピソードボーナス＝Opposites attract＝高設定示唆（弱）"]],
+   "h:4_1":[["ep_chisato","エピソードボーナス＝Recoil of Lycoris -side 千束&真島-＝高設定示唆（強）"]],
+   "h:4_2":[["ep_lyco","エピソードボーナス＝Recoil of Lycoris -side リコリコ-＝高設定示唆（弱）"]],
+   "h:4_3":[["ep_hawaii","エピソードボーナス＝Recoil of Lycoris -side ハワイ-＝高設定示唆（強）"]],
+   "h:5_1":[["lamp","赤＝高設定示唆（強）"]],
+   "g:5":[["lamp","エンディング中レア役時の上部ランプ"]]
+  }
  },
  mahoako:{
   at:1,
@@ -3306,7 +3333,7 @@ const M={
   ],
   notes:["トロフィー・AT終了画面はP-WORLD・nana-press・パチマガ・フリック7で一致。星座カード（ハリセンボン座など）は1出典のみのため未登録。各画面の出現率は調査中。"]
  }
-};;;;;
+};;;;;;
 // gs＝ボーナス合算(BB+RB)の公表値（表示・比較用。BIG/REGと重複するため設定推定の計算には入れない）
 // 出典：p-gabu.jp/guideworks/machinecontents/detail/6326, dynam.jp, kaku6.jp/slot/gogojuggler3/, jug123.com/my6spec/, 1geki.jp/slot/s_ij_ex_6/0/
 const S=[1,2,3,4,5,6];
