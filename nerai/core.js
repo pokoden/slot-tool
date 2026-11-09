@@ -208,15 +208,16 @@ let CUR=false;function analyzeStore(rows,set,ranks,store,axis,from,to,B,base){co
  return G}
 const topFn=vals=>{const s=vals.slice().sort((a,b)=>b-a);const n=s.length;return x=>{let lo=0,hi=n;while(lo<hi){const m=(lo+hi)>>1;if(s[m]>x)lo=m+1;else hi=m}return(lo+1)/n*100}};
 // 指数・上位%・自動○を付ける。
-// 店舗機種指数：この店舗×機種の「軸ぜんぶ」（件数割合のボーダー以上の台）の平均と偏差から。確率は回転指数55以上の台だけと比べる
+// 店舗機種指数：この店舗×機種の「軸ぜんぶ」（件数割合のボーダー以上の台）の平均と偏差から。RB・合算も同じ母集団（回転55で絞らない）
 // 標準指数：登録初日からの全データ。確率は回転指数55以上の台・日だけと比べる
 function finalize(G,B,base,HS){
  for(const o of G.values()){const sb=base.rot[o.typ],pb=base.prob[o.g]||{};const zr=base.zr||{rb:new Set(),both:new Set()};const noRb=zr.rb.has(o.g)||zr.both.has(o.g),noGs=zr.both.has(o.g);o.taiL=[...o.tai.values()];o.stL=[...o.st.values()];
   for(const L of[o.taiL,o.stL]){
    for(const u of L){const nd=o.cal[u.v]||0;u.typ=o.typ;u.ratio=nd?u.cnt/nd:0;u.avg=u.g/u.cnt;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0;u.okR=u.cnt?u.okN/u.cnt:0}
    const pool=L.filter(u=>!has(B.ratio)||u.ratio*100>=+B.ratio);const inP=new Set(pool);
-   const sg=stat(pool.map(u=>u.avg));let p55=pool.filter(u=>dev(u.avg,sg)>=P.cmpTk);if(!p55.length)p55=pool;
-   const s1={rb:stat(p55.map(u=>u.rbR)),gs:stat(p55.map(u=>u.gsR))};const sok=stat(pool.map(u=>u.okR));
+   const sg=stat(pool.map(u=>u.avg));
+   // RB・合算は回転55で絞らず、件数/割合ボーダー後の全台を母集団にする
+   const s1={rb:stat(pool.map(u=>u.rbR)),gs:stat(pool.map(u=>u.gsR))};const sok=stat(pool.map(u=>u.okR));
    const val={g:u=>u.avg,rb:u=>u.rbR,gs:u=>u.gsR};const sp={},dp={};
    for(const m in val){sp[m]=topFn(pool.map(val[m]));const bv=new Map();for(const u of pool){let a=bv.get(u.v);if(!a)bv.set(u.v,a=[]);a.push(val[m](u))}dp[m]=new Map([...bv].map(([v,a])=>[v,topFn(a)]))}
    for(const u of L){const a=[dev(u.avg,sg),noRb?null:dev(u.rbR,s1.rb),noGs?null:dev(u.gsR,s1.gs)];const ok1=dev(u.okR,sok);const i1=idx(...a,ok1);u.tk={g:a[0],rb:a[1],gs:a[2],ok:ok1,p:i1.p,t:i1.t};
@@ -262,8 +263,7 @@ const SEGS=AXES;
 // 印と、その印の基本点数（組み合わせに印を付けると、その行の点数のもとになる）
 const MARKS=['★','◎','○','△','□','×'];
 const DEF_CFG={marks:{'★':5,'◎':4,'○':3,'△':2,'□':1,'×':0},combo:{},prevX:true,seatMerge:false,sub:{metric:'t',w:{matsu:50,hi:25,you:25,all:0}}};
-// 組み合わせ（日末尾・日・曜日の○有無を3桁の0/1）→ 評価印（★◎○△□×のどれか）。未設定は印なし（空）
-// 印：○が1つでもあれば○（点数は軸ごとの点数の合計）
+// 印：○が1つでもあれば○（点数は軸ごとの点数の合計）。狙う/狙わないは index 側の組み合わせ評価で見る
 function comboMark(code,cfg){return String(code).includes('1')?'○':''}
 // 印の基本点数（印なしは0）
 const baseOf=(cfg,mark)=>mark?(+(cfg.marks||DEF_CFG.marks)[mark]||0):0;
