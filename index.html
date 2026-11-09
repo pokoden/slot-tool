@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><link rel="apple-touch-icon" href="icon.png?v=5"><link rel="icon" href="icon.png?v=5"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><link rel="apple-touch-icon" href="icon.png?v=6"><link rel="icon" href="icon.png?v=6"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>スロ設定判別ツール</title>
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
@@ -854,10 +854,7 @@ const M={
     ]
    ],
    ["謎Vストック",[["当選","設定差あり",null]]],
-   [
-    "プロローグのエピソード",
-    [["Repay evil with evil","高設定示唆（弱）",null],["Time will tell②","高設定示唆（強）",null]]
-   ],
+   ["プロローグのエピソード",[["Repay evil with evil","高設定示唆（弱）",null],["Time will tell②","高設定示唆（強）",null]]],
    [
     "エピソードボーナス",
     [
@@ -1216,7 +1213,7 @@ const M={
     k:"wsk",
     l:"弱スイカ",
     t:"rate",
-    d:[109,108.3,,105.9,100.7,98.3]
+    d:[109,108.7,,105.9,100.7,98.3]
    },
    {
     k:"ssk",
@@ -1292,7 +1289,20 @@ const M={
    "https://nana-press.com/kaiseki/machine/514/14273/",
    "https://nana-press.com/kaiseki/machine/514/14274/"
   ],
-  notes:["設定3なし。"]
+  notes:["示唆・画像はなな徹で確認。トロフィー画像なし。設定3の数値はなな徹表に無し（null維持）。"],
+  ph:{
+   "e:at":[["at","AT"]],
+   "e:chu":[["chu","中段チェリーA"]],
+   "e:sk":[["sk","宿命バトル"]],
+   "h:0_0":[["shodai_shin","シンバトル＝設定5以上"]],
+   "h:0_1":[["shodai_souther","サウザーバトル＝設定5以上"]],
+   "h:0_2":[["shodai_jagi","ジャギバトル＝設定5以上"]],
+   "h:0_3":[["shodai_rin","リン復活＝設定5以上"]],
+   "h:0_4":[["shodai_yuria","ユリア復活＝設定5以上"]],
+   "h:1_0":[["maisu_456","456枚突破＝設定4以上"]],
+   "h:1_1":[["maisu_666","666枚突破＝設定6"]],
+   "g:2":[["voice","AT終了後ボイス（サブ液晶）"]]
+  }
  },
  hkt2:{
   at:1,
@@ -1386,13 +1396,13 @@ const M={
   els:[
    {
     k:"at",
-    l:"AT初当たり",
+    l:"AT初当たり（バレットオブバレッツ）",
     t:"rate",
     d:[386.2,364.3,368.1,326.8,340.6,269.6]
    },
    {
     k:"cz",
-    l:"CZ初当たり（スコードロンバトル）",
+    l:"CZ（スコードロンバトル）",
     t:"rate",
     d:[238.4,232.3,232.7,218.9,225.2,191.7]
    },
@@ -1441,14 +1451,14 @@ const M={
    [
     "AT終了画面",
     [
-     ["キリト&シノン","デフォルト",null],
-     ["制服","奇数示唆",null],
+     ["キリト＆シノン","デフォルト",null],
+     ["横たわる詩乃","奇数示唆",null],
      ["ソファー","偶数示唆",null],
-     ["木漏れ日","高設定示唆",null],
-     ["夏祭り","高設定示唆(強)",null],
+     ["ヘカートⅡ","高設定示唆",null],
+     ["浴衣","高設定示唆(強)",null],
      ["幼少期","設定5以上のチャンス",null],
-     ["ワイシャツ","設定2以上",[2,3,4,5,6]],
-     ["お風呂","設定3以上",[3,4,5,6]],
+     ["ベッド","設定2以上",[2,3,4,5,6]],
+     ["シャワー","設定3以上",[3,4,5,6]],
      ["水着","設定4以上",[4,5,6]],
      ["パジャマ","設定6",[6]]
     ]
@@ -1463,13 +1473,37 @@ const M={
      ["虹","設定6",[6]]
     ]
    ],
-   ["曠野の決闘（CZ失敗時）",[["突入","設定1:1/128 設定6:1/64",null]]]
+   ["曠野の決闘（CZ失敗時）",[["当選","設定差あり（設定1=1/128・設定6=1/64）",null]]],
+   ["CZ",[["CZ（デス・ガンバトル）","上位CZ",null]]]
   ],
-  src:["https://www.p-world.co.jp/machine/database/10483","https://slothack.net/matome/194110/"],
-  notes:[
-   "設定4より設定5の方がAT・CZが重い（出典どおり）。",
-   "CZ・AT・機械割はP-WORLD（HAZUSE調べ）とSLOT HACKで一致。強チャンス目B・ステージ選択率はP-WORLD掲載値。"
-  ]
+  src:[
+   "https://www.p-world.co.jp/machine/database/10483",
+   "https://slothack.net/matome/194110/",
+   "https://1geki.jp/slot/l_sao2/0/",
+   "https://1geki.jp/slot/l_sao2/10/",
+   "https://1geki.jp/slot/l_sao2/55/",
+   "https://1geki.jp/slot/l_sao2/89/"
+  ],
+  notes:["示唆・画像は一撃・スロハックで確認。トロフィー画像なし。AT終了画面名は一撃画像に合わせて表記。"],
+  ph:{
+   "e:cz":[["cz","CZ「スコードロンバトル」"]],
+   "h:3_0":[["cz_ex","上位CZ「デス・ガンバトル」"]],
+   "e:kcb":[["kcb","強チャンス目B"]],
+   "e:item":[["item","CZ失敗時のアイテム獲得"]],
+   "h:2_0":[["kouya","曠野の決闘"]],
+   "e:stg":[["stg_buggy","AT初当り時ステージ：バギー"]],
+   "e:at":[["at","AT"]],
+   "h:0_0":[["atend_default","キリト＆シノン＝デフォルト"]],
+   "h:0_1":[["atend_yokotawaru","横たわる詩乃＝奇数示唆"]],
+   "h:0_2":[["atend_sofa","ソファー＝偶数示唆"]],
+   "h:0_3":[["atend_hecate","ヘカートⅡ＝高設定示唆"]],
+   "h:0_4":[["atend_yukata","浴衣＝高設定示唆(強)"]],
+   "h:0_5":[["atend_youshou","幼少期＝設定5以上のチャンス"]],
+   "h:0_6":[["atend_bed","ベッド＝設定2以上"]],
+   "h:0_7":[["atend_shower","シャワー＝設定3以上"]],
+   "h:0_8":[["atend_mizugi","水着＝設定4以上"]],
+   "h:0_9":[["atend_pajama","パジャマ＝設定6"]]
+  }
  },
  otome5:{
   at:1,
@@ -1488,8 +1522,8 @@ const M={
    },
    {
     k:"miko",
-    l:"巫女ポイント0到達時のCZ当選",
-    s:"0pt到達回数／うち乙女アタック",
+    l:"CZ（乙女アタック）",
+    s:"巫女ポイント0到達回数／うちCZ",
     t:"pct",
     p:[20.3,21.4,23.2,24.7,25.2,25.7]
    }
@@ -1498,11 +1532,31 @@ const M={
    [
     "ボーナス終了スタンプ",
     [
-     ["可","設定2以上",[2,3,4,5,6]],
-     ["吉","設定3以上",[3,4,5,6]],
-     ["良","設定4以上",[4,5,6]],
-     ["優","設定5以上",[5,6]],
-     ["極","設定6",[6]]
+     [
+      "可",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "吉",
+      "設定3以上",
+      [3,4,5,6]
+     ],
+     [
+      "良",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "優",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "極",
+      "設定6",
+      [6]
+     ]
     ]
    ],
    [
@@ -1513,10 +1567,22 @@ const M={
      ["モトナリ・ドウセツ・ソウリン","通常B以上+1周期目100G以内示唆",null],
      ["敵キャラ集合","ヨシテル濃厚",null],
      ["イエヤス・シンゲン・カンスケ・ヨシモト","通常B以上濃厚",null],
-     ["└その後通常A","設定4以上",[4,5,6]],
+     [
+      "└その後通常A",
+      "設定4以上",
+      [4,5,6]
+     ],
      ["乙女集合(赤背景)","天国濃厚",null],
-     ["└その後天国否定","設定4以上",[4,5,6]],
-     ["乙女集合(金背景)","天国濃厚+設定2以上",[2,3,4,5,6]]
+     [
+      "└その後天国否定",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "乙女集合(金背景)",
+      "天国濃厚+設定2以上",
+      [2,3,4,5,6]
+     ]
     ]
    ],
    [
@@ -1527,47 +1593,174 @@ const M={
      ["怪しい…！","偶数示唆",null],
      ["どーよ？あたしも中々いけてるっしょ","高設定示唆(弱)",null],
      ["きゅい～ん♪","高設定示唆(強)",null],
-     ["なになに、気になるー？","設定2否定",[1,3,4,5,6]],
-     ["ちょ～っとホンキ出しちゃおっかな？","設定3否定",[1,2,4,5,6]],
-     ["さんきゅ～！","設定2以上",[2,3,4,5,6]],
-     ["ご機嫌っしょ！","設定3以上",[3,4,5,6]],
-     ["攻めどきっしょ！","設定4以上",[4,5,6]],
-     ["気分アゲアゲだし！","設定5以上",[5,6]],
-     ["戦乱に忍ぶ深紅の影、石川ゴエモン！","設定6",[6]]
+     [
+      "なになに、気になるー？",
+      "設定2否定",
+      [1,3,4,5,6]
+     ],
+     [
+      "ちょ～っとホンキ出しちゃおっかな？",
+      "設定3否定",
+      [1,2,4,5,6]
+     ],
+     [
+      "さんきゅ～！",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "ご機嫌っしょ！",
+      "設定3以上",
+      [3,4,5,6]
+     ],
+     [
+      "攻めどきっしょ！",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "気分アゲアゲだし！",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "戦乱に忍ぶ深紅の影、石川ゴエモン！",
+      "設定6",
+      [6]
+     ]
     ]
    ],
    [
     "隠れ凪（従来機種参考）",
     [
      ["白 また遊んでくださいね","デフォルト",null],
-     ["青 一味違いますね","設定2以上",[2,3,4,5,6]],
-     ["緑 何やら不思議な気配です","設定3以上",[3,4,5,6]],
-     ["赤 良い予感がします","設定4以上",[4,5,6]],
-     ["銀 遊び尽くしちゃいましょう","設定5以上",[5,6]],
-     ["金 お肉～お肉～","設定6",[6]]
+     [
+      "青 一味違いますね",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "緑 何やら不思議な気配です",
+      "設定3以上",
+      [3,4,5,6]
+     ],
+     [
+      "赤 良い予感がします",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "銀 遊び尽くしちゃいましょう",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "金 お肉～お肉～",
+      "設定6",
+      [6]
+     ]
     ]
    ],
    [
     "獲得枚数表示（従来機種参考）",
     [
-     ["222枚OVER","設定2以上",[2,3,4,5,6]],
-     ["333枚OVER","設定3以上",[3,4,5,6]],
-     ["444枚OVER","設定4以上",[4,5,6]],
-     ["555枚OVER","設定5以上",[5,6]],
-     ["666枚OVER","設定6",[6]]
+     [
+      "222枚OVER",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "333枚OVER",
+      "設定3以上",
+      [3,4,5,6]
+     ],
+     [
+      "444枚OVER",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "555枚OVER",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "666枚OVER",
+      "設定6",
+      [6]
+     ]
     ]
    ]
   ],
   src:[
    "https://www.p-world.co.jp/machine/database/10473",
    "https://pacnk.com/slot/tools/sh_sengokuotome5gouka.html",
-   "https://slobase.jp/machines/sengoku-otome5"
+   "https://slobase.jp/machines/sengoku-otome5",
+   "https://nana-press.com/kaiseki/machine/1160/",
+   "https://nana-press.com/kaiseki/machine/1160/37374/"
   ],
   notes:[
    "AT初当たり・機械割はP-WORLD・スロベースで一致。巫女ポイントCZ当選率はP-WORLD（HAZUSE調べ）。",
-   "戦国乙女BONUS（1/21206.7〜1/5502.7）は出現が少ないため入れていません。",
-   "隠れ凪・獲得枚数表示は従来機種参考の示唆。"
-  ]
+   "スタンプ・AT終了画面はなな徹解析で確認。",
+   "隠れ凪・獲得枚数表示は従来機種参考の示唆（画像は本機なな徹掲載）。",
+   "戦国乙女BONUS（出現少）は未登録。"
+  ],
+  ph:{
+   "e:at":[
+    ["at","AT"]
+   ],
+   "e:miko":[
+    ["cz","CZ（乙女アタック）巫女ポイント0到達時"]
+   ],
+   "h:0_0":[
+    ["stamp_ka","可＝設定2以上"]
+   ],
+   "h:0_1":[
+    ["stamp_kichi","吉＝設定3以上"]
+   ],
+   "h:0_2":[
+    ["stamp_ryo","良＝設定4以上"]
+   ],
+   "h:0_3":[
+    ["stamp_yu","優＝設定5以上"]
+   ],
+   "h:0_4":[
+    ["stamp_kyoku","極＝設定6"]
+   ],
+   "h:1_0":[
+    ["atend_nobu","ノブナガ＝デフォルト"]
+   ],
+   "h:1_1":[
+    ["atend_masa","マサムネ・ヒデヨシ＝通常B以上示唆"]
+   ],
+   "h:1_2":[
+    ["atend_moto","モトナリ・ドウセツ・ソウリン＝通常B以上+1周期目100G以内"]
+   ],
+   "h:1_3":[
+    ["atend_teki","敵キャラ集合＝ヨシテル濃厚"]
+   ],
+   "h:1_4":[
+    ["atend_ieyasu","イエヤス・シンゲン・カンスケ・ヨシモト＝通常B以上濃厚"]
+   ],
+   "h:1_5":[
+    ["atend_ieyasu","通常A移行なら設定4以上"]
+   ],
+   "h:1_6":[
+    ["atend_red","乙女集合（赤背景）＝天国濃厚"]
+   ],
+   "h:1_7":[
+    ["atend_red","天国否定なら設定4以上"]
+   ],
+   "h:1_8":[
+    ["atend_gold","乙女集合（金背景）＝天国濃厚＋設定2以上"]
+   ],
+   "g:3":[
+    ["kakurenagi","隠れ凪（打-WIN LITE・従来機種参考）"]
+   ],
+   "g:4":[
+    ["maisu","獲得枚数表示（従来機種参考）"]
+   ]
+  }
  },
  shaman:{
   at:1,
@@ -1622,10 +1815,7 @@ const M={
      ["666 OVER","設定6",[6]]
     ]
    ],
-   [
-    "たまおのこっくりさん占い中の文字",
-    [["「偶」「数」","偶数設定",[2,4,6]],["「終」「日」","設定4以上",[4,5,6]],["「ろ」「く」","設定6",[6]]]
-   ],
+   ["たまおのこっくりさん占い中の文字",[["「偶」「数」","偶数設定",[2,4,6]],["「終」「日」","設定4以上",[4,5,6]],["「ろ」「く」","設定6",[6]]]],
    [
     "エンディング開始時Congratulations文字色",
     [
@@ -2019,12 +2209,7 @@ const M={
   hints:[
    [
     "AT終了画面",
-    [
-     ["街道","奇数設定示唆",null],
-     ["茶屋","偶数設定示唆",null],
-     ["茜ちゃん","高設定示唆",null],
-     ["やじさんきたさん","設定4以上",[4,5,6]]
-    ]
+    [["街道","奇数設定示唆",null],["茶屋","偶数設定示唆",null],["茜ちゃん","高設定示唆",null],["やじさんきたさん","設定4以上",[4,5,6]]]
    ],
    [
     "ユニバプレート",
@@ -2043,11 +2228,7 @@ const M={
    "https://pachinavi.net/machines/smasloth-yajikita/",
    "https://nana-press.com/kaiseki/machine/1186/38356/"
   ],
-  notes:[
-   "CZ「関所チャレンジ」は設定1・6（1/231.1・1/157.5）しか確認できなかったため未収録。",
-   "BIG・REGには設定差なし。",
-   "nana-press・道具箱で一致。"
-  ]
+  notes:["CZ「関所チャレンジ」は設定1・6（1/231.1・1/157.5）しか確認できなかったため未収録。","BIG・REGには設定差なし。","nana-press・道具箱で一致。"]
  },
  tnsk:{
   at:1,
@@ -2093,14 +2274,12 @@ const M={
   name:"スマスロ 化物語",
   sub:"サミー / AT機",
   payout:[97.9,98.9,100.9,105,107.8,112.1],
-  els:[
-   {
+  els:[{
     k:"at",
     l:"AT初当たり（倖時間）",
     t:"rate",
     d:[265.1,260.7,252.1,238.8,230.8,219.6]
-   }
-  ],
+   }],
   hints:[
    [
     "AT終了画面",
@@ -2129,11 +2308,7 @@ const M={
    ],
    [
     "獲得枚数表示",
-    [
-     ["174枚（いちなし）","設定2以上",[2,3,4,5,6]],
-     ["543枚（こよみ）","設定3以上",[3,4,5,6]],
-     ["331枚（サミー）","設定6",[6]]
-    ]
+    [["174枚（いちなし）","設定2以上",[2,3,4,5,6]],["543枚（こよみ）","設定3以上",[3,4,5,6]],["331枚（サミー）","設定6",[6]]]
    ],
    ["ボーナス確定画面",[["ヒロイン1枚絵","高設定示唆",null],["忍＋赤7","設定5以上",[5,6]]]],
    ["CZ",[["CZ（解呪ノ儀）","AT期待度平均約43%",null],["CZ（解呪ノ儀EX）","AT濃厚",null]]]
@@ -2196,27 +2371,110 @@ const M={
     s:"AT終了回数／うち黒メダル",
     t:"pct",
     p:[1.25,1.5,,4,4.5,4.5]
+   },
+   {
+    k:"soku",
+    l:"AT終了後の即優出",
+    s:"AT終了回数／うち即優出",
+    t:"pct",
+    p:[1.6,1.7,,2.2,3,3.7]
    }
   ],
   hints:[
    [
     "AT終了画面（ケロットトロフィー）",
-    [["銅","設定2以上",[2,3,4,5,6]],["金","設定4以上",[4,5,6]],["ケロット柄","設定5以上",[5,6]],["虹","設定6",[6]]]
+    [
+     [
+      "銅",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "金",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "ケロット柄",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "虹",
+      "設定6",
+      [6]
+     ]
+    ]
    ],
-   ["AT終了画面（SGメダル）",[["青","偶数設定示唆",null],["黄","高設定示唆（弱）",null],["黒","高設定示唆（強）",null]]],
-   ["AT直撃",[["弱チェリー・ボートから直撃","設定4以上",[4,5,6]],["弱チャンス目から直撃","設定4以上",[4,5,6]]]]
+   [
+    "AT終了画面（SGメダル）",
+    [
+     ["青","偶数設定示唆",null],
+     ["黄","高設定示唆（弱）",null],
+     ["黒","高設定示唆（強）",null]
+    ]
+   ],
+   [
+    "AT直撃",
+    [
+     [
+      "弱チェリー・ボートから直撃",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "弱チャンス目から直撃",
+      "設定4以上",
+      [4,5,6]
+     ]
+    ]
+   ],
+   [
+    "激走チャージ終了セリフ（サブ液晶）",
+    [
+     ["波多野「落ち着くんだ憲二…」(青)","デフォルト",null],
+     ["波多野「この気配は!?」(青)","偶数示唆（弱）",null],
+     [
+      "榎木「おつかれ」(赤)",
+      "設定2・4・6",
+      [2,4,6]
+     ],
+     [
+      "榎木「これが艇王…」(紫)",
+      "設定4以上",
+      [4,5,6]
+     ]
+    ]
+   ]
   ],
   src:[
    "https://www.p-world.co.jp/machine/database/9923",
    "https://p-gabu.jp/guideworks/machinecontents/detail/6450",
    "https://slomiru.com/monkey_turn_v",
-   "https://p.hisshobon.jp/machine/4185/1/102664"
+   "https://p.hisshobon.jp/machine/4185/1/102664",
+   "https://1geki.jp/slot/l_monkeyturn5/0/"
   ],
   no:[3],
   notes:[
    "設定3は不明（未搭載または調査中）のため計算から外しています。",
-   "黒メダル出現率・トロフィー示唆はP-WORLD・p-gabu・slomiruで一致。獲得枚数表示（456/803/666）は1出典のみのため未登録。"
-  ]
+   "黒メダル・トロフィー示唆はP-WORLD・p-gabu・slomiruで一致。トロフィーは文字のみ。",
+   "激走チャージ終了セリフは一撃で確認。即優出率は一撃掲載値。",
+   "獲得枚数表示（456/803/666）は1出典のみのため未登録。"
+  ],
+  ph:{
+   "h:3_0":[
+    ["voice_default","波多野「落ち着くんだ憲二…」＝デフォルト"]
+   ],
+   "h:3_1":[
+    ["voice_kehai","波多野「この気配は!?」＝偶数示唆（弱）"]
+   ],
+   "h:3_2":[
+    ["voice_otsukare","榎木「おつかれ」＝設定2・4・6"]
+   ],
+   "h:3_3":[
+    ["voice_teiou","榎木「これが艇王…」＝設定4以上"]
+   ]
+  }
  },
  okg25:{
   at:1,
@@ -2265,12 +2523,49 @@ const M={
     l:"REG出現率",
     t:"rate",
     d:[368.7,346.2,324,,297.9,276.5]
+   },
+   {
+    k:"chb",
+    l:"チェリーB",
+    t:"rate",
+    d:[168,152.4,145.6,,136.5,128]
+   },
+   {
+    k:"kkb",
+    l:"確定役B",
+    t:"rate",
+    d:[16384,13107.2,10922.7,,8192,6553.6]
+   },
+   {
+    k:"bh",
+    l:"ボーナス初当たり",
+    t:"rate",
+    d:[299.6,287.3,266.7,,247.6,237]
    }
   ],
   hints:[],
-  src:["https://www.p-world.co.jp/machine/database/9738"],
+  src:[
+   "https://www.p-world.co.jp/machine/database/9738",
+   "https://nana-press.com/kaiseki/machine/478/",
+   "https://nana-press.com/kaiseki/machine/478/12869/"
+  ],
   no:[4],
-  notes:["数値はP-WORLD機種ページの公表値。設定示唆（終了画面など）は出典で確認できる数値が無いため未登録。","設定4は不明（未搭載または調査中）のため計算から外しています。"]
+  notes:[
+   "BIG/REG・チェリーB・確定役B・ボーナス初当たりはなな徹設定判別ページの公表値。",
+   "設定4は不明（未搭載または調査中）のため計算から外しています。",
+   "終了画面など設定示唆は出典で確認できる数値が無いため未登録。"
+  ],
+  ph:{
+   "e:e0":[
+    ["big","BIG"]
+   ],
+   "e:e1":[
+    ["reg","REG"]
+   ],
+   "e:chb":[
+    ["cherry_b","チェリーB"]
+   ]
+  }
  },
  juou:{
   at:1,
@@ -2293,13 +2588,62 @@ const M={
     s:"左向き／右向きの回数",
     t:"multi",
     c:["左向き","右向き"],
-    p:[[60,40],[40,60],[50,50],[40,60],[60,40],[50,50]]
+    p:[
+     [60,40],
+     [40,60],
+     [50,50],
+     [40,60],
+     [60,40],
+     [50,50]
+    ]
+   },
+   {
+    k:"sc_cherry",
+    l:"SC高確移行（チェリー）",
+    s:"チェリー成立回数／うちSC高確移行",
+    t:"pct",
+    p:[3.1,3.5,,5.5,5.9,6.3]
+   },
+   {
+    k:"sc_rare",
+    l:"SC高確移行（レアリプレイ）",
+    s:"レアリプレイ成立回数／うちSC高確移行",
+    t:"pct",
+    p:[20.3,21.1,,27.3,30.9,33.6]
+   },
+   {
+    k:"choku",
+    l:"チャンス目のSC以上直撃",
+    s:"SC高確・SP高確非滞在のチャンス目／うちSC以上",
+    t:"pct",
+    p:[0.8,0.8,,2.3,2.7,3.1]
    }
   ],
   hints:[
    [
     "初回SC終了画面（サミートロフィー）",
-    [["銅","設定2以上",[2,3,4,5,6]],["金","設定4以上",[4,5,6]],["キリン柄","設定5以上",[5,6]],["虹","設定6",[6]]]
+    [
+     [
+      "銅",
+      "設定2以上",
+      [2,3,4,5,6]
+     ],
+     [
+      "金",
+      "設定4以上",
+      [4,5,6]
+     ],
+     [
+      "キリン柄",
+      "設定5以上",
+      [5,6]
+     ],
+     [
+      "虹",
+      "設定6",
+      [6]
+     ]
+    ]
    ]
   ],
   src:[
@@ -2309,11 +2653,20 @@ const M={
    "https://parlourfullslotl.com/archives/190652"
   ],
   no:[3],
-  notes:["示唆・画像はなな徹で確認。トロフィーは文字のみ。設定3のAT確率はなな徹表に無し（null維持）。"],
+  notes:["示唆・画像はなな徹で確認。トロフィーは文字のみ。SC高確移行・直撃率もなな徹掲載値。"],
   ph:{
-   "e:e0":[["at","AT「サバンナチャンス」"]],
-   "e:mong":[["mongoose","BIG中のマングース"]],
-   "g:big":[["big","BIG BONUS"]]
+   "e:e0":[
+    ["at","AT「サバンナチャンス」"]
+   ],
+   "e:mong":[
+    ["mongoose","BIG中のマングース"]
+   ],
+   "g:big":[
+    ["big","BIG BONUS"]
+   ],
+   "g:reg":[
+    ["reg","REG BONUS"]
+   ]
   }
  },
  karak2:{
@@ -2537,14 +2890,12 @@ const M={
   name:"L青春ブタ野郎はバニーガール先輩の夢を見ない",
   sub:"オリンピア / AT機",
   payout:[,98.1,99.3,105.3,108.4,110.3],
-  els:[
-   {
+  els:[{
     k:"e0",
     l:"青春BONUS初当り",
     t:"rate",
     d:[,350.8,336.5,295.1,274.6,207.8]
-   }
-  ],
+   }],
   hints:[
    [
     "ST終了画面",
@@ -2684,23 +3035,36 @@ const M={
   hints:[
    [
     "ボーナス・AT終了画面",
-    [["シンジ","奇数設定示唆",null],["レイ","偶数設定示唆",null],["マリ","高設定示唆（弱）",null],["アスカ","高設定示唆（強）",null]]
+    [
+     ["シンジ＆初号機","奇数設定示唆",null],
+     ["レイ＆零号機","偶数設定示唆",null],
+     ["マリ＆8号機α","高設定示唆（弱）",null],
+     ["アスカ＆弐号機","高設定示唆（強）",null],
+     ["モスラ","設定1・3否定",[2,4,5,6]],
+     ["X星人レイ","設定2・4否定",[1,3,5,6]],
+     ["レイ","設定2以上",[2,3,4,5,6]],
+     ["初号機＆ゴジラ","設定4以上",[4,5,6]],
+     ["4人集合","設定5以上",[5,6]]
+    ]
    ],
-   [
-    "特定獲得枚数表示",
-    [["222枚OVER","設定2以上",[2,3,4,5,6]],["456枚OVER","設定4以上",[4,5,6]],["666枚OVER","設定6",[6]]]
-   ]
+   ["特定獲得枚数表示",[["222枚OVER","設定2以上",[2,3,4,5,6]],["456枚OVER","設定4以上",[4,5,6]],["666枚OVER","設定6",[6]]]]
   ],
   src:[
    "https://www.p-world.co.jp/machine/database/10590",
    "https://1geki.jp/slot/l_goji_eva2/6/",
    "https://pachimo.altema.jp/lgojieva2gamen"
   ],
-  notes:["終了画面画像は一撃から。マリ等の不足分は追加調査予定。"],
+  notes:["終了画面は一撃画像＋アルテマ示唆で確認。獲得枚数は従来記載を維持。"],
   ph:{
-   "h:0_0":[["atend_shinji","シンジ＝奇数設定示唆"]],
-   "h:0_3":[["atend_asuka","アスカ＝高設定示唆（強）"]],
-   "h:0_1":[["atend_rei","レイ＝偶数設定示唆"]]
+   "h:0_0":[["atend_shinji","シンジ＆初号機＝奇数設定示唆"]],
+   "h:0_1":[["atend_rei","レイ＆零号機＝偶数設定示唆"]],
+   "h:0_2":[["atend_mari","マリ＆8号機α＝高設定示唆（弱）"]],
+   "h:0_3":[["atend_asuka","アスカ＆弐号機＝高設定示唆（強）"]],
+   "h:0_4":[["atend_mothra","モスラ＝設定1・3否定"]],
+   "h:0_5":[["atend_xrei","X星人レイ＝設定2・4否定"]],
+   "h:0_6":[["atend_rei_bg","レイ＝設定2以上"]],
+   "h:0_7":[["atend_godzilla","初号機＆ゴジラ＝設定4以上"]],
+   "h:0_8":[["atend_all","4人集合＝設定5以上"]]
   }
  },
  bjtz:{
@@ -2767,10 +3131,7 @@ const M={
    }
   ],
   hints:[
-   [
-    "AT終了画面",
-    [["みかづき荘メンバー","設定2・4・6",[2,4,6]],["マギウスメンバー","設定3・5・6",[3,5,6]],["まどか＆いろは","設定6",[6]]]
-   ],
+   ["AT終了画面",[["みかづき荘メンバー","設定2・4・6",[2,4,6]],["マギウスメンバー","設定3・5・6",[3,5,6]],["まどか＆いろは","設定6",[6]]]],
    [
     "BB終了画面",
     [
@@ -2841,14 +3202,12 @@ const M={
   name:"スマスロ 新鬼武者3",
   sub:"レオスター / AT機",
   payout:[97.5,98.3,100.2,105.2,109.2,113],
-  els:[
-   {
+  els:[{
     k:"e0",
     l:"AT初当り確率",
     t:"rate",
     d:[379.7,372.7,352.8,306.5,297.9,293.1]
-   }
-  ],
+   }],
   hints:[
    [
     "エンタトロフィー",
@@ -2893,7 +3252,7 @@ const M={
   els:[
    {
     k:"e0",
-    l:"CZ合成確率",
+    l:"CZ合算",
     t:"rate",
     d:[156.6,154.6,151.4,148.7,144.2,141.1]
    },
@@ -2943,9 +3302,28 @@ const M={
   src:[
    "https://www.p-world.co.jp/machine/database/10582",
    "https://1geki.jp/slot/l_garo/0/",
-   "https://chonborista.com/slot/sansei-slot/270768/"
+   "https://chonborista.com/slot/sansei-slot/270768/",
+   "https://1geki.jp/slot/l_garo/6/"
   ],
-  notes:["終了画面・トロフィーはP-WORLD・1撃・ちょんぼりすた・スロパイで一致。トータルCZ確率はスロパイのみのため未登録。"]
+  notes:["示唆・画像は一撃で確認。トロフィー画像なし。"],
+  ph:{
+   "e:e0":[["cz","CZ合成"]],
+   "e:e1":[["bon","ボーナス"]],
+   "h:0_8":[["bon","金色牙狼＝設定6"]],
+   "h:0_0":[["bend_rian","莉杏＝偶数設定示唆（弱）"]],
+   "h:0_1":[["bend_fure","符礼＝偶数設定示唆（中）"]],
+   "h:0_2":[["bend_maid","メイド莉杏＝偶数設定示唆（強）"]],
+   "h:0_3":[["bend_enpo","燕邦＝高設定示唆（弱）"]],
+   "h:0_4":[["bend_libera","リベラ＝高設定示唆（中）"]],
+   "h:0_5":[["bend_sonshi","尊士＝高設定示唆（強）"]],
+   "h:0_6":[["bend_horror","魔導ホラー集合＝設定2以上"]],
+   "h:0_7":[["bend_knight","魔戒騎士集合＝設定4以上"]],
+   "h:1_0":[["rush_zen","漸＝偶数設定示唆（弱）"]],
+   "h:1_1":[["rush_gasha","牙射＝高設定示唆（弱）"]],
+   "h:1_2":[["rush_rian","莉杏＝設定2以上"]],
+   "h:1_3":[["rush_knight","魔戒騎士集合＝設定4以上"]],
+   "h:1_4":[["rush_garo","牙狼闇＝設定6"]]
+  }
  },
  koukaku:{
   at:1,
@@ -2988,14 +3366,12 @@ const M={
   name:"パチスロ 新鬼武者2",
   sub:"エンターライズ / AT機",
   payout:[98.2,99.5,100.5,105.4,107.7,110.1],
-  els:[
-   {
+  els:[{
     k:"e0",
     l:"AT初当り確率",
     t:"rate",
     d:[405.2,382.4,366.2,301.3,275.6,262.2]
-   }
-  ],
+   }],
   hints:[
    [
     "AT終了画面",
@@ -3010,10 +3386,7 @@ const M={
     ]
    ],
    ["上乗せゲーム数表示",[["+4G","設定4以上",[4,5,6]],["+5G","設定5以上",[5,6]],["+6G","設定6",[6]]]],
-   [
-    "特定獲得枚数表示",
-    [["456枚OVER","設定4以上",[4,5,6]],["555枚OVER","設定5以上",[5,6]],["666枚OVER","設定6",[6]]]
-   ],
+   ["特定獲得枚数表示",[["456枚OVER","設定4以上",[4,5,6]],["555枚OVER","設定5以上",[5,6]],["666枚OVER","設定6",[6]]]],
    ["鬼ボーナス中の6キャラ目",[["信長","設定4以上",[4,5,6]],["覚醒鬼武者","設定5以上",[5,6]],["エンタライオン","設定6",[6]]]]
   ],
   src:[
@@ -3101,10 +3474,7 @@ const M={
     ]
    ]
   ],
-  src:[
-   "https://www.p-world.co.jp/machine/database/10313",
-   "https://pachimo.altema.jp/ltorivetrophy"
-  ],
+  src:["https://www.p-world.co.jp/machine/database/10313","https://pachimo.altema.jp/ltorivetrophy"],
   notes:["トロフィーはアルテマ・P-WORLDで一致。"]
  },
  ge:{
@@ -3249,14 +3619,12 @@ const M={
   name:"いざ!番長",
   sub:"サボハニ / AT機",
   payout:[97.6,98.9,101.3,106,112.1,114.9],
-  els:[
-   {
+  els:[{
     k:"e0",
     l:"初当り合成",
     t:"rate",
     d:[386.9,368.5,375.8,332.4,351.6,312.1]
-   }
-  ],
+   }],
   hints:[
    [
     "AT・青頂ZBASH終了画面",
@@ -3289,13 +3657,13 @@ const M={
   els:[
    {
     k:"e0",
-    l:"CZ合成確率",
+    l:"CZ合算（影ノ襲来など）",
     t:"rate",
     d:[214.4,214.1,211.7,202.5,197.2,200.3]
    },
    {
     k:"e1",
-    l:"AT初当り確率",
+    l:"AT初当り",
     t:"rate",
     d:[364.2,356.1,345.6,322.3,313.7,310.5]
    }
@@ -3316,24 +3684,40 @@ const M={
     [
      ["紫龍・氷河・瞬","奇数設定示唆",null],
      ["紫龍・氷河・瞬・星矢","偶数設定示唆",null],
-     ["5人","高設定示唆（強）",null],
-     ["走る青銅聖闘士（4人左向き）","高設定示唆",null],
-     ["魔鈴＆シャイナ","設定4以上",[4,5,6]],
+     ["紫龍・氷河・瞬・星矢・一輝","高設定示唆（強）",null],
+     ["ブロンズ4人","高設定示唆",null],
+     ["マリン＆シャイナ","設定4以上",[4,5,6]],
      ["沙織","設定6",[6]],
-     ["一輝","復活示唆（設定示唆なし）",null]
+     ["一輝","復活示唆",null]
     ]
-   ]
+   ],
+   ["CZ",[["CZ（影ノ襲来）","通常CZ",null],["CZ（最終決戦サガバトル）","上位CZ",null]]]
   ],
   src:[
    "https://www.p-world.co.jp/machine/database/10536",
    "https://nana-press.com/kaiseki/machine/1193/40116/",
    "https://pachimaga.com/free/article/20261026/067182.php",
    "https://slotana777.com/machines/10536/settei",
-   "https://flick7.net/slot/seiya_ougon12kyu/"
+   "https://flick7.net/slot/seiya_ougon12kyu/",
+   "https://nana-press.com/kaiseki/machine/1193/39938/",
+   "https://nana-press.com/kaiseki/machine/1193/40128/"
   ],
-  notes:["トロフィー・AT終了画面はP-WORLD・nana-press・パチマガ・フリック7で一致。星座カード（ハリセンボン座など）は1出典のみのため未登録。各画面の出現率は調査中。"]
+  notes:["示唆・画像はなな徹で確認。トロフィー画像なし。"],
+  ph:{
+   "e:e0":[["cz","CZ合算（影ノ襲来など）"]],
+   "h:2_0":[["cz","CZ「影ノ襲来」"]],
+   "h:2_1":[["cz_ex","上位CZ「最終決戦サガバトル」"]],
+   "e:e1":[["at","AT"]],
+   "h:1_0":[["atend_3","紫龍・氷河・瞬＝奇数設定示唆"]],
+   "h:1_1":[["atend_4","紫龍・氷河・瞬・星矢＝偶数設定示唆"]],
+   "h:1_2":[["atend_5","5人＝高設定示唆（強）"]],
+   "h:1_3":[["atend_bronze","走る青銅聖闘士＝高設定示唆"]],
+   "h:1_4":[["atend_marin","マリン＆シャイナ＝設定4以上"]],
+   "h:1_5":[["atend_saori","沙織＝設定6"]],
+   "h:1_6":[["atend_ikki","一輝＝復活示唆"]]
+  }
  }
-};;;;;;
+};;;;;;;
 // gs＝ボーナス合算(BB+RB)の公表値（表示・比較用。BIG/REGと重複するため設定推定の計算には入れない）
 // 出典：p-gabu.jp/guideworks/machinecontents/detail/6326, dynam.jp, kaku6.jp/slot/gogojuggler3/, jug123.com/my6spec/, 1geki.jp/slot/s_ij_ex_6/0/
 const S=[1,2,3,4,5,6];
@@ -3655,7 +4039,7 @@ function todayCard(){// 同じ記録の再保存は最新の1件だけ数える�
  return`<div class="card"><h2>本日の収支 <small class="note">${today()}</small></h2>${L.length?rw('合計収支',yn?sg(yen)+'円':'-',yn?yen:null)+rw('台数',L.length+'台'+(play?`（うち保存前${play}台）`:''))+rw('差枚',dn?sg(df)+'枚':'-',dn?df:null)+rw('合計回転数',G.toLocaleString()+'G')+rw('合計時間',h.toFixed(1)+'時間'):'<p class="note">今日の保存データはまだありません</p>'}</div>`}
 function home(){$('mach').classList.add('hidden');$('home').classList.remove('hidden');
  if(location.hash==='#hist')return histPage();if(location.hash.startsWith('#an'))return anPage();
- $('home').innerHTML=`<h1>スロ設定判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><a href="nerai/" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#111,#2a2418);color:#e9c46a;text-decoration:none;font-weight:600"><img src="nerai/icon.png?v=1" alt="" width="32" height="32" style="border-radius:8px">🎯 設定狙いツール</a><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${(()=>{const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}const o=Object.keys(M),hid=new Set(hideList());return Object.entries(M).filter(([k])=>!hid.has(k)).map(x=>[...x,L[x[0]]||'']).sort((a,b)=>a[2]&&b[2]?(a[2]<b[2]?1:a[2]>b[2]?-1:0):a[2]?-1:b[2]?1:iDt(b[1])-iDt(a[1])||o.indexOf(a[0])-o.indexOf(b[0]))})().map(([k,m,lp])=>homeItem(k,m)).join('')}</div>${(()=>{const H=hideList();if(!H.length){homeHidOpen=false;return''}return`<button class="sub" style="width:100%;margin-top:8px" onclick="homeHidToggle()">${homeHidOpen?'閉じる':'非表示の機種を見る'}</button>`+(homeHidOpen?`<div id="homeHid" style="margin-top:8px">${H.map(k=>homeItem(k,M[k],1)).join('')}</div>`:'')})()}</div>
+ $('home').innerHTML=`<h1>スロ設定判別ツール</h1>${todayCard()}<div style="display:flex;gap:8px;margin-bottom:10px"><button onclick="hsInit();location.hash='hist'" style="flex:1">📋 履歴</button><button onclick="location.hash='an'" style="flex:1">📊 集計</button></div><a href="nerai/" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,#111,#2a2418);color:#e9c46a;text-decoration:none;font-weight:600"><img src="nerai/icon.png?v=6" alt="" width="32" height="32" style="border-radius:8px">🎯 設定狙いツール</a><div class="card"><h2>機種を選択</h2>${homeTop()}<div id="homeML">${(()=>{const L={};for(const e of hist()){const t=e.saved||e.updatedAt||'',key=(e.date||t.slice(0,10))+'|'+t;if(!L[e.mid]||key>L[e.mid])L[e.mid]=key}const o=Object.keys(M),hid=new Set(hideList());return Object.entries(M).filter(([k])=>!hid.has(k)).map(x=>[...x,L[x[0]]||'']).sort((a,b)=>a[2]&&b[2]?(a[2]<b[2]?1:a[2]>b[2]?-1:0):a[2]?-1:b[2]?1:iDt(b[1])-iDt(a[1])||o.indexOf(a[0])-o.indexOf(b[0]))})().map(([k,m,lp])=>homeItem(k,m)).join('')}</div>${(()=>{const H=hideList();if(!H.length){homeHidOpen=false;return''}return`<button class="sub" style="width:100%;margin-top:8px" onclick="homeHidToggle()">${homeHidOpen?'閉じる':'非表示の機種を見る'}</button>`+(homeHidOpen?`<div id="homeHid" style="margin-top:8px">${H.map(k=>homeItem(k,M[k],1)).join('')}</div>`:'')})()}</div>
  <div class="card"><h2>店舗設定</h2><div id="slist"></div>
  <div class="row"><label>店舗名</label><input id="s_name" type="text"></div>
  <div class="row"><label>貸出枚数<small>1000円あたり（例：50）</small></label><input inputmode="decimal" id="s_lend" type="text" step="any"></div>
