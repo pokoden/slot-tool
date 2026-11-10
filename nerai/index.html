@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="設定狙い">
 <title>設定狙いツール</title>
-<link rel="apple-touch-icon" href="icon.png?v=1">
-<link rel="icon" href="icon.png?v=1">
+<link rel="apple-touch-icon" href="icon.png?v=2">
+<link rel="icon" href="icon.png?v=2">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
@@ -70,6 +70,18 @@ td.kst{color:#0b57d0;font-weight:700;font-size:11px;line-height:12px;white-space
 details summary{font-size:14px;font-weight:600;padding:4px 0}
 .mk{display:inline-block;min-width:20px;text-align:center;border-radius:50%;font-weight:700;line-height:20px;font-size:14px}.mk.a{background:#39ff14;color:#063}.mk.m{background:#ff2bd6;color:#fff}.mk.x{color:#111;font-weight:700}.mk.t{background:#f5ff00;color:#5a5200}.mk.ms{background:#ff9100;color:#3a1c00}.mk.mb{background:#00b0ff;color:#00243a}.mk.mq{background:#b4b4b4;color:#111}.ox3{min-width:46px;width:46px}.gl{border-left:1px solid #888!important}.hl{border-left:1px solid #888!important}td.evb{background:#00E5FF!important}.em2{position:relative;display:inline-block;width:24px;height:24px;vertical-align:middle;color:#000}.em2 .eo{display:block;font-size:24px;line-height:24px;text-align:center;color:#000}.em2 .ei{position:absolute;left:0;right:0;top:0;font-size:11px;font-weight:700;line-height:24px;text-align:center;color:#000}td.evy{background:#FFFF00!important}.em{display:inline-block;box-sizing:border-box;width:22px;height:22px;border:2px solid #000;border-radius:50%;line-height:18px;font-size:12px;font-weight:700;color:#000;text-align:center;vertical-align:middle}.em.e2{box-shadow:inset 0 0 0 2px #00E5FF,inset 0 0 0 4px #000}#kvt td:nth-child(2),#kvt th:nth-child(2),#kvt td:nth-child(3),#kvt th:nth-child(3),#kvt td:nth-child(6),#kvt th:nth-child(6),#kvt td:nth-child(7),#kvt th:nth-child(7),.kat td:nth-child(2),.kat th:nth-child(2),.kat td:nth-child(4),.kat th:nth-child(4),.kat td:nth-child(6),.kat th:nth-child(6),.kat td:nth-child(8),.kat th:nth-child(8),.kat td:nth-child(11),.kat th:nth-child(11),.kbt td:nth-child(2),.kbt th:nth-child(2),.kbt td:nth-child(7),.kbt th:nth-child(7),.kbt td:nth-child(10),.kbt th:nth-child(10){border-left:1px solid #888!important}th.hc{width:1px}.gr{border-right:1px solid #888!important}.og{color:#0b7a2b;font-weight:700;background:#e3f9dd}.ox{color:#222}.seat{font-weight:600}.seat.un{color:#222;font-weight:400}.tn b{font-size:13px}td.tn{white-space:nowrap!important;min-width:3.5em;line-height:1.2}.sc{font-weight:700;white-space:nowrap}.tn b.sl{color:#1f5fd6}td.mkc{cursor:pointer}
 input[inputmode="decimal"],input[inputmode="numeric"]{text-align:right}
+
+/* r255 PC wide — iPhone unmatched: min-width 900 + hover + fine pointer */
+@media (min-width:900px) and (hover:hover) and (pointer:fine){
+main{max-width:none;width:100%;margin:0 auto}
+.tw{overflow-x:auto;overflow-y:visible;margin:0;scrollbar-width:thin;scrollbar-color:#8a93a5 #e8edf6;-ms-overflow-style:scrollbar}
+.tw::-webkit-scrollbar{height:12px;display:block}
+.tw::-webkit-scrollbar-thumb{background:#8a93a5;border-radius:6px;border:2px solid #e8edf6}
+.tw::-webkit-scrollbar-track{background:#e8edf6}
+.tw table{width:max-content;min-width:100%;max-width:none}
+#r166top,#r166bar{width:100%;box-sizing:border-box}
+header,nav{max-width:none;width:100%}
+}
 </style>
 <style>input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([style*="font-size:1"]):not([style*="font-size:2"]),select:not([style*="font-size:1"]):not([style*="font-size:2"]),textarea:not([style*="font-size:1"]):not([style*="font-size:2"]){font-size:16px}
 #r166top{position:sticky;top:0;z-index:1000;padding-top:env(safe-area-inset-top)}
@@ -120,7 +132,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 })();
 </script></head>
 <body>
-<header><img src="icon.png?v=1" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<header><img src="icon.png?v=2" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
 <script>/* r188 数字入力：入ったときだけカーソルを右端へ（入ったあとの長押し移動はそのまま） */
@@ -131,7 +143,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=94"></script><script src="auto.js?v=94"></script>
+<script src="core.js?v=95"></script><script src="auto.js?v=95"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
