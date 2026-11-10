@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>パチンコ判別ツール</title>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="パチンコ判別">
-<link rel="apple-touch-icon" href="icon.png?v=10"><link rel="icon" href="icon.png?v=10">
+<link rel="apple-touch-icon" href="icon.png?v=11"><link rel="icon" href="icon.png?v=11">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -179,7 +179,9 @@ const MACHINES=[
  {id:'pa_agnes',yt:239,name:'PA大海物語 with アグネス・ラム Premium Edition',sub:'三洋物産 / 甘デジ・アグネスプレミアRBA',intro:'2026年9月7日',first:99.9,total:6.48,r1:99,R:[4, 6, 10],cond:'通常条件・遊タイムあり（残保留ありの記載なし）',
   src:'https://pachinko-spec.info/spec/171633/'},
  {id:'madoka3_qb',name:'P魔法少女まどか☆マギカ3 キュウべえver.',sub:'京楽産業. / 甘デジ・P魔法少女まどか☆マギカ3MAJ1',intro:'2026年5月11日',first:99.9,total:5.25,r1:79.54,R:[4, 10],cond:'通常条件（残保留あり）',
-  src:'https://pachinko-spec.info/spec/168081/'}
+  src:'https://pachinko-spec.info/spec/168081/'},
+ {id:'rezero_s2_129',name:'P Re:ゼロから始める異世界生活 season2 129ver.',sub:'大都技研 / ライトミドル・P／Re:ゼロから始める異世界生活season2／A10',intro:'2026年3月2日',first:129.9,total:8.97,r1:140,R:[2, 5, 10],cond:'通常条件（残保留なし）',
+  src:'https://pachinko-spec.info/spec/166154/'}
 ];
 var MACHINES_IDS=MACHINES.map(m=>m.id);const M={};MACHINES.forEach(m=>{m.R=[...m.R].sort((a,b)=>a-b);M[m.id]=m});
 const ROWS=30,ROWS0=10;
