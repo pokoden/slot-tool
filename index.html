@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><link rel="apple-touch-icon" href="icon.png?v=8"><link rel="icon" href="icon.png?v=8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><link rel="apple-touch-icon" href="icon.png?v=9"><link rel="icon" href="icon.png?v=9"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>スロ設定判別ツール</title>
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
@@ -3769,7 +3769,31 @@ function migrate(st){if(!st)return st;if('unit' in st||'inv' in st){if(st.unit==
  if(!E(st.invYen)&&E(st.y0)&&E(st.y1)){st.y0=st.invYen;st.invYen=''}
  const c={};for(const k in st.checks||{}){const n=st.checks[k]===true?1:+st.checks[k]||0;if(n)c[k]=n}st.checks=c;st.v=st.v||{};return st}
 function genId(){let r;if(typeof crypto!=='undefined'&&crypto.randomUUID)r=crypto.randomUUID();else if(typeof crypto!=='undefined'&&crypto.getRandomValues){const b=crypto.getRandomValues(new Uint8Array(16));r=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('')}else r=Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');return Date.now().toString(36)+'-'+r}
-if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate,genId};
+
+// ===== r175：ジャグラー系ブドウ逆算（チェリー狙い前提） =====
+const BUD={
+ im:{big:252,reg:96,gPay:8,rep:7.298,che:33.301,chePay:2,rates:[6.02,6.02,6.02,6.02,6.02,5.78]},
+ my5:{big:240,reg:96,gPay:8,rep:7.298,che:34.62,chePay:2,rates:[5.9,5.85,5.8,5.78,5.76,5.66]},
+ my6:{big:240,reg:96,gPay:8,rep:7.298,che:34.62,chePay:2,rates:[5.9,5.85,5.8,5.78,5.76,5.66]},
+ gg3:{big:240,reg:96,gPay:8,rep:7.298,che:33.539,chePay:2,rates:[6.25,6.2,6.15,6.07,6,5.92]}
+};
+function isBud(mid){return !!BUD[mid]}
+function budCnt(st,k){const v=(st&&st.v)||{};const a=v[k],b=v[k+'_s'];if(a===''||a==null)return null;return Math.max(0,(+a||0)-(+b||0))}
+function budAutoOf(mid,st,stores){const mo=money(st,stores||[]);const G=useG(st);return{G:G>0?G:null,big:budCnt(st,'big'),reg:budCnt(st,'reg'),diff:mo.diff!=null&&isFinite(mo.diff)?mo.diff:null}}
+function budPick(mid,st,stores){const a=budAutoOf(mid,st,stores),m=st.bud||{};const n=k=>{if(m[k]!=null&&String(m[k]).trim()!==''){const x=+z2h(String(m[k]).trim());return isFinite(x)?x:null}return a[k]};return{G:n('G'),big:n('big'),reg:n('reg'),diff:n('diff'),auto:a}}
+function budRev(mid,inp){const B=BUD[mid];if(!B||!inp)return null;const G=+inp.G,big=+inp.big,reg=+inp.reg,diff=+inp.diff;
+ if(!(G>0)||!isFinite(big)||big<0||!isFinite(reg)||reg<0||!isFinite(diff))return null;
+ const other=big*B.big+reg*B.reg+3*(G/B.rep)+B.chePay*(G/B.che);
+ const pay=(diff+G*3)-other;if(!(pay>0))return null;const n=pay/B.gPay;if(!(n>0))return null;const den=G/n;
+ let near=0;B.rates.forEach((r,i)=>{if(Math.abs(r-den)<Math.abs(B.rates[near]-den))near=i});
+ return{n,den,near,rates:B.rates,pay}}
+function budLabel(r){return r&&isFinite(r.den)?'1/'+(Math.round(r.den*100)/100).toFixed(2):'-'}
+function budFromEntry(e){if(!e||!isBud(e.mid))return null;const s=migrate(Object.assign({start:'',total:'',v:{},checks:{},y0:'',y1:'',sv0:'',sv1:'',hb0:'',hb1:'',out:'',invYen:''},e.st||{}));
+ const G=e.G!=null&&e.G!==''?+e.G:useG(s);const big=budCnt(s,'big'),reg=budCnt(s,'reg');
+ let diff=e.diff;if(diff==null||!isFinite(+diff))diff=money(s,[]).diff;
+ return budRev(e.mid,{G,big:big==null?0:big,reg:reg==null?0:reg,diff})}
+
+if(typeof module!=='undefined')module.exports={M,post,summary,useG,money,migrate,genId,budRev,budAutoOf,budPick,budFromEntry,BUD,isBud,budLabel};
 // ===== 内容フィンガープリント（id・保存時刻を除く全記録項目） =====
 function canon(mid,st){const n=x=>x===''||x==null?'':String(+x===+x&&String(x).trim()!==''?+x:String(x).trim());
  const v={};Object.keys(st.v||{}).sort().forEach(k=>{if(+st.v[k])v[k]=+st.v[k]});
@@ -3857,7 +3881,7 @@ const eDiff=e=>PA?anStats([e]).diff:(e.diff!=null&&isFinite(e.diff)?+e.diff:null
 const yenS=v=>v!=null?`<span${pc(v)}>${sg(v)}円</span>`:'-';
 function hLines(e){const d=eDiff(e),tm=((e.tS||e.tE)?esc(e.tS||'')+'〜'+esc(e.tE||''):'-')+(e.hours>0?'　'+(+e.hours).toFixed(1)+'時間':''),L=['日付 '+jDate(e.date),'店舗名'+esc(e.store||'店舗未入力')+(e.memo?'、台番'+esc(e.memo):''),'稼働時間'+tm];
  if(PA){L.push(`回転数${(e.G??0).toLocaleString()}回転、回転率${e.rate!=null?f2(e.rate):'-'}`,`差玉${d!=null?`<span${pc(d)}>${sg(Math.round(d))}玉</span>`:'-'}、収支${yenS(e.yen)}`,`仕事量${e.work!=null?`<span${pc(e.work)}>${sg(e.work)}円</span>`:'-'}`)}
- else{const q=anStats([e]).pay;L.push(`回転数${(e.G??0).toLocaleString()}G、機械割${q!=null?(q*100).toFixed(1)+'%':'-'}`,`差枚${d!=null?`<span${pc(d)}>${sg(d)}枚</span>`:'-'}、収支${yenS(e.yen)}`,e.avg!=null?`推定設定${e.avg.toFixed(2)}、456確率${(e.hi*100).toFixed(1)}%`:'推定設定-、456確率-')}return L.join('<br>')}
+ else{const q=anStats([e]).pay;L.push(`回転数${(e.G??0).toLocaleString()}G、機械割${q!=null?(q*100).toFixed(1)+'%':'-'}`,`差枚${d!=null?`<span${pc(d)}>${sg(d)}枚</span>`:'-'}、収支${yenS(e.yen)}`,e.avg!=null?`推定設定${e.avg.toFixed(2)}、456確率${(e.hi*100).toFixed(1)}%`:'推定設定-、456確率-');if(isBud(e.mid))L.push(`ブドウ確率${budLabel(budFromEntry(e))}`)}return L.join('<br>')}
 function hEntry(e,o){o=o||{};
  return`<div class="row" style="border-bottom:1px solid #eee;padding:6px 0;gap:8px;align-items:center">${o.rank?`<b style="flex:0 0 26px;white-space:nowrap">${o.rank}</b>`:''}<span style="flex:0 0 auto;display:flex;align-self:center">${thumb(mk(e),o.rank?40:48)}</span><label style="cursor:pointer;flex:1;min-width:0;margin:0" onclick="loadAll('${e.id}')"><b>${esc((M[e.mid]||{}).name||e.machine||'')}</b>${aimTag(aimOf(e))}<small style="display:block;line-height:1.5">${hLines(e)}</small></label>${o.del?`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto">${BS}<button class="sub sm" style="margin:0" onclick="delAll('${e.id}')">削除</button>${e.src!=='excel'?`<button class="sub sm" style="margin:0" onclick="chgM('${e.id}')">機種変更</button>`:''}</div>`:''}</div>`}
 const perHTML=S=>{const L='flex:0 0 3.5em;color:#111;font-size:.95em',Dd='flex:1;min-width:0;width:100%;font-size:16px;box-sizing:border-box;padding:4px 4px;border:1px solid #ccd;border-radius:8px;background:#fff',R='display:flex;align-items:center;gap:4px;margin-top:6px',B='flex:0 0 auto;margin:0;padding:4px 5px;font-size:11px;line-height:1.2;white-space:nowrap';return`<div class="card" id="perCard"><div style="display:flex;align-items:center;justify-content:space-between"><b>📅 検索期間</b><label style="display:flex;align-items:center;gap:6px;margin:0;font-size:.95em;color:${S.pOn?'#2b6fe8':'#111'}"><input type="checkbox" ${S.pOn?'checked':''} onchange="anSet('pOn',this.checked)" style="width:22px;height:22px;margin:0;accent-color:#2b6fe8">${S.pOn?'期間で絞る':'全期間'}</label></div><div style="${S.pOn?'':'opacity:.4;'}transition:opacity .2s"><div style="${R}"><span style="${L}">いつから</span><input type="date" value="${esc(S.pFrom||'')}" onchange="anSet('pFrom',this.value)" style="${Dd}"><button class="sub sm" style="${B}" onclick="pdefSet('f',this.previousElementSibling.value)">デフォルト<br>期間にする</button></div><div style="${R}"><span style="${L}">いつまで</span><input type="date" value="${esc(S.pTo||today())}" onchange="anSet('pTo',this.value)" style="${Dd}"><button class="sub sm" style="${B}" onclick="pdefSet('t',this.previousElementSibling.value)">デフォルト<br>期間にする</button></div><div style="display:flex;gap:4px;margin-top:6px"><button class="sub sm" style="flex:1;margin:0;padding:7px 4px;font-size:11px;line-height:1.25" onclick="pdefReset()">デフォルト期間をリセット</button></div>${pqBtns('anPer')}</div></div>`};
@@ -4124,7 +4148,8 @@ ${blocks(m)[0]}
  const pb=k=>{if(!m.ph)return'';const l=m.ph[k];if(!l)return'<span class="phb phe"></span>';return`<button class="phb" onclick="phShow('${k}')" aria-label="見本画像"><img src="img/${mid}/thumb/${l[0][0]}.jpg" loading="lazy" alt="">${l.length>1?`<i>${l.length}</i>`:''}</button>`};for(const e of m.els){if(e.t==='rate'){if(e.sk)continue;h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)} 回数${e.s?`<small>${esc(e.s)}</small>`:''}</label>${step('v_'+e.k,st.v[e.k]??'')}</div>`;if(e.sk)h+=`<div class="row"><label style="padding-left:12px">打ち始め${esc(e.l)}<small>空欄＝0。（現在−打ち始め）÷（総回転数−打ち始め回転数）で計算</small></label>${step('v_'+e.k+'_s',st.v[e.k+'_s']??'')}</div>`}
   else if(e.t==='pct')h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div><div class="row"><label style="text-align:right">母数</label>${step('v_'+e.k+'_n',st.v[e.k+'_n']??'',48)}<label style="text-align:right">当選</label>${step('v_'+e.k+'_k',st.v[e.k+'_k']??'',48)}</div>`;
   else{h+=`<div class="row">${pb('e:'+e.k)}<label>${esc(e.l)}<small>${esc(e.s)}</small></label></div>`;e.c.forEach((c,j)=>{h+=`<div class="row"><label style="padding-left:12px">${c}</label>${step('v_'+e.k+'_'+j,st.v[e.k+'_'+j]??'')}</div>`})}}
- h+=`</div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`;
+ if(isBud(k)){const a0=budAutoOf(k,st,stores()),bv=key=>{const m=st.bud||{};return(m[key]!=null&&String(m[key]).trim()!=='')?m[key]:(a0[key]==null||a0[key]===''?'':a0[key])};const bi=(id,val,neg)=>`<input id="${id}" inputmode="${neg?'decimal':'numeric'}" type="text" value="${esc(val)}" style="width:96px;text-align:right;font-size:16px">`;
+ h+=`</div><div class="card" id="budCard"><h2>ブドウ逆算</h2><div class="row"><label>総回転数</label>${bi('bud_G',bv('G'))}</div><div class="row"><label>BIG</label>${bi('bud_big',bv('big'))}</div><div class="row"><label>REG</label>${bi('bud_reg',bv('reg'))}</div><div class="row"><label>差枚数</label>${bi('bud_diff',bv('diff'),1)}</div><div id="budOut"></div></div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`}else h+=`</div><div class="card"><h2>設定示唆（出現回数）</h2><p class="note">「濃厚・否定」系は1回以上で該当しない設定を0%にします。奇偶・高設定示唆は回数を記録するだけ（計算に入れない）。</p>`;
  m.hints.forEach((g,gi)=>{h+=`<p style="margin:12px 0 4px;font-weight:bold;font-size:.9em;display:flex;align-items:center;gap:0">${m.ph&&m.ph['g:'+gi]?pb('g:'+gi):''}<span style="min-width:0">${esc(g[0])}</span></p>`;g[1].forEach((x,hi)=>{h+=`<div class="row">${pb('h:'+gi+'_'+hi)}<label>${esc(x[0])} <span class="tag">${esc(x[1])}</span>${x[2]?'':' <span class="note">(注記)</span>'}</label>${step('c_'+gi+'_'+hi,st.checks[gi+'_'+hi]||'',44)}</div>`});if(m.cards===gi)h+=cardBox()});
  h+=`</div><div class="card res"><h2>結果</h2><div id="out"></div></div>
  <div class="card"><h2>確率表と実測</h2><p class="note">濃い青＝実測値に最も近い設定</p><div class="tw" id="tbl"></div></div>
@@ -4135,7 +4160,7 @@ ${blocks(m)[0]}
  ${m.notes.map(n=>`<p class="note">・${esc(n)}</p>`).join('')}<p class="note">出典：<br>${m.src.map(u=>`<a href="${u}" target="_blank">${u}</a>`).join('<br>')}</p></div>`;
  if(m.free)h=h.replace(/<div class="card"><h2>設定示唆[\s\S]*?(?=<div class="card"><h2>この台を保存)/,'').replace(/<div class="card"><h2>注意・出典[\s\S]*$/,'');
  el.innerHTML=h;
- el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',e=>{clearTimeout(window._rdT);window._rdI=e.target.id;window._rdT=setTimeout(()=>{window._rdT=null;read({target:{id:window._rdI}})},150)});x.addEventListener('change',e=>{clearTimeout(window._rdT);window._rdT=null;read(e)})});
+ el.querySelectorAll('input').forEach(x=>{x.addEventListener('input',e=>{clearTimeout(window._rdT);window._rdI=e.target.id;window._rdT=setTimeout(()=>{window._rdT=null;read({target:{id:window._rdI}})},150)});x.addEventListener('change',e=>{clearTimeout(window._rdT);window._rdT=null;read(e)});if(/^bud_/.test(x.id)){x.addEventListener('focus',()=>{const t=x;setTimeout(()=>{try{const n=t.value.length;t.setSelectionRange(n,n)}catch(e){}},0)});x.addEventListener('blur',()=>{budPaint()})}});
  tickE();update();renderH();banner();scrollTo(0,0)}
 // 保存済み(locked)の記録は最終更新時刻・終了時刻を変えない。旧データ（最終更新時刻なし・終了時刻あり）は保存済み扱い
 function lockMig(s){if(s&&s.locked==null){if(s.tE&&!s.tL){s.locked=1;s.tSaved=s.tE}else s.locked=0}return s}
@@ -4144,6 +4169,7 @@ function tickE(){if(mid&&st&&!st.tEman&&$('f_tE')&&document.activeElement!==$('f
 setInterval(tickE,20000);
 function read(ev){if(!mid||!curM()||!$('f_store'))return;if(mid==='free')readFM();const _snap=()=>{const c={...st};delete c.fm;delete c.tS;delete c.tE;delete c.tL;delete c.tEman;return JSON.stringify(c)},_b=_snap();for(const f of['store','memo','note','date','start','total','y0','y1','tS','tE','sv0','sv1','hb0','hb1','out','tstart','ttotal'])if($('f_'+f))st[f]=$('f_'+f).value;
  const v={};document.querySelectorAll('[id^="v_"]').forEach(x=>{if(x.value!=='')v[x.id.slice(2)]=Math.max(0,parseInt(x.value)||0)});st.v=v;
+ if(isBud(mid)){st.bud=st.bud||{};const tid=ev&&ev.target&&ev.target.id;['G','big','reg','diff'].forEach(k=>{if(tid!=='bud_'+k)return;const el=$('bud_'+k);if(!el)return;const t=String(el.value).trim();if(t==='')delete st.bud[k];else st.bud[k]=t});if(st.bud&&!Object.keys(st.bud).length)delete st.bud}
  const c={};document.querySelectorAll('[id^="c_"]').forEach(x=>{const n=Math.max(0,parseInt(x.value)||0);if(n)c[x.id.slice(2)]=n});st.checks=c;
  if(!st.tS&&[...document.querySelectorAll('#mach input')].some(x=>x.id!=='f_date'&&x.id!=='f_tS'&&x.id!=='f_tE'&&!String(x.id).startsWith('fm_')&&x.value!=='')){st.tS=nowHM();$('f_tS').value=st.tS}
  // 最終更新時刻：時刻欄以外の入力・ボタン操作で更新。終了時刻は手入力が無ければこれに追従
@@ -4178,6 +4204,11 @@ function ownG(m,st){if(m.at&&st.ttotal!==''&&st.ttotal!=null)return Math.max(0,+
 function payoutMine(m,st,mo){const g=ownG(m,st);return g>0&&mo.diff!=null?(3*g+mo.diff)/(3*g)*100:null}
 window.setG=g=>{st.gmode=g;LS.set('v2_cur_'+mid,st);update()};
 const pc=x=>x>0?' style="color:#1e5bd6"':x<0?' style="color:#d62828"':'',r1=x=>Math.round(x*10)/10,sg=x=>(x>0?'+':'')+Math.round(x).toLocaleString();
+function budPaint(){if(!mid||!isBud(mid))return;const a=budAutoOf(mid,st,stores());
+ ['G','big','reg','diff'].forEach(k=>{const el=$('bud_'+k);if(!el||document.activeElement===el)return;const man=st.bud&&st.bud[k]!=null&&String(st.bud[k]).trim()!=='';if(man)return;el.value=a[k]==null||a[k]===''?'':a[k]});
+ const br=budRev(mid,budPick(mid,st,stores())),o=$('budOut');if(!o)return;if(!br){o.innerHTML='<div class="row"><label>推定ブドウ回数</label><b>-</b></div><div class="row"><label>ブドウ確率</label><b>-</b></div>';return}
+ const rows=br.rates.map((r,i)=>`<div class="row"><label style="flex:0 0 52px">設定${i+1}</label><b style="${i===br.near?'color:#1e5bd6':''}">1/${r}</b>${i===br.near?' <span class="tag">近い</span>':''}</div>`).join('');
+ o.innerHTML=`<div class="row"><label>推定ブドウ回数</label><b>${Math.round(br.n)}回</b></div><div class="row"><label>ブドウ確率</label><b>${budLabel(br)}</b></div>${rows}`}
 function update(){const m=curM(),G=useG(st),tot=+st.total||0,start=+st.start||0;{const T=(i,v)=>{const e=$(i);if(e)e.textContent=String(v||'').trim()||'-'};T('o_kdate',st.date);T('o_kstore',st.store);T('o_kdai',st.memo)}
  $('mine').textContent=st.total!==''?Math.max(0,tot-start)+'G':'-';
  
@@ -4198,10 +4229,11 @@ function update(){const m=curM(),G=useG(st),tot=+st.total||0,start=+st.start||0;
   const ks=m.at?['xbig','xreg']:(m.els.some(e=>e.k==='big')?['big','reg']:null);
   if(ks){const c=k=>st.v[k]!=null&&st.v[k]!==''?Math.max(0,(+st.v[k]||0)-(+st.v[k+'_s']||0)):0,b=c(ks[0]),r=c(ks[1]),g=gm||0,pr=n=>n>0&&g>0?'1/'+(g/n).toFixed(1):'-';
    x+=[['BB',b],['RB',r],['合算',b+r]].map(([l,n])=>RW(l,`${n}回　${pr(n)}`)).join('')}
+  if(isBud(mid)){const br=budRev(mid,budPick(mid,st,stores()));x+=RW('ブドウ確率',budLabel(br));x+=RW('推定ブドウ',br?Math.round(br.n)+'回':'-')}
   if(!m.free){const q=summary(m,st);x+=RW('設定判別',q.p?'推定設定 '+q.avg.toFixed(1):'-')+RW('456確率',q.p?(q.hi*100).toFixed(1)+'%':'-')}
   if(m.at&&!m.free){const T=terms(m,st.v,G,gm).out;x+='<p style="margin:10px 0 2px;font-weight:bold;font-size:.9em">数えた項目</p>'+(T.length?T.map(([e,k,g])=>RW(esc(e.l),`${k}回　${k>0&&g>0?'1/'+r1(g/k):'-'}`)).join(''):'<p class="note">まだありません</p>')}
   $('money').innerHTML=x}
- if(m.free)return;const sm=summary(m,st);let o='';
+ budPaint();if(m.free)return;const sm=summary(m,st);let o='';
  if(!sm.p)o=`<div class="warn">入力した示唆が矛盾していて、残る設定がありません。回数を見直してね。</div>`;
  else{o=`<p class="note">計算G数：${G}G（自分の分＝現在−打ち始め）</p>`+(()=>{const mx=Math.max(...sm.p);return sm.p.map((x,i)=>`<div class="row"><label style="flex:0 0 52px">設定${S[i]}</label><div class="bar"><div style="width:${(x*100).toFixed(1)}%${x>=mx-1e-12?';background:#ff9f2e':''}"></div></div><span>${(x*100).toFixed(1)}%</span></div>`).join('')})()+
   `<p><b>期待設定：${sm.avg.toFixed(2)}</b>　設定4以上：${(sm.hi*100).toFixed(1)}%</p>`}
