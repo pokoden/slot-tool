@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="設定狙い">
 <title>設定狙いツール</title>
-<link rel="apple-touch-icon" href="icon.png?v=2">
-<link rel="icon" href="icon.png?v=2">
+<link rel="apple-touch-icon" href="icon.png?v=3">
+<link rel="icon" href="icon.png?v=3">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
@@ -132,7 +132,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 })();
 </script></head>
 <body>
-<header><img src="icon.png?v=2" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<header><img src="icon.png?v=3" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
 <script>/* r188 数字入力：入ったときだけカーソルを右端へ（入ったあとの長押し移動はそのまま） */
@@ -143,7 +143,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=95"></script><script src="auto.js?v=95"></script>
+<script src="core.js?v=96"></script><script src="auto.js?v=96"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -378,8 +378,8 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
 // ===== 手入力の回転・BB・RB（店舗・日付・台番ごと。本データがあれば本データ優先）=====
 const manKey=(s,d,t)=>s+'|'+d+'|'+t;
 const manAll=()=>S.an.manual||(S.an.manual={});
-// 本データがある日は本データ。無い日（仮想日など）だけ手入力を使う
-function effV(s,d,t,real){if(real)return{g:real.g,bb:real.bb,rb:real.rb};const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null?m.g:null,bb:m.bb!=null?m.bb:null,rb:m.rb!=null?m.rb:null}}
+// 手入力があれば手入力、なければ本データ。消した項目は本データに戻る（仮想日は空）
+function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null?m.g:real?real.g:null,bb:m.bb!=null?m.bb:real?real.bb:null,rb:m.rb!=null?m.rb:real?real.rb:null}}
 // 本データがある台の手入力を消す。消した件数を返す
 function manClean(){const M=manAll();let n=0;for(const k of Object.keys(M)){const[s,d,t]=k.split('|');if(S.rows.some(r=>r.s===s&&r.d===d&&String(r.t)===String(t))){delete M[k];n++}}return n}
 const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
@@ -515,7 +515,8 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const soC=cols.find(c=>c.k===tu.so);
  const rkCell=(v,c,n,i)=>`<td class="${v===1?'r1b':''}${i===0?' hl':''}">${v||''}</td>`;
  const e=cols.length?'<td class="hl"></td>'+'<td></td>'.repeat(cols.length-1):'',e4='<td class="hl"></td>'+'<td></td>'.repeat(5);
- const sums=(lab1,lab2,t)=>`<tr class="sum"><td class="fix">${lab1}</td><td class="hl"></td><td></td><td></td><td class="hl">${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td class="hl"></td><td></td><td></td><td class="hl">${Math.round(t.g/t.n).toLocaleString()}</td><td>${(t.bb/t.n).toFixed(1)}</td><td>${(t.rb/t.n).toFixed(1)}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr>`;
+ const sums=(lab1,lab2,t,ix)=>{const a=t.n?{g:t.g/t.n,bb:t.bb/t.n,rb:t.rb/t.n}:{g:0,bb:0,rb:0};const ixV=t.n?{g:a.g,bb:t.bbN===t.n?a.bb:null,rb:t.rbN===t.n?a.rb:null}:null;const ixTd=ix&&t.n&&t.m&&ixV?idxTds(t.m,ixV,t.s||''):e4;
+  return`<tr class="sum"><td class="fix">${lab1}</td><td class="hl"></td><td></td><td></td><td class="hl">${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td class="hl"></td><td></td><td></td><td class="hl">${Math.round(a.g).toLocaleString()}</td><td>${a.bb.toFixed(1)}</td><td>${a.rb.toFixed(1)}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${ixTd}${e}</tr>`};
  const flat=tu.so==='rank';const flatRows=[];const NF=NPV();
  const onlyF=nm=>!tu.only||!!dMk(nm);
  const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順','hl'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='g'?`<th class="s hl ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`:k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${k==='rank'?'hl ':''}${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数'],['it','総合<br>指数'],['itk','店舗機種<br>総合']].map(([k,t])=>`<th class="s${k==='ig'?' hl':''} ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map((c,i)=>`<th class="s hc${i===0?' hl':''} ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
@@ -525,32 +526,33 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   const nkey=(r,c)=>{const x=wsum(r,c);if(!x)return null;return c.m==='g'?x.g:-NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)};
   const tval=(r,k)=>{const nm=NM.get(String(r.t));
    if(k==='rank')return inR(nm)&&nm.rank!==''?nm.rank:null;if(k==='mark')return dMk(nm)?0:null;if(k==='score')return nm?-nm.score:null;
-   if(k==='g'||k==='bb'||k==='rb'||k==='pbb'||k==='prb'||k==='pgs'){if(u.virt)return null;return k==='g'?-r.g:k==='bb'?-r.bb:k==='rb'?-r.rb:NC.den(r.g,k==='pbb'?r.bb:k==='prb'?r.rb:r.bb+r.rb)}
+   if(k==='g'||k==='bb'||k==='rb'||k==='pbb'||k==='prb'||k==='pgs'){const V=effV(u.s,u.date,r.t,u.virt?null:r);if(V.g==null)return null;return k==='g'?-V.g:k==='bb'?-(V.bb||0):k==='rb'?-(V.rb||0):NC.den(V.g,k==='pbb'?V.bb:k==='prb'?V.rb: (V.bb||0)+(V.rb||0))}
    if(k==='ig'||k==='irb'||k==='igs'||k==='it'||k==='itk'){const V=effV(u.s,u.date,r.t,u.virt?null:r);const x=idxOfV(r.m,V);if(k==='it'){const n=touTot(x);return n==null?null:-n}if(k==='itk'){const tk=V.bb!=null&&V.rb!=null?tkRowIdx({s:u.s,m:r.m,g:V.g,bb:V.bb,rb:V.rb},set):null;const n=touTkTot(tk);return n==null?null:-n}const n=x?x[{ig:'g',irb:'rb',igs:'gs'}[k]]:null;return n==null?null:-n}
    if(!soC||soC.k!==k)return null;
    if(nmode)return nkey(r,soC);const v=(u.rk[r.s+'|'+r.t]||[])[soC.i];return v||null};
   const sorter=(a,b)=>{const k=tu.so;const dir=tu.rev?-1:1;if(k&&k!=='t'){const va=tval(a,k),vb=tval(b,k);if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb)return(va<vb?-1:1)*dir}return a.t.localeCompare(b.t,'ja',{numeric:true})*(k==='t'?dir:1)};
   let cst={};const ncell=(r,c,i)=>{const x=wsum(r,c);const y=x?(c.m==='g'?barSty(x.g,cst[c.k]):tintSty(NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb),cst[c.k])):'';return`<td${i===0?' class="hl"':''}${y?` style="${y}"`:''}>${x?(c.m==='g'?x.g.toLocaleString():P(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):''}</td>`};
-  const st={n:0,g:0,bb:0,rb:0};const so={n:0,g:0,bb:0,rb:0,k:0};let ng=0;
+  const st={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,m:null,s:u.s};const so={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,k:0,m:null,s:u.s};let ng=0;
   for(const g of groups.slice().sort((a,b)=>gS(u.s,a,b))){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>NC.groupOf(r.m,set)===g&&(!tu.ok||okIx(idxOfV(r.m,effV(u.s,u.date,r.t,u.virt?null:r))))).sort(sorter);if(!L.length)continue;ng++;
-   const t={n:L.length,g:0,bb:0,rb:0};for(const r of L){t.g+=r.g;t.bb+=r.bb;t.rb+=r.rb}st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;
+   const acc=rows=>{const t={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,m:null,s:u.s};for(const r of rows){const V=effV(u.s,u.date,r.t,u.virt?null:r);if(V.g==null)continue;t.n++;t.g+=V.g||0;if(V.bb!=null){t.bb+=V.bb;t.bbN++}if(V.rb!=null){t.rb+=V.rb;t.rbN++}if(!t.m)t.m=r.m}return t};
+   const t=acc(L);st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;st.bbN=(st.bbN||0)+t.bbN;st.rbN=(st.rbN||0)+t.rbN;st.m=st.m||t.m;st.s=u.s;
    const full=(all?sShort(u.s)+'｜':'')+[...new Set(L.map(r=>r.m))].join('／');
    if(!flat&&!(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t))))))body+=band(NCOL,(all?sShort(u.s)+'｜':'')+mShort(g),full,`${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}`);
-   const gst=u.virt?null:{g:{max:Math.max(0,...L.map(r=>r.g)),n:L.length},bb:mm(L.map(r=>NC.den(r.g,r.bb))),rb:mm(L.map(r=>NC.den(r.g,r.rb))),gs:mm(L.map(r=>NC.den(r.g,r.bb+r.rb)))};
+   const VV=L.map(r=>effV(u.s,u.date,r.t,u.virt?null:r));const gst=VV.some(V=>V.g>0)?{g:{max:Math.max(0,...VV.map(V=>V.g||0)),n:VV.filter(V=>V.g!=null).length},bb:mm(VV.map(V=>V.g>0&&V.bb!=null?NC.den(V.g,V.bb):null)),rb:mm(VV.map(V=>V.g>0&&V.rb!=null?NC.den(V.g,V.rb):null)),gs:mm(VV.map(V=>V.g>0&&V.bb!=null&&V.rb!=null?NC.den(V.g,V.bb+V.rb):null))}:null;
    cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null)),n:L.length}:mm(vs)}
    const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
-    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty?sy('g',r.g):''}><input inputmode="numeric" class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)" style="text-align:right"></td>`;
+    const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty&&V.g!=null?sy('g',V.g):''}><input inputmode="numeric" class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)" style="text-align:right"></td>`;
     const pc=(c,k,n)=>`<td data-c="${c}" class="pw"${sty&&V.g>0&&n!=null?sy2(k,NC.den(V.g,n)):''}>${probT(V.g,n==null?null:n)}</td>`;
     return`<tr data-m="${esc(r.m)}" data-s="${esc(u.s)}"><td class="fix">${esc(r.t)}</td>${ex}<td class="hl">${inR(nm)?nm.rank:''}</td><td class="mkc" style="text-align:center${mjBg(nm)?';background:'+mjBg(nm):''}">${esc(dMk(nm))}</td><td>${nm?nm.score.toFixed(1):''}</td>${inp('g','')}${inp('bb',' s')}${inp('rb',' s')}${pc('pbb','bb',V.bb)}${pc('prb','rb',V.rb)}${pc('pgs','gs',V.bb!=null&&V.rb!=null?V.bb+V.rb:null)}${idxTds(r.m,V,u.s)}${cols.map((c,i)=>nmode?ncell(r,c,i):rkCell(x[c.i],c,L.length,i)).join('')}</tr>`};
    if(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t)))))continue;
    if(flat){for(const r of L){const nm=NM.get(String(r.t));if(onlyF(nm))flatRows.push({nm,s:u.s,t:r.t,html:mkRow(r,`${stTd(u.s)}<td class="l ml" title="${esc(r.m)}">${esc(mShort(g))}</td>`)})}}
    else body+=L.filter(r=>onlyF(NM.get(String(r.t)))).map(r=>mkRow(r,'')).join('');
-   if(!u.virt&&!flat&&!tu.only)body+=sums('合計','平均',t);
-   if(!u.virt&&!flat&&tu.only){const F=L.filter(r=>onlyF(NM.get(String(r.t))));const t2={n:F.length,g:0,bb:0,rb:0};for(const r of F){t2.g+=r.g;t2.bb+=r.bb;t2.rb+=r.rb}so.n+=t2.n;so.g+=t2.g;so.bb+=t2.bb;so.rb+=t2.rb;so.k++;if(t2.n)body+=sums('合計','平均',t2)}}
-  if(all&&!u.virt&&!tu.g&&ng>1&&!flat&&!tu.only)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${st.n}台`,'st')+sums('店計','店平均',st);
-  if(all&&!u.virt&&!tu.g&&!flat&&tu.only&&so.k>1&&so.n)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${so.n}台`,'st')+sums('店計','店平均',so)}
+   if(!flat&&!tu.only&&t.n)body+=sums('合計','平均',t,1);
+   if(!flat&&tu.only){const F=L.filter(r=>onlyF(NM.get(String(r.t))));const t2=acc(F);so.n+=t2.n;so.g+=t2.g;so.bb+=t2.bb;so.rb+=t2.rb;so.bbN+=t2.bbN;so.rbN+=t2.rbN;if(t2.n)so.k++;if(t2.n)body+=sums('合計','平均',t2,1)}}
+  if(all&&!tu.g&&ng>1&&!flat&&!tu.only&&st.n)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${st.n}台`,'st')+sums('店計','店平均',st,0);
+  if(all&&!tu.g&&!flat&&tu.only&&so.k>1&&so.n)body+=band(NCOL,sShort(u.s)+'｜全体',sShort(u.s)+'｜全機種の合計',`${so.n}台`,'st')+sums('店計','店平均',so,0)}
  // 狙い順の見出しをタップ：帯をやめて、全店舗・全機種を1列に（順位の小さい順。順位なしは最後に点数順）
  if(flat){const d=tu.rev?-1:1;flatRows.sort((a,b)=>{const ra=inR(a.nm)&&a.nm.rank!==''?a.nm.rank:null,rb=inR(b.nm)&&b.nm.rank!==''?b.nm.rank:null;if(ra==null&&rb!=null)return 1;if(rb==null&&ra!=null)return-1;if(ra!=null)return(ra-rb)*d;return(b.nm?b.nm.score:0)-(a.nm?a.nm.score:0)||a.s.localeCompare(b.s,'ja')||String(a.t).localeCompare(String(b.t),'ja',{numeric:true})});body=flatRows.map(o=>o.html).join('')}
  $('main').innerHTML=`${asBar()}<div class="card"><h2>🎯 当日データ</h2>
@@ -846,12 +848,13 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  // 当日履歴：選んだ日が過去でその日のデータがあるとき（指数は全データが母集団）
  const HD=new Map();for(const u of units)if(!u.virt&&u.date<=last)for(const r of u.day)HD.set(u.s+'|'+r.t,r);const hasH=true;const HB=kenBase();const HG=new Map();for(const r of HD.values()){const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
  const sv=SV(nr.so);const dir=nr.rev?-1:1;
- const hOk=x=>{const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);return!!r&&okIx(NC.rowIdx(r,set,HB))};
+ const hRow=r=>{if(!r)return null;const V=effV(r.s,r.d,r.t,r);if(V.g==null)return null;return{s:r.s,m:r.m,g:V.g,bb:V.bb||0,rb:V.rb||0}};
+ const hOk=x=>{const r=hRow(x.seat==null?null:HD.get(x.s+'|'+x.seat));return!!r&&okIx(NC.rowIdx(r,set,HB))};
  let V=nr.only?T.filter(x=>dMk(x)):T.slice();if(nr.hok)V=V.filter(hOk);
  V=V.map(x=>({x,v:sv(x)}));
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
  const shown=V.map(o=>o.x);
- const hist=x=>{if(!hasH)return'';const r=x.seat==null?null:HD.get(x.s+'|'+x.seat);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(14)+'<td class="gr"></td>';
+ const hist=x=>{if(!hasH)return'';const raw=x.seat==null?null:HD.get(x.s+'|'+x.seat);const r=hRow(raw);if(!r)return'<td class="gl hl"></td>'+'<td></td>'.repeat(14)+'<td class="gr"></td>';
   const ix=NC.rowIdx(r,set,HB);const b=n=>`<td${n!=null&&n>=NPV().blue?' class="ib"':''}>${n==null?'':n}</td>`;
   const hyT=touTot(ix);const tk=tkRowIdx(r,set);const tkT=touTkTot(tk);
   const hs=HGS.get(r.s+'|'+NC.groupOf(r.m,set));return`<td class="gl hl"${gSty(r,hs,'g')}>${r.g.toLocaleString()}</td><td>${r.bb}</td><td>${r.rb}</td><td${gSty(r,hs,'bb')}>${P(r.g,r.bb)}</td><td${gSty(r,hs,'rb')}>${P(r.g,r.rb)}</td><td${gSty(r,hs,'gs')}>${P(r.g,r.bb+r.rb)}</td>${b(ix.g)}${b(ix.rb)}${b(ix.gs)}${b(hyT)}${b(tkT)}<td style="text-align:center">${okIx(ix)?'<span class="mk a">○</span>':''}</td><td class="mkc" style="text-align:center${mjBg(x)?';background:'+mjBg(x):''}">${mkBox(dMk(x))}</td>${inR(x)?`<td>${x.r3[0]}</td><td>${x.r3[1]}</td><td class="gr">${x.r3[2]}</td>`:'<td></td><td></td><td class="gr"></td>'}`};
@@ -1416,6 +1419,11 @@ document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closes
  tip=document.createElement('div');tip.textContent=el.title;tip.style.cssText='position:fixed;z-index:9999;background:#fff;color:#111;border:1px solid #888;border-radius:6px;padding:4px 8px;font-size:inherit;max-width:90vw;box-shadow:0 2px 8px rgba(0,0,0,.25);word-break:break-all';
  document.body.appendChild(tip);cur=el;const r=el.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;let x=Math.min(Math.max(4,r.left),innerWidth-w-4),y=r.bottom+4;if(y+h>innerHeight-4)y=Math.max(4,r.top-h-4);tip.style.left=x+'px';tip.style.top=y+'px'},true);
 addEventListener('scroll',close,true);addEventListener('resize',close)})();
+(function(){const mq=window.matchMedia('(min-width:900px) and (hover:hover) and (pointer:fine)');const skip='input,select,textarea,button,a,label';let st=null;
+ const down=e=>{if(!mq.matches||e.button!==0)return;if(e.target.closest&&e.target.closest(skip))return;const tw=e.target.closest&&e.target.closest('.tw');if(!tw)return;st={tw,x:e.clientX,sl:tw.scrollLeft,drag:0}};
+ const move=e=>{if(!st)return;const dx=e.clientX-st.x;if(!st.drag&&Math.abs(dx)>5){st.drag=1;st.tw.style.cursor='grabbing';st.tw.style.userSelect='none';document.body.style.userSelect='none'}if(st.drag){e.preventDefault();st.tw.scrollLeft=st.sl-dx}};
+ const up=()=>{if(!st)return;if(st.drag){const blk=ev=>{ev.stopPropagation();ev.preventDefault()};document.addEventListener('click',blk,true);setTimeout(()=>document.removeEventListener('click',blk,true),50);st.tw.style.cursor='';st.tw.style.userSelect='';document.body.style.userSelect=''}st=null};
+ document.addEventListener('mousedown',down);document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);window.addEventListener('blur',up)})();
 </script>
 </body>
 </html>
