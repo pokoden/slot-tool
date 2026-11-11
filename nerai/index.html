@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="設定狙い">
 <title>設定狙いツール</title>
-<link rel="apple-touch-icon" href="icon.png?v=3">
-<link rel="icon" href="icon.png?v=3">
+<link rel="apple-touch-icon" href="icon.png?v=4">
+<link rel="icon" href="icon.png?v=4">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
@@ -132,7 +132,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 })();
 </script></head>
 <body>
-<header><img src="icon.png?v=3" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<header><img src="icon.png?v=4" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
 <script>/* r188 数字入力：入ったときだけカーソルを右端へ（入ったあとの長押し移動はそのまま） */
@@ -143,7 +143,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=96"></script><script src="auto.js?v=96"></script>
+<script src="core.js?v=97"></script><script src="auto.js?v=97"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -189,8 +189,8 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
  for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
   else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
- try{if(typeof manClean==='function'){const n=manClean();if(n)anDirty=true}}catch(e){}
- S.loaded=true;IDB.keep(list.map(f=>f.sha));setTimeout(dropTxt,3000)}
+ try{if(typeof manMerge==='function')manMerge()}catch(e){}
+ S.loaded=true;IDB.keep(list.map(f=>f.sha));setTimeout(dropTxt,3000);if(anDirty)autoSave()}
 // 変わったファイルだけ保存。読み込みに失敗していたら絶対に保存しない
 async function saveFiles(out,msg,prog){try{const n=await saveFiles0(out,msg,prog);R166.ok();return n}catch(e){R166.fail(e.message);throw e}}
 async function saveFiles0(out,msg,prog){if(!S.loaded)throw new Error('読み込みに失敗してるので保存しないよ（データを守るため）');
@@ -370,7 +370,7 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
  try{sv.textContent='計算中…';await new Promise(r=>setTimeout(r,30));const out=allFiles(m.rows);
   NRC={};const n=await saveFiles(out,'設定狙い取込',t=>sv.textContent=t);S.rows=m.rows;refreshAgg(out);S.pending=null;
   // 取り込んだ台の手入力を消して本データを出す
-  {const ch=manClean();if(ch){anDirty=true;try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙い手入力掃除',()=>{});S.anSaved=snap;anDirty=false}catch(e){}}}
+  {const ch=manClean();if(ch){anDirty=true;try{if(typeof manSaved==='function')manSaved();const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙い手入力掃除',()=>{});S.anSaved=snap;anDirty=false}catch(e){}}}
   try{ckRun(S.pendNew||[]);ckPaint()}catch(e){}
   sv.className='st ok';sv.textContent=`保存したよ（${n}ファイル更新）`;$('paste').value='';$('f').value=''}
  catch(e){sv.className='st ng';sv.textContent=e.message}};
@@ -378,13 +378,20 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
 // ===== 手入力の回転・BB・RB（店舗・日付・台番ごと。本データがあれば本データ優先）=====
 const manKey=(s,d,t)=>s+'|'+d+'|'+t;
 const manAll=()=>S.an.manual||(S.an.manual={});
+const MANLS='nr_manual';
+function manWrite(){try{LS.set(MANLS,{at:Date.now(),pend:1,m:manAll()})}catch(e){}}
+function manSaved(){try{LS.set(MANLS,{at:Date.now(),pend:0,m:manAll()})}catch(e){}}
+function manMerge(){const loc=LS.get(MANLS,null);const gh=S.an.manual||{};
+ if(loc&&loc.m&&loc.pend){S.an.manual=Object.assign({},gh,loc.m);anDirty=true}
+ else if(S.an.manual){try{LS.set(MANLS,{at:Date.now(),pend:0,m:S.an.manual})}catch(e){}}}
 // 手入力があれば手入力、なければ本データ。消した項目は本データに戻る（仮想日は空）
 function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null?m.g:real?real.g:null,bb:m.bb!=null?m.bb:real?real.bb:null,rb:m.rb!=null?m.rb:real?real.rb:null}}
-// 本データがある台の手入力を消す。消した件数を返す
-function manClean(){const M=manAll();let n=0;for(const k of Object.keys(M)){const[s,d,t]=k.split('|');if(S.rows.some(r=>r.s===s&&r.d===d&&String(r.t)===String(t))){delete M[k];n++}}return n}
+// 本データがある台の手入力を消す。消した件数を返す（取り込み時だけ）
+function manClean(){const M=manAll();let n=0;for(const k of Object.keys(M)){const[s,d,t]=k.split('|');if(S.rows.some(r=>r.s===s&&r.d===d&&String(r.t)===String(t))){delete M[k];n++}}if(n)manWrite();return n}
 const probT=(g,n)=>g>0&&n!=null?NC.fmtP(NC.den(g,n)):'';
 // 入っている項目の分だけ指数を出す（回転だけ→回転指数。BBとRBあり→RB・合算・総合も）
-function idxOfV(m,v){if(!TOUB||!(v.g>0))return null;if(v.bb!=null&&v.rb!=null)return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base);
+function ensureTOUB(){if(!TOUB)TOUB={set:setObj(),base:kenBase()}}
+function idxOfV(m,v){ensureTOUB();if(!TOUB||!(v.g>0))return null;if(v.bb!=null&&v.rb!=null)return NC.rowIdx({m,g:v.g,bb:v.bb,rb:v.rb},TOUB.set,TOUB.base);
  const rT=NC.dev(v.g,TOUB.base.rot[NC.typeOf(m,TOUB.set)]);return{g:rT,rb:null,gs:null,p:null,t:null}}
 let TOUB=null;
 // 合格ライン（どの画面も同じ決まり）：チェックが入っていて数字が1つでも入っている行だけ使う。空欄の項目は見ない。
@@ -425,7 +432,7 @@ function touPaint(tr){const v={};tr.querySelectorAll('input.mi').forEach(i=>{v[i
  const o=tr.querySelector('[data-c="iok"]');if(o)o.innerHTML=okIx(x)?'<span class="mk a">○</span>':''}
 window.touIn=el=>{const k=el.dataset.k,f=el.dataset.f,M=manAll(),raw=el.value.trim();let o=M[k];
  if(raw===''||!isFinite(+raw)){if(o){delete o[f];if(!Object.keys(o).length)delete M[k]}}else{if(!o)o=M[k]={};o[f]=Math.max(0,Math.round(+raw))}
- anDirty=true;autoSave();touPaint(el.closest('tr'))};
+ anDirty=true;manWrite();autoSave();touPaint(el.closest('tr'))};
 window.touCh=el=>{if(el.value.trim()===''){el.value=el.dataset.r||'';touPaint(el.closest('tr'))}};
 // ===== 当日 =====
 let tu=LS.get('nr_tu',{});
@@ -896,7 +903,7 @@ function paintAs(){const e=$('as');if(e){e.className=asCls;e.textContent=asMsg}c
 function autoSave(){clearTimeout(asT);asMsg='保存待ち…';asCls='st';asT=setTimeout(asRun,NPV().asMs)}
 window.asNow=()=>{clearTimeout(asT);asRun()};
 async function asRun(){if(asBusy){asT=setTimeout(asRun,500);return}if(!anDirty){return}asBusy=true;asMsg='保存中…';asCls='st';paintAs();let ok=false;
- try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙い設定',t=>{asMsg=t;paintAs()});S.anSaved=snap;if(JSON.stringify(S.an)===snap)anDirty=false;const d=new Date();asMsg='自動保存したよ（'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'）';asCls='st ok';ok=true}
+ try{const snap=JSON.stringify(S.an);await saveFiles({'nerai/analysis.json':snap},'設定狙い設定',t=>{asMsg=t;paintAs()});S.anSaved=snap;if(JSON.stringify(S.an)===snap){anDirty=false;manSaved()}const d=new Date();asMsg='自動保存したよ（'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+'）';asCls='st ok';ok=true}
  catch(e){asMsg=e.message;asCls='st ng'}
  asBusy=false;if(ok&&anDirty)asT=setTimeout(asRun,300);paintAs()}
 
@@ -1403,13 +1410,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 // 即反映：入力・変更・操作のたびに計算の作り置きを全部捨てる。画面に戻ったときも捨てて描き直す。新しい版が出ていたら読み直す
 window.bust=()=>{if(window.autoBust)autoBust();NRC={};NRG={nrc:null,m:{}};TKC=null;GOC=null;WIC=null;ARC=null;LAC=null;ANC=null;KIX=null;KBC=null;NPC=null;TOUB=null;KNOWN_R=null;KST_R=null;if(NC.clr)NC.clr()};
 {const PURE=/^(nrSo|tuSo|nrOnly|go|zuTap|nrML)\(|scSet\('rev'/;
- const ev=e=>{const t=e.target;if(!t||!t.closest)return;if(e.type==='click'){const h=t.closest('[onclick]');if(!h)return;const f=h.getAttribute('onclick')||'';if(PURE.test(f.trim()))return}bust()};
+ const ev=e=>{const t=e.target;if(!t||!t.closest)return;if((e.type==='input'||e.type==='change')&&t.closest('input.mi'))return;if(e.type==='click'){const h=t.closest('[onclick]');if(!h)return;const f=h.getAttribute('onclick')||'';if(PURE.test(f.trim()))return}bust()};
  for(const k of['input','change','click'])document.addEventListener(k,ev,true)}
 const VER=(document.querySelector('script[src^="core.js?v="]')||{}).src||'';
 const verChk=async()=>{try{const r=await fetch('index.html?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/core\.js\?v=(\d+)/);if(m&&VER&&!VER.endsWith('v='+m[1])&&!anDirty&&!zuDirty)location.reload()}catch(e){}};
 // 戻ってきたとき：日付が変わったときだけ計算し直す（前は毎回ぜんぶ計算し直していて重かった）
 let wakeDay=todayS();const wake=()=>{if(document.visibilityState!=='visible')return;if(S.loaded&&todayS()!==wakeDay){wakeDay=todayS();bust();render()}verChk()};
 document.addEventListener('visibilitychange',wake);window.addEventListener('pageshow',e=>{if(e.persisted)wake()});window.addEventListener('focus',wake);setInterval(verChk,300000);
+document.addEventListener('visibilitychange',()=>{if(anDirty&&typeof manWrite==='function')manWrite()});window.addEventListener('pagehide',()=>{if(anDirty&&typeof manWrite==='function')manWrite()});
 </script>
 <script>
 // 表の中で省略された名前（title付き）をタップ → 近くに全文。ほかをタップで閉じる。元のタップ動作はそのまま
