@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>収支管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="収支管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png?v=4"><link rel="icon" href="icon.png?v=4">
+<title>収支管理</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="収支管理"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon.png?v=5"><link rel="icon" href="icon.png?v=5">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -391,7 +391,16 @@ window.setCash=(i,v)=>{const id=IDS[i];if(!id)return;v=String(v).trim();const l=
 window.toggleTob=i=>{const id=IDS[i];if(!id)return;const on=!tobOn(id),l=tobList().filter(x=>x.id!==id);l.push({id,on,updatedAt:new Date().toISOString()});LS.set(TOB,l);const Y=scrollY;render();scrollTo(0,Y);syncSoon()};
 // ===== 同期：記録は読むだけ（pachinko.json / data.json）、タバコ交換は chodama.json に保存 =====
 const b64e=s=>{const b=new TextEncoder().encode(s);let r='';for(let i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r)},b64d=s=>{const x=atob(String(s).replace(/\s/g,''));const b=new Uint8Array(x.length);for(let i=0;i<x.length;i++)b[i]=x.charCodeAt(i);return new TextDecoder().decode(b)};
-async function ghGet(tok,f){const r=await fetch(REPO+f+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{sha:null,data:null};if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64d(j.content||'')))}}
+const GH_ROOT='https://api.github.com/repos/pokoden/slot-data/';
+async function ghBlob(tok,sha){const r=await fetch(GH_ROOT+'git/blobs/'+sha+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return j.content||''}
+async function ghListSha(tok,name){const r=await fetch(GH_ROOT+'contents/?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(!r.ok)throw new Error('取得失敗 '+r.status);const a=await r.json();const f=(Array.isArray(a)?a:[]).find(x=>x.name===name);return f&&f.sha||null}
+async function ghGet(tok,f){const hd={Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'};const r=await fetch(REPO+f+'?t='+Date.now(),{headers:hd,cache:'no-store'});if(r.status===404)return{sha:null,data:null};
+ let j=null,raw='';
+ if(r.ok){j=await r.json();raw=String(j.content||'').replace(/\s/g,'')}
+ else if(r.status!==403)throw new Error('取得失敗 '+r.status);
+ let sha=j&&j.sha;
+ if(!raw){if(!sha)sha=await ghListSha(tok,f);if(!sha)throw new Error('取得失敗 '+(r.status||''));raw=await ghBlob(tok,sha);if(!j)j={sha}}
+ return{sha:j.sha||sha,data:SMIG(JSON.parse(b64d(raw)))}}
 let syT=null,busy=false,again=false;const syncSoon=()=>{clearTimeout(syT);syT=setTimeout(syncNow,600)};
 const srt=a=>JSON.stringify([...a].sort((x,y)=>x.id<y.id?-1:1));
 window.syncNow=async()=>{const tok=LS.get(TOK,'');if(!tok)return;if(busy){again=true;return}busy=true;const msg=t=>{LS.set('cd_sync_msg',t);if($('sy'))$('sy').textContent=t};msg('同期中…');

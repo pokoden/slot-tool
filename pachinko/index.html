@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>パチンコ判別ツール</title>
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="パチンコ判別">
-<link rel="apple-touch-icon" href="icon.png?v=11"><link rel="icon" href="icon.png?v=11">
+<link rel="apple-touch-icon" href="icon.png?v=12"><link rel="icon" href="icon.png?v=12">
 <style>
 *{box-sizing:border-box}body{font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f2f4f8;margin:0;padding:12px;color:#222;max-width:640px;margin:auto}
 h1{font-size:1.25em;margin:4px 0 12px}h2{font-size:1.05em;margin:0 0 10px}
@@ -534,9 +534,18 @@ let syncing=false,again=false,syncT=null;
 function syncStatus(t){if(t!=null)LS.set('p1_sync_msg',t);const el=$('sy_st');if(!el)return;el.textContent=!LS.get(TOK,'')?'未設定（この端末だけに保存中）':LS.get('p1_sync_msg','')}
 window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow(true)};
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
-async function ghGet(tok){const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});
- if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[],machines:[]}};if(!r.ok)throw new Error('取得失敗 '+r.status+(r.status===401?'（トークンが無効）':r.status===403?'（権限不足）':''));
- const j=await r.json();return{sha:j.sha,data:SMIG(JSON.parse(b64dec(j.content||'')))}}
+const GH_REPO='https://api.github.com/repos/pokoden/slot-data/';
+async function ghBlob(tok,sha){const r=await fetch(GH_REPO+'git/blobs/'+sha+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(!r.ok)throw new Error('取得失敗 '+r.status);const j=await r.json();return j.content||''}
+async function ghListSha(tok,name){const r=await fetch(GH_REPO+'contents/?t='+Date.now(),{headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'},cache:'no-store'});if(!r.ok)throw new Error('取得失敗 '+r.status);const a=await r.json();const f=(Array.isArray(a)?a:[]).find(x=>x.name===name);return f&&f.sha||null}
+async function ghGet(tok){const hd={Authorization:'Bearer '+tok,Accept:'application/vnd.github+json'};const r=await fetch(SYNC_URL+'?t='+Date.now(),{headers:hd,cache:'no-store'});
+ if(r.status===404)return{sha:null,data:{version:1,stores:[],entries:[],machines:[]}};
+ let j=null,raw='';
+ if(r.ok){j=await r.json();raw=String(j.content||'').replace(/\s/g,'')}
+ else if(r.status===401)throw new Error('取得失敗 401（トークンが無効）');
+ else if(r.status!==403)throw new Error('取得失敗 '+r.status);
+ let sha=j&&j.sha;
+ if(!raw){if(!sha)sha=await ghListSha(tok,'pachinko.json');if(!sha)throw new Error('取得失敗 '+(r.status||''));raw=await ghBlob(tok,sha);if(!j)j={sha}}
+ return{sha:j.sha||sha,data:SMIG(JSON.parse(b64dec(raw)))}}
 async function ghPut(tok,data,sha){const body={message:'pachinko sync '+new Date().toISOString(),content:b64enc(JSON.stringify(data))};if(sha)body.sha=sha;
  return fetch(SYNC_URL,{method:'PUT',headers:{Authorization:'Bearer '+tok,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)})}
 window.syncNow=async manual=>{const tok=LS.get(TOK,'');if(!tok){if(manual)syncStatus();return}
