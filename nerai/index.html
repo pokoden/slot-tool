@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="設定狙い">
 <title>設定狙いツール</title>
-<link rel="apple-touch-icon" href="icon.png?v=4">
-<link rel="icon" href="icon.png?v=4">
+<link rel="apple-touch-icon" href="icon.png?v=5">
+<link rel="icon" href="icon.png?v=5">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
@@ -132,7 +132,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 })();
 </script></head>
 <body>
-<header><img src="icon.png?v=4" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<header><img src="icon.png?v=5" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
 <script>/* r188 数字入力：入ったときだけカーソルを右端へ（入ったあとの長押し移動はそのまま） */
@@ -143,7 +143,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=97"></script><script src="auto.js?v=97"></script>
+<script src="core.js?v=98"></script><script src="auto.js?v=98"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -208,7 +208,8 @@ function nav(){$('nav').innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':
 window.go=t=>{if(t!==tab&&anDirty){clearTimeout(asT);asRun()}if(zuDirty&&t!==tab&&!confirm('図面が未保存だよ。保存しないで移動する？'))return;if(t!==tab&&zuDirty){zuDirty=false;S.zu=JSON.parse(S.zuSaved);S.zimgNew={};NRC={}}tab=t;LS.set('nr_tab',t);bust();render()};
 function render(){if(tab==='pc')tab='ner';if(S.loaded)npApply();nav();const m=$('main');
  if(!S.loaded){m.innerHTML=`<div class="card"><h2>読み込めなかったよ</h2><p class="note ng">${esc(S.loadErr)}</p><button class="b" onclick="reload()">もう一度読む</button></div>${tokCard()}`;return}
- if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
+ try{if(tab==='imp')return impPage();if(tab==='set')return setPage();if(tab==='tou')return touPage();if(tab==='ana')return anaPage();if(tab==='np')return npPage();if(tab==='sc')return scPage();if(tab==='ner')return nerPage();if(tab==='zu')return zuPage();if(tab==='ken')return kenPage();if(tab==='kb')return kbPage();if(tab==='pc')return pcPage()}
+ catch(e){m.innerHTML=`<div class="card"><h2>表示できなかったよ</h2><p class="note ng">${esc(e&&e.message||e)}</p><button class="b" onclick="bust();render()">もう一度</button></div>`}}
 window.reload=async()=>{$('main').innerHTML='<div class="card">読み込み中…</div>';try{await loadAll()}catch(e){S.loadErr=e.message}render()};
 
 // ===== トークン（スロ判別ツールと同じ v2_token。ホーム画面に追加したアプリは保存場所が別なので、ここでも入れられる）=====
@@ -377,13 +378,14 @@ window.doSave=async()=>{const m=S.pending;if(!m)return;const sv=$('sv');document
 
 // ===== 手入力の回転・BB・RB（店舗・日付・台番ごと。本データがあれば本データ優先）=====
 const manKey=(s,d,t)=>s+'|'+d+'|'+t;
-const manAll=()=>S.an.manual||(S.an.manual={});
+const manObj=m=>!!m&&typeof m==='object'&&!Array.isArray(m);
+const manAll=()=>{if(!manObj(S.an.manual))S.an.manual={};return S.an.manual};
 const MANLS='nr_manual';
 function manWrite(){try{LS.set(MANLS,{at:Date.now(),pend:1,m:manAll()})}catch(e){}}
 function manSaved(){try{LS.set(MANLS,{at:Date.now(),pend:0,m:manAll()})}catch(e){}}
-function manMerge(){const loc=LS.get(MANLS,null);const gh=S.an.manual||{};
- if(loc&&loc.m&&loc.pend){S.an.manual=Object.assign({},gh,loc.m);anDirty=true}
- else if(S.an.manual){try{LS.set(MANLS,{at:Date.now(),pend:0,m:S.an.manual})}catch(e){}}}
+function manMerge(){try{const loc=LS.get(MANLS,null);const gh=manObj(S.an.manual)?S.an.manual:{};const locm=loc&&loc.pend&&manObj(loc.m)?loc.m:null;
+ if(locm){S.an.manual=Object.assign({},gh,locm);anDirty=true}
+ else if(manObj(S.an.manual)){try{LS.set(MANLS,{at:Date.now(),pend:0,m:S.an.manual})}catch(e){}}}catch(e){if(!manObj(S.an&&S.an.manual))S.an.manual={}}}
 // 手入力があれば手入力、なければ本データ。消した項目は本データに戻る（仮想日は空）
 function effV(s,d,t,real){const m=manAll()[manKey(s,d,t)]||{};return{g:m.g!=null?m.g:real?real.g:null,bb:m.bb!=null?m.bb:real?real.bb:null,rb:m.rb!=null?m.rb:real?real.rb:null}}
 // 本データがある台の手入力を消す。消した件数を返す（取り込み時だけ）
@@ -547,7 +549,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
    if(!flat&&!(tu.only&&!L.some(r=>onlyF(NM.get(String(r.t))))))body+=band(NCOL,(all?sShort(u.s)+'｜':'')+mShort(g),full,`${L.length}台・${NC.typeOf(L[0].m,set)==='N'?'ノーマル':'AT'}`);
    const VV=L.map(r=>effV(u.s,u.date,r.t,u.virt?null:r));const gst=VV.some(V=>V.g>0)?{g:{max:Math.max(0,...VV.map(V=>V.g||0)),n:VV.filter(V=>V.g!=null).length},bb:mm(VV.map(V=>V.g>0&&V.bb!=null?NC.den(V.g,V.bb):null)),rb:mm(VV.map(V=>V.g>0&&V.rb!=null?NC.den(V.g,V.rb):null)),gs:mm(VV.map(V=>V.g>0&&V.bb!=null&&V.rb!=null?NC.den(V.g,V.bb+V.rb):null))}:null;
    cst={};if(nmode)for(const c of cols){const vs=L.map(r=>{const x=wsum(r,c);return x?(c.m==='g'?x.g:NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):null});cst[c.k]=c.m==='g'?{max:Math.max(0,...vs.filter(v=>v!=null)),n:L.length}:mm(vs)}
-   const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=k==='g'?barSty(v,gst.g):tintSty(v,gst[k]);return y?` style="${y}"`:''};
+   const sy2=(k,v)=>{const y=gst?tintGR(v,gst[k]):'';return y?` style="${y}"`:''};const sy=(k,v)=>{const y=gst&&(k==='g'?barSty(v,gst.g):tintSty(v,gst[k]));return y?` style="${y}"`:''};
    const mkRow=(r,ex)=>{const x=u.rk[r.s+'|'+r.t]||[];const nm=NM.get(String(r.t));
     const real=u.virt?null:r,mk=manKey(u.s,u.date,r.t),mo=manAll()[mk],V=effV(u.s,u.date,r.t,real),sty=real&&!mo;
     const inp=(f,w)=>`<td${f==='g'?' class="hl"':''}${f==='g'&&sty&&V.g!=null?sy('g',V.g):''}><input inputmode="numeric" class="mi${w}" type="text" min="0" value="${V[f]==null?'':V[f]}" data-r="${real?real[f]:''}" data-k="${esc(mk)}" data-f="${f}" oninput="touIn(this)" onchange="touCh(this)" style="text-align:right"></td>`;
