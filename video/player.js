@@ -74,11 +74,13 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
  fs(){const b=$('pv');const on=!b.classList.contains('fs');b.classList.toggle('fs',on);if(on){const f=b.requestFullscreen||b.webkitRequestFullscreen;if(f&&!isIOS)try{f.call(b).catch&&f.call(b).catch(()=>{})}catch(e){}try{screen.orientation.lock('landscape').catch(()=>{})}catch(e){}}else{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});try{screen.orientation.unlock()}catch(e){}}this.showCtl()},
  setZoom(z,ox,oy){this.zoom=Math.max(1,Math.min(4,z));if(this.zoom===1){this.px=this.py=0}const st=$('stage'),w=st.clientWidth,h=st.clientHeight,mx=(this.zoom-1)*w/2,my=(this.zoom-1)*h/2;this.px=Math.max(-mx,Math.min(mx,this.px));this.py=Math.max(-my,Math.min(my,this.py));for(const v of this.els)v.style.transform=this.zoom===1?'':`translate(${this.px}px,${this.py}px) scale(${this.zoom})`;$('pv').classList.toggle('zoomed',this.zoom>1)},
  setVol(v){this.vol=Math.max(0,Math.min(1,v));LS.set('md_vol',this.vol);this.gain();this.ind('音量 '+Math.round(this.vol*100))},
- setDim(v){this.dim=Math.max(0,Math.min(.85,v));$('dim').style.opacity=this.dim;this.ind('明るさ '+Math.round((1-this.dim)*100))},
- ind(t,ms){const e=$(this.kind==='music'?'pm_ind':'ind');if(!e)return;e.textContent=t;e.classList.add('show');clearTimeout(this._it);this._it=setTimeout(()=>e.classList.remove('show'),ms||700)},
+ setDim(v){this.dim=Math.max(0,Math.min(.85,v));for(const d of document.querySelectorAll('.dimx'))d.style.opacity=this.dim;this.ind('明るさ '+Math.round((1-this.dim)*100))},
+ indId(){return this.kind==='music'?(isLand()?'mind':'pm_ind'):'ind'},
+ indOff(){clearTimeout(this._it);for(const id of['ind','mind','pm_ind']){const e=$(id);if(e)e.classList.remove('show')}},
+ ind(t,ms){const e=$(this.indId());if(!e)return;e.textContent=t;e.classList.add('show');clearTimeout(this._it);this._it=setTimeout(()=>e.classList.remove('show'),ms||700)},
  toast(t,ms){this.ind(t,ms||2000)},
- showCtl(){const b=$('pv');b.classList.remove('hid');clearTimeout(this._ct);this._ct=setTimeout(()=>{if(this.el&&!this.el.paused&&this.kind==='video')b.classList.add('hid')},3000)},
- lock(on){this.locked=on;$('pv').classList.toggle('locked',on);if(!on)this.showCtl()},
+ showCtl(){const b=this.box();b.classList.remove('hid');clearTimeout(this._ct);this._ct=setTimeout(()=>{if(this.el&&!this.el.paused&&this.box()===b&&(this.kind==='video'||isLand()))b.classList.add('hid')},3000)},
+ lock(on){this.locked=on;for(const b of[$('pv'),$('pm')])b.classList.toggle('locked',on&&b===this.box());if(!on)this.showCtl()},
  ms(){if(!('mediaSession'in navigator)||!this.key)return;const e=this.entry(this.key);TH.get(this.kind+'|'+this.key).then(async th=>{if(!th&&this.kind==='music')th=letterArt(titleOf(this.kind,e));if(th&&th.startsWith('data:'))th=await artUrl(th);try{navigator.mediaSession.metadata=new MediaMetadata({title:titleOf(this.kind,e),artist:artistOf(this.kind,e),album:NAME[this.kind],artwork:th?[{src:th,sizes:this.kind==='music'?'300x300':'320x180',type:'image/jpeg'}]:[{src:new URL('icon-512.png',location.href).href,sizes:'512x512',type:'image/png'}]})}catch(x){}});
   if(!this._msOk){this._msOk=1;const S=(a,f)=>{try{navigator.mediaSession.setActionHandler(a,f)}catch(x){}};S('play',()=>{this.el&&this.el.play()});S('pause',()=>{this.el&&this.el.pause()});S('previoustrack',()=>this.prev());S('nexttrack',()=>this.next());S('seekbackward',()=>this.seekBy(-10));S('seekforward',()=>this.seekBy(10));S('seekto',d=>{if(this.el&&d.seekTime!=null)this.el.currentTime=d.seekTime})}},
  msPos(){const el=this.el;if(!el||!('mediaSession'in navigator)||!navigator.mediaSession.setPositionState)return;try{if(isFinite(el.duration)&&el.duration>0)navigator.mediaSession.setPositionState({duration:el.duration,playbackRate:el.playbackRate||1,position:Math.min(el.currentTime,el.duration)})}catch(e){}},
@@ -88,7 +90,7 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
   for(const x of b.querySelectorAll('.p_t'))x.textContent=titleOf(k,e);for(const x of b.querySelectorAll('.p_a'))x.textContent=artistOf(k,e);
   const set=(c,t,on)=>{for(const x of b.querySelectorAll('[data-pc='+c+']')){if(t!=null)x.textContent=t;x.classList.toggle('on',!!on)}};
   set('pp',pl?'❚❚':'▶');set('shuf',null,this.shuf);for(const x of b.querySelectorAll('[data-pc=rep]')){x.innerHTML=this.rep==='one'?SV.rep1:SV.rep;x.classList.toggle('on',this.rep!=='off')};set('spd',this.rate+'x',this.rate!==1);set('fav',d.fav?'★':'☆',d.fav);
-  if(k==='music'){const ti=titleOf(k,e);TH.get('music|'+this.key).then(th=>{$('pm_art').src=th||letterArt(ti)})}
+  if(k==='music'){const ti=titleOf(k,e);TH.get('music|'+this.key).then(th=>{$('pm_art').src=$('pm_art2').src=th||letterArt(ti)})}
   const sig=k+this.q.join('\n')+'#'+this.i;if(sig!==this.qSig){this.qSig=sig;const m=libMap(k);const qq=b.querySelector('.p_q');if(qq){qq.innerHTML=this.q.map((x,j)=>{const en=m.get(x)||{key:x,path:keyPath(x)};return`<div class="it${j===this.i?' now':''}" data-qi="${j}"><div class="th ${k}"><img data-tk="${esc(k+'|'+x)}" alt=""${k==='music'?` src="${letterArt(titleOf(k,en))}"`:''}></div><div class="tx"><b>${esc(titleOf(k,en))}</b><span>${esc(artistOf(k,en))}</span></div></div>`}).join('');for(const img of qq.querySelectorAll('img[data-tk]'))TH.io&&TH.io.observe(img);const nw=qq.querySelector('.now');if(nw)nw.scrollIntoView({block:'nearest'})}}
   this.tick();this.mini()},
  mini(){const m=$('mini');const show=this.kind==='music'&&this.key&&!$('pm').classList.contains('open')&&MODE==='music';m.hidden=!show;document.body.classList.toggle('hasmini',!!show);if(!show)return;const e=this.entry(this.key);$('mini_t').textContent=titleOf('music',e);$('mini_a').textContent=artistOf('music',e);$('mini_pp').textContent=this.el&&!this.el.paused?'❚❚':'▶';TH.get('music|'+this.key).then(th=>{$('mini_img').src=th||letterArt(titleOf('music',e))})}
@@ -97,37 +99,55 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
 const ctlHTML=(k,ns)=>(ns?'':`<div class="seekw"><span class="p_cur">0:00</span><div class="sk"><input type="range" min="0" max="1000" value="0" data-pc="seek"></div><span class="p_dur">0:00</span></div>`)+`
 <div class="pbtn main"><button data-pc="shuf">${SV.shuf}</button><button data-pc="prev">${SV.prev}</button><button data-pc="rw">−10</button><button data-pc="pp" class="pp">▶</button><button data-pc="ff">+10</button><button data-pc="next">${SV.next}</button><button data-pc="rep">${SV.rep}</button></div>
 <div class="pbtn"><button data-pc="spd">1x</button>${k==='video'?'<button data-pc="fb">◀|</button><button data-pc="fn">|▶</button><button data-pc="snap">サムネ</button>':''}<button data-pc="fav">☆</button><button data-pc="addpl">＋</button><button data-pc="menu">⋯</button></div>`;
+const isLand=()=>matchMedia('(orientation:landscape) and (max-height:500px)').matches;
+// 画面のジェスチャー：ダブルタップ±10秒・上下スワイプで明るさ/音量・長押し右で2倍速・左で巻き戻し・ピンチ拡大（動画のみ）
+function bindStage(st,box,zoomable){let T=null,pin=null,lastTap=null,tapT=null,H=null,noClick=false;
+ const onCtl=e=>!!e.target.closest('.ctlx button,.ctlx input,.lockx');
+ const side=x=>{const r=st.getBoundingClientRect(),f=(x-r.left)/r.width;return f<1/3?-1:f>2/3?1:0};
+ const holdStart=x=>{const el=P.el;if(!el||P.locked||P.box()!==box)return false;const r=st.getBoundingClientRect(),right=x-r.left>r.width/2;H={right,el,wasPaused:el.paused};
+  if(right){el.playbackRate=2;if(el.paused)el.play().catch(()=>{});P.ind('2x ▶▶',600000)}
+  else{try{el.pause()}catch(e){}const stp=()=>{try{el.currentTime=Math.max(0,el.currentTime-1)}catch(e){}P.tick()};stp();H.iv=setInterval(stp,200);P.ind('◀◀ 巻き戻し',600000)}return true};
+ const holdEnd=()=>{if(!H)return false;const h=H;H=null;clearInterval(h.iv);if(h.right){h.el.playbackRate=P.rate;if(h.wasPaused)h.el.pause()}else if(!h.wasPaused)h.el.play().catch(()=>{});P.indOff();return true};
+ const armHold=(x)=>{const tt=setTimeout(()=>{if(T&&!T.m&&holdStart(x))T.m='hold'},450);return tt};
+ st.addEventListener('touchstart',e=>{if(P.locked||onCtl(e))return;if(e.touches.length===2){if(H)holdEnd();if(T)clearTimeout(T.ht);T=null;if(zoomable){const[a,b]=e.touches;pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:P.zoom}}}else if(e.touches.length===1){const t=e.touches[0];T={x:t.clientX,y:t.clientY,t:Date.now(),m:null,dim:P.dim,vol:P.vol,px:P.px,py:P.py};T.ht=armHold(t.clientX)}},{passive:true});
+ st.addEventListener('touchmove',e=>{if(P.locked)return;if(pin&&e.touches.length===2){const[a,b]=e.touches;P.setZoom(pin.z*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/pin.d);e.preventDefault();return}if(!T||e.touches.length!==1)return;if(T.m==='hold'){e.preventDefault();return}const t=e.touches[0],dx=t.clientX-T.x,dy=t.clientY-T.y,h=st.clientHeight;
+  if(!T.m){if(Math.hypot(dx,dy)<12)return;clearTimeout(T.ht);if(zoomable&&P.zoom>1)T.m='pan';else if(Math.abs(dy)>Math.abs(dx)){const r=st.getBoundingClientRect();T.m=T.x-r.left<r.width/2?'dim':'vol'}else T.m='x'}
+  if(T.m==='pan'){P.px=T.px+dx;P.py=T.py+dy;P.setZoom(P.zoom)}else if(T.m==='dim')P.setDim(T.dim+dy/(h*.9));else if(T.m==='vol')P.setVol(T.vol-dy/(h*.9));if(T.m!=='x')e.preventDefault()},{passive:false});
+ const tend=e=>{if(T)clearTimeout(T.ht);if(holdEnd()){T=null;if(e.cancelable)e.preventDefault();return}if(P.locked||onCtl(e))return;if(pin){if(e.touches.length<2)pin=null;return}if(!T)return;const t0=T;T=null;if(t0.m||Date.now()-t0.t>350)return;if(e.cancelable)e.preventDefault();tap(t0.x)};
+ st.addEventListener('touchend',tend);st.addEventListener('touchcancel',e=>{if(T)clearTimeout(T.ht);T=null;holdEnd()});
+ st.addEventListener('contextmenu',e=>e.preventDefault());
+ function tap(x){const s=side(x),n=Date.now();if(lastTap&&n-lastTap.t<300&&s!==0&&s===lastTap.s){clearTimeout(tapT);P.seekBy(10*s);lastTap={t:n,s};return}lastTap={t:n,s};clearTimeout(tapT);tapT=setTimeout(()=>{if(box.classList.contains('hid'))P.showCtl();else box.classList.add('hid')},280)}
+ // マウス（PC）
+ let mT=null;const fine=()=>!matchMedia('(pointer:coarse)').matches;
+ st.addEventListener('mousedown',e=>{if(e.button!==0||!fine()||P.locked||onCtl(e))return;const x=e.clientX;mT=setTimeout(()=>{mT=null;if(holdStart(x))noClick=true},450)});
+ addEventListener('mouseup',()=>{clearTimeout(mT);mT=null;holdEnd()});
+ st.addEventListener('click',e=>{if(noClick){noClick=false;return}if(onCtl(e))return;if(!fine())return;tap(e.clientX)})}
 function buildPlayers(){
- $('pv').innerHTML=`<div class="pvl"><div id="stage"><video id="v0" playsinline webkit-playsinline preload="auto" class="on"></video><video id="v1" playsinline webkit-playsinline preload="auto"></video><div id="dim"></div><div id="ind"></div>
- <div id="ctl"><div class="ct"><button data-pc="close">⌄</button><b class="p_t"></b><button data-pc="lock">🔒</button></div><div class="cm"><button data-pc="prev">${SV.prev}</button><button data-pc="rw">−10</button><button data-pc="pp" class="pp">▶</button><button data-pc="ff">+10</button><button data-pc="next">${SV.next}</button></div>
+ $('pv').innerHTML=`<div class="pvl"><div id="stage" class="stg"><video id="v0" playsinline webkit-playsinline preload="auto" class="on"></video><video id="v1" playsinline webkit-playsinline preload="auto"></video><div id="dim" class="dimx"></div><div id="ind" class="indx"></div>
+ <div id="ctl" class="ctlx"><div class="ct"><button data-pc="close">⌄</button><b class="p_t"></b><button data-pc="lock">🔒</button></div><div class="cm"><button data-pc="prev">${SV.prev}</button><button data-pc="rw">−10</button><button data-pc="pp" class="pp">▶</button><button data-pc="ff">+10</button><button data-pc="next">${SV.next}</button></div>
  <div class="cb"><span class="p_cur">0:00</span><div class="sk"><input type="range" min="0" max="1000" value="0" data-pc="seek"></div><span class="p_dur">0:00</span><button data-pc="zoom1" class="zr">1x</button><button data-pc="fs">⛶</button></div></div>
- <div id="lock"><button id="unlock">🔓</button></div></div>
+ <div id="lock" class="lockx"><button id="unlock" class="unl">🔓</button></div></div>
  <div class="pinfo"><h3 class="p_t"></h3><div class="p_a"></div>${ctlHTML('video',1)}</div></div><div class="p_q list"></div>`;
- $('pm').innerHTML=`<div class="pmw"><div class="ct"><button data-pc="close">⌄</button><b></b><button data-pc="menu">⋯</button></div><div class="art"><img id="pm_art" alt=""><div id="pm_ind" class="indm"></div></div><h3 class="p_t"></h3><div class="p_a"></div>${ctlHTML('music')}</div><div class="p_q list"></div>`;
+ $('pm').innerHTML=`<div id="mstage" class="stg mst"><img id="pm_art2" class="mart" alt=""><div id="mdim" class="dimx"></div><div id="mind" class="indx"></div>
+ <div id="mctl" class="ctlx"><div class="ct"><button data-pc="close">⌄</button><b class="p_t"></b><button data-pc="lock">🔒</button></div><div class="cm"><button data-pc="prev">${SV.prev}</button><button data-pc="rw">−10</button><button data-pc="pp" class="pp">▶</button><button data-pc="ff">+10</button><button data-pc="next">${SV.next}</button></div>
+ <div class="cb"><span class="p_cur">0:00</span><div class="sk"><input type="range" min="0" max="1000" value="0" data-pc="seek"></div><span class="p_dur">0:00</span></div></div>
+ <div id="mlock" class="lockx"><button class="unl">🔓</button></div></div><div class="pmw"><div class="ct"><button data-pc="close">⌄</button><b></b><button data-pc="menu">⋯</button></div><div class="art"><img id="pm_art" alt=""><div id="pm_ind" class="indm"></div></div><h3 class="p_t"></h3><div class="p_a"></div>${ctlHTML('music')}</div><div class="p_q list"></div>`;
  P.els=[$('v0'),$('v1')];
  for(const el of[...P.els,$('au')]){el.addEventListener('timeupdate',()=>P.onTime(el));el.addEventListener('ended',()=>{if(el===P.el)P.onEnd()});
-  el.addEventListener('play',()=>{if(el!==P.el)return;if(P.kind==='video'){WL.on();P.showCtl()}P.lastT=performance.now();P.ui();try{navigator.mediaSession.playbackState='playing'}catch(e){}});
-  el.addEventListener('pause',()=>{if(el!==P.el)return;if(P.kind==='video'){WL.off();$('pv').classList.remove('hid')}P.savePos();syncSoon(P.kind,3000);P.ui();try{navigator.mediaSession.playbackState='paused'}catch(e){}});
+  el.addEventListener('play',()=>{if(el!==P.el)return;if(P.kind==='video')WL.on();P.showCtl();P.lastT=performance.now();P.ui();try{navigator.mediaSession.playbackState='playing'}catch(e){}});
+  el.addEventListener('pause',()=>{if(el!==P.el)return;if(P.kind==='video')WL.off();P.box().classList.remove('hid');P.savePos();syncSoon(P.kind,3000);P.ui();try{navigator.mediaSession.playbackState='paused'}catch(e){}});
   el.addEventListener('error',()=>{if(el!==P.el||!el.src||el.src===SILENT||!P.key)return;const c=el.error&&el.error.code;P.fail(el,P.key,({1:'読み込みが中断された',2:'読み込みに失敗',3:'壊れたファイル（デコードできない）',4:'非対応の形式'}[c]||'再生できない'))});
   el.addEventListener('playing',()=>{if(el!==P.el||!P.key)return;clearTimeout(P._wd);const id=P.kind+'|'+P.key,B=LS.get('md_bad',{});if(B[id]){delete B[id];LS.set('md_bad',B);if(typeof softRender==='function')softRender()}});
   el.addEventListener('loadedmetadata',()=>{if(el!==P.el)return;const k=P.kind,key=P.key;if(k&&key&&isFinite(el.duration)&&it(k,key).dur==null)setF(k,key,'dur',el.duration,1);P.tick()})}
  for(const box of[$('pv'),$('pm')]){
-  box.addEventListener('click',e=>{const b=e.target.closest('[data-pc],[data-qi]');if(!b)return;if(b.dataset.qi!=null){P.i=+b.dataset.qi;P.load();return}const c=b.dataset.pc;e.stopPropagation();if(P.kind==='video')P.showCtl();
+  box.addEventListener('click',e=>{const b=e.target.closest('[data-pc],[data-qi]');if(!b)return;if(b.dataset.qi!=null){P.i=+b.dataset.qi;P.load();return}const c=b.dataset.pc;e.stopPropagation();P.showCtl();
    ({close:()=>P.minimize(),pp:()=>P.toggle(),prev:()=>P.prev(),next:()=>P.next(),rw:()=>P.seekBy(-10),ff:()=>P.seekBy(10),shuf:()=>P.setShuf(),rep:()=>P.setRep(),spd:()=>P.speed(),fb:()=>P.frame(-1),fn:()=>P.frame(1),snap:()=>P.snap(),fs:()=>P.fs(),zoom1:()=>P.setZoom(1),lock:()=>P.lock(true),
     fav:()=>{setF(P.kind,P.key,'fav',!it(P.kind,P.key).fav);syncSoon(P.kind);P.ui();render()},addpl:()=>addPlMenu(P.key),menu:()=>itemMenu(P.key)}[c]||(()=>{}))()});
   box.addEventListener('input',e=>{const s=e.target;if(s.dataset.pc!=='seek'||!P.el)return;s._drag=true;const d=P.el.duration||0;if(d)P.el.currentTime=s.value/1000*d;clearTimeout(s._t);s._t=setTimeout(()=>s._drag=false,300)})}
- // --- ジェスチャー（動画） ---
- const st=$('stage');let T=null,pin=null,lastTap=null,tapT=null;
- const side=x=>{const r=st.getBoundingClientRect(),f=(x-r.left)/r.width;return f<1/3?-1:f>2/3?1:0};
- st.addEventListener('touchstart',e=>{if(P.locked)return;if(e.target.closest('#ctl button,#ctl input'))return;if(e.touches.length===2){const[a,b]=e.touches;pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:P.zoom};T=null}else if(e.touches.length===1){const t=e.touches[0];T={x:t.clientX,y:t.clientY,t:Date.now(),m:null,dim:P.dim,vol:P.vol,px:P.px,py:P.py}}},{passive:true});
- st.addEventListener('touchmove',e=>{if(P.locked)return;if(pin&&e.touches.length===2){const[a,b]=e.touches;P.setZoom(pin.z*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/pin.d);e.preventDefault();return}if(!T||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-T.x,dy=t.clientY-T.y,h=st.clientHeight;
-  if(!T.m){if(Math.hypot(dx,dy)<12)return;if(P.zoom>1)T.m='pan';else if(Math.abs(dy)>Math.abs(dx)){const r=st.getBoundingClientRect();T.m=T.x-r.left<r.width/2?'dim':'vol'}else T.m='x'}
-  if(T.m==='pan'){P.px=T.px+dx;P.py=T.py+dy;P.setZoom(P.zoom)}else if(T.m==='dim')P.setDim(T.dim+dy/(h*.9));else if(T.m==='vol')P.setVol(T.vol-dy/(h*.9));if(T.m!=='x')e.preventDefault()},{passive:false});
- st.addEventListener('touchend',e=>{if(P.locked)return;if(e.target.closest('#ctl button,#ctl input')){return}if(pin){if(e.touches.length<2)pin=null;return}if(!T)return;const t0=T;T=null;if(t0.m||Date.now()-t0.t>350)return;e.preventDefault();tap(t0.x)});
- function tap(x){const s=side(x),n=Date.now();if(lastTap&&n-lastTap.t<300&&s!==0&&s===lastTap.s){clearTimeout(tapT);P.seekBy(10*s);lastTap={t:n,s};return}lastTap={t:n,s};clearTimeout(tapT);tapT=setTimeout(()=>{const b=$('pv');if(b.classList.contains('hid'))P.showCtl();else if(!e_ctl())b.classList.add('hid')},280)}
- const e_ctl=()=>false;
- st.addEventListener('click',e=>{if(e.target.closest('#ctl button,#ctl input,#lock'))return;if(matchMedia('(pointer:coarse)').matches)return;tap(e.clientX)});
- $('lock').addEventListener('click',e=>{e.stopPropagation();if(e.target.id==='unlock'){P.lock(false);return}const u=$('unlock');u.classList.add('show');clearTimeout(u._t);u._t=setTimeout(()=>u.classList.remove('show'),2000)});
+ // --- ジェスチャー（動画と、横向きの音楽） ---
+ bindStage($('stage'),$('pv'),true);bindStage($('mstage'),$('pm'),false);
+ try{matchMedia('(orientation:landscape) and (max-height:500px)').addEventListener('change',()=>{if(P.kind==='music'){if(!isLand()&&P.locked)P.lock(false);$('pm').classList.remove('hid');if(isLand())P.showCtl()}})}catch(e){}
+ for(const lk of document.querySelectorAll('.lockx'))lk.addEventListener('click',e=>{e.stopPropagation();const u=lk.querySelector('.unl');if(e.target===u){P.lock(false);return}u.classList.add('show');clearTimeout(u._t);u._t=setTimeout(()=>u.classList.remove('show'),2000)});
  $('mini').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.id==='mini_pp'){P.toggle();return}if(b&&b.id==='mini_nx'){P.next();return}P.open();P.ui()});
  document.addEventListener('keydown',e=>{if(!P.kind||e.target.matches('input,textarea,select'))return;const k=e.key;if(k===' '){e.preventDefault();P.toggle()}else if(k==='ArrowLeft')P.seekBy(-10);else if(k==='ArrowRight')P.seekBy(10);else if(k==='ArrowUp'){e.preventDefault();P.setVol(P.vol+.05)}else if(k==='ArrowDown'){e.preventDefault();P.setVol(P.vol-.05)}else if(k==='f'&&P.kind==='video')P.fs();else if(k===',')P.frame(-1);else if(k==='.')P.frame(1);else if(k==='Escape'&&$('pv').classList.contains('fs'))P.fs()});
  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)$('pv').classList.remove('fs')});
