@@ -92,13 +92,13 @@ function vSend(){const k=MODE,side=SIDE();let h=`<div class="seg">${[['tx','PC�
  if(!tok())h+=`<div class="warn" data-tab="set">GitHubトークンを設定してね</div>`;
  return h+(side==='tx'?vTx(k):vRx(k))}
 function vRx(k){const c=RX.cur;let h=`<div class="card"><div class="kv"><span>状態</span><b>${esc(RX.st||'停止')}</b></div><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b>${fmtB(EST.free)}</b></div>
- <button id="rx_btn" class="${RX.on?'sub':''}">${RX.on?'受け取りをやめる':'受け取りを始める'}</button></div>`;
+ ${RX.why?`<div class="red">${esc(RX.why)}</div>`:''}<button id="rx_btn" class="${RX.on?'sub':''}">${RX.on?'受け取りをやめる':'受け取りを始める'}</button>${RX.on?'<button data-rxre="1">再接続</button>':''}</div>`;
  if(c)h+=`<div class="card"><b>${esc(c.name)}</b><div class="prog"><div style="width:${(RX.got/c.size*100).toFixed(1)}%"></div></div><div class="kv"><span>${fmtB(RX.got)} / ${fmtB(c.size)}</span></div></div>`;
  return h}
 function vTx(k){const F=PCF[k];let h=`<div class="card">`;
  h+=`<div class="pbar"><button data-pick="1">${PCDIR[k]?'フォルダを選び直す':'フォルダを選ぶ'}</button>${PCNEED[k]?`<button data-reopen="1">「${esc(PCDIR[k].name)}」を開く</button>`:''}</div>`;
- h+=`<div class="kv"><span>iPhone</span><b>${esc(TX.st||'未接続')}</b></div>${TX.peer?`<div class="kv"><span>iPhoneの空き</span><b>${fmtB(TX.peer.free)}</b></div>`:''}
- <div class="pbar"><button data-conn="1" class="${TX.st==='接続済み'?'sub':''}">${TX.st==='接続済み'?'つなぎ直す':'iPhoneとつなぐ'}</button>${TX.st?'<button class="sub" data-disc="1">切断</button>':''}</div></div>`;
+ h+=`<div class="kv"><span>iPhone</span><b>${esc(TX.st||'未接続')}</b></div>${TX.why&&/失敗|切断/.test(TX.st)?`<div class="red">${esc(TX.why)}</div>`:''}${TX.peer?`<div class="kv"><span>iPhoneの空き</span><b>${fmtB(TX.peer.free)}</b></div>`:''}
+ <div class="pbar"><button data-conn="1" class="${TX.st==='接続済み'?'sub':''}">${TX.st==='接続済み'?'つなぎ直す':/失敗|時間切れ|切断|エラー/.test(TX.st)?'再接続':'iPhoneとつなぐ'}</button>${TX.st?'<button class="sub" data-disc="1">切断</button>':''}</div></div>`;
  if(!F.size)return h;
  const NW=new Set(LS.get('md_new_'+k,[]));const L=[...F.values()].sort((a,b)=>a.path.localeCompare(b.path,'ja'));
  const sent=e=>it(k,e.key).sent>0,isNew=e=>!sent(e)&&NW.has(e.key);const nNew=L.filter(isNew).length,nUn=L.filter(e=>!sent(e)).length;
@@ -208,6 +208,9 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.close){closeSheet();return}
  if(ds.side){LS.set('md_side',ds.side);render();return}
  if(ds.pick){pickDir();return}if(ds.reopen){reopenDir();return}
+ if(ds.conn&&!LS.get('md_mic_ok',0)&&!ds.ok){micNote('conn');return}
+ if(ds.micok){closeSheet();if(ds.micok==='rx')startRx();else{SENDERR='';TX.connect().catch(e=>{TX.st='エラー：'+(e.message||e);render()})}return}
+ if(ds.rxre){RX.stopListen();RX.why='';startRx();return}
  if(ds.conn){SENDERR='';TX.connect().catch(e=>{TX.st='エラー：'+(e.message||e);render()});return}
  if(ds.disc){TX.close();render();return}
  if(ds.dosend){doSend();return}if(ds.sstop){TX.stop=true;return}
@@ -218,7 +221,7 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.syncnow){syncNow(MODE);return}
  if(ds.thall){if(!confirm('サムネを全部作り直す？'))return;for(const e of lib(MODE)){const id=MODE+'|'+e.key;await IDB.del('thumbs',id);TH.mem.delete(id)}LS.set('md_bad',{});render();return}
  if(ds.home){goHome();return}
- if(t.id==='rx_btn'){if(RX.on){RX.stopListen();WL.off()}else{WL.on();RX.listen();refreshEst()}render();return}
+ if(t.id==='rx_btn'){if(RX.on){RX.stopListen();WL.off();render()}else if(!LS.get('md_mic_ok',0))micNote('rx');else startRx();return}
 });
 document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  if(t.id==='f_sort'){fil().sort=t.value;saveFil();render()}
@@ -232,6 +235,8 @@ let qT=null;document.addEventListener('input',ev=>{if(ev.target.id==='f_q'){fil(
 $('hd_back').onclick=()=>{(NAV[TAB]||[]).pop();render()};
 $('hd_home').onclick=()=>goHome();
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
+function micNote(w){sheet(`<h3>接続の準備</h3><p>PCとiPhoneを家のネットで直接つなぐために、マイクの許可を1回だけ聞くよ。つなぐためだけで、録音はしないし、すぐ止めるよ。</p><button data-micok="${w}">OK</button><button class="sub" data-close="1">やめる</button>`)}
+async function startRx(){WL.on();RX.why='';RX.st='準備中';render();await NET.unlock();RX.listen();refreshEst();render()}
 function goHome(){P.stop();MODE=null;closeSheet();render()}
 async function refreshEst(){EST=await storageEst();if(MODE)render()}
 
