@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="設定狙い">
 <title>設定狙いツール</title>
-<link rel="apple-touch-icon" href="icon.png?v=6">
-<link rel="icon" href="icon.png?v=6">
+<link rel="apple-touch-icon" href="icon.png?v=7">
+<link rel="icon" href="icon.png?v=7">
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:15px;-webkit-text-size-adjust:100%}
@@ -132,7 +132,7 @@ R.bump=(cur,bak,key,del)=>{const now=new Date().toISOString(),kf=key||(x=>x&&x.i
 })();
 </script></head>
 <body>
-<header><img src="icon.png?v=6" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
+<header><img src="icon.png?v=7" alt=""><h1>設定狙いツール</h1><a href="../">スロ判別へ</a></header>
 <nav id="nav"></nav>
 <main id="main"><div class="card">読み込み中…</div></main>
 <script>/* r188 数字入力：入ったときだけカーソルを右端へ（入ったあとの長押し移動はそのまま） */
@@ -143,7 +143,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=99"></script><script src="auto.js?v=99"></script>
+<script src="core.js?v=100"></script><script src="auto.js?v=100"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -464,7 +464,7 @@ const MKZ={'★':' ms','◎':' mb','○':' mo','△':' mt','□':' mq','×':' mx
 let NRG={nrc:null,m:{}};
 // 狙い順：印が付いて×じゃない行を点数順に。同じ店舗で着席台番が同じ行は一番上だけ。r3=[全店舗全機種,店舗内,店舗機種内]
 function rankT(T){const rk=x=>!!x.mark&&x.mark!=='×';
- const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
+ const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
  // 総合点数偏差値：平均・標準偏差は台分析4枠ぜんぶ指数がある台（0の枠が1つもない台）だけで出す。0がある台も値は出すが母集団には入れない
  {const v=T.filter(x=>!x.nx&&x.full).map(x=>x.score);const n=v.length,m=n?v.reduce((a,b)=>a+b,0)/n:0,sd=n?Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/n):0;for(const x of T)x.sdv=x.auto?(x.asdv??0):sd>0?50+10*(x.score-m)/sd:50}
  const NF=NPV();T.sort((a,b)=>(rk(b)-rk(a))||cmpT(a,b));const R=new Map(),seen=new Set();let nn=0;const c2={},c3={};let d0=0;const e2={},e3={};
@@ -481,12 +481,12 @@ function unitsAll(d,stores,R,set,man){if(NRG.nrc!==NRC)NRG={nrc:NRC,m:{}};const 
   const L=nerFor(s,date,day,rk);const T0=L.targets||[];out.push({s,day,rk,virt,date,L,T:AU?autoApply({s,date,T:T0,day,dropT:L.dropT}):T0,dropT:L.dropT})}
  // 狙い順は、狙い印が付いていて×じゃない台だけに付ける。rank＝全店舗の通し、srank＝店舗の中
  const all=[];for(const u of out)for(const x of u.L)if(isRk(x))all.push([u,x]);
- all.sort((a,b)=>b[1].score-a[1].score||(b[1].tti??-1)-(a[1].tti??-1)||a[0].s.localeCompare(b[0].s,'ja')||String(a[1].t).localeCompare(String(b[1].t),'ja',{numeric:true}));
+ all.sort((a,b)=>b[1].score-a[1].score||a[0].s.localeCompare(b[0].s,'ja')||String(a[1].t).localeCompare(String(b[1].t),'ja',{numeric:true}));
  const g=new Map(),sg=new Map();const cn={};all.forEach(([u,x],i)=>{g.set(x,i+1);cn[u.s]=(cn[u.s]||0)+1;sg.set(x,cn[u.s])});
  for(const u of out)u.L=u.L.map(x=>Object.assign({},x,{rank:g.get(x)||'',srank:sg.get(x)||'',lrank:x.rank}));
  // 当日用：狙いページと同じ行（targets）・同じ並び・同じ順位の付け方で、台番ごとの印・点数・順位を出す
  {const T=[];for(const u of out)for(const x of u.T)T.push(x);const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
-  const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
+  const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
   // 何%までの母数：その日の台の数（全店舗・店舗・店舗機種）
   {const all=new Set(),st={},sm={};for(const u of out)for(const r of u.day){if(u.dropT&&u.dropT.has(String(r.t)))continue;const t=u.s+'|'+r.t;all.add(t);(st[u.s]||(st[u.s]=new Set())).add(t);const k=u.s+'|'+NC.groupOf(r.m,set);(sm[k]||(sm[k]=new Set())).add(t)}
    for(const x of T)x.n3=[all.size,(st[x.s]||new Set()).size,(sm[x.s+'|'+x.g]||new Set()).size]}
@@ -775,8 +775,10 @@ function nrEval(L,store,date,from,to){const cfg=nerCfg();const MU=cfg.mul;
   x.drop=false;x.ev=ev;x.miss=miss;x.tti=ttN?ttS/ttN:null;x.score=exp?(ttN?sc/ttN:0):sc/4;x.full=ttN===axes.length;
   const pvX=cfg.prevX!==false&&x.prev;x.mark=!pvX&&anyO?'○':''};
  const ban=x=>nxHas(x.g)||ceHas(x.ev);
- for(const x of L){one(x);if(ban(x))x.mark=''}L.dropT=new Set();const T=(L.targets||[]).map(x=>{one(x);return ban(x)?Object.assign({},x,{nx:1,mark:''}):x});for(const x of T){if(x.parts){for(const p of x.parts){one(p);if(ban(p)){p.nx=1;p.mark=''}}x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
- L.sort((a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
+ const Sfn=NC.neraiScoreFn(S.rows,setObj(),date);const matsu=+date.slice(8)%10;
+ const apply=x=>{one(x);x.score=Sfn(x.s,x.g,matsu);x.full=true};
+ for(const x of L){apply(x);if(ban(x))x.mark=''}L.dropT=new Set();const T=(L.targets||[]).map(x=>{apply(x);return ban(x)?Object.assign({},x,{nx:1,mark:''}):x});for(const x of T){if(x.parts){for(const p of x.parts){apply(p);if(ban(p)){p.nx=1;p.mark=''}}x.mlist=x.parts.map(p=>({l:p.kind==='t'?'台番':p.label,sc:p.score,k:p.kind})).sort((p,q)=>q.sc-p.sc)}}L.targets=T;
+ L.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));L.forEach((x,i)=>x.rank=i+1)}
 let nr=LS.get('nr_nr',{});if(!nr.m)nr.m=['gs'];if(!nr.r)nr.r=['w'];nr.ss=[];// 店舗は毎回全店舗から（保存しない）
 const SEGN={all:'全',matsu:'日末尾',hi:'日',you:'曜日'};
 const isDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'')&&NC.normDate(v)===v;
@@ -828,7 +830,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const T=[];for(const u of units)for(const x of u.T)if(!nr.g||x.g===nr.g)T.push(Object.assign({date:u.date,virt:u.virt},x));
  const SK=NC.RANK_KEYS;const rk=x=>!!x.mark&&x.mark!=='×';
  // 同じ点数（ぴったり同じ）は、店舗→台番の小さい順
- const cmpT=(a,b)=>b.score-a.score||(b.tti??-1)-(a.tti??-1)||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
+ const cmpT=(a,b)=>b.score-a.score||a.s.localeCompare(b.s,'ja')||(a.kind===b.kind?(a.kind==='t'?String(a.t).localeCompare(String(b.t),'ja',{numeric:true}):String(a.seat==null?'':a.seat).localeCompare(String(b.seat==null?'':b.seat),'ja',{numeric:true})||a.g.localeCompare(b.g,'ja')||NC.skOrd(a.k)-NC.skOrd(b.k)):a.kind==='t'?-1:1);
  // 標準の並び：印があって×じゃない行を点数の高い順に上へ、そのあとにそれ以外（これも点数順）
  T.sort(cmpT);
  // 順位：印があって×じゃない行を点数の高い順に 1,2,3…。同じ店舗で着席台番が同じ（未定は除く）行は、いちばん点数が高い1行だけに番号を付け、ほかは空白（番号は使わない）
