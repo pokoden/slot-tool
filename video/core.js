@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=6;
+const APPV=7;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -233,10 +233,14 @@ function letterArt(title){const ch=(String(title||'').trim()[0]||'♪').toUpperC
 function toThumb(src,w,h){const c=document.createElement('canvas');const r=Math.min(1,Math.max(w/(src.videoWidth||src.naturalWidth||w),h/(src.videoHeight||src.naturalHeight||h)));const sw=src.videoWidth||src.naturalWidth,sh=src.videoHeight||src.naturalHeight;if(!sw||!sh)return null;
  if(w===h){const s=Math.min(sw,sh);c.width=c.height=w;c.getContext('2d').drawImage(src,(sw-s)/2,(sh-s)/2,s,s,0,0,w,w)}else{c.width=Math.round(sw*Math.min(1,w/sw));c.height=Math.round(sh*Math.min(1,w/sw));c.getContext('2d').drawImage(src,0,0,c.width,c.height)}return c.toDataURL('image/jpeg',.72)}
 function once(el,ev,ms){return new Promise((res,rej)=>{const t=setTimeout(()=>{cl();rej(new Error('timeout'))},ms||10000);const ok=()=>{cl();res()},ng=()=>{cl();rej(new Error('error'))};const cl=()=>{clearTimeout(t);el.removeEventListener(ev,ok);el.removeEventListener('error',ng)};el.addEventListener(ev,ok);el.addEventListener('error',ng)})}
+// タグ文字列の後ろのNUL・空白を取る（m4a/mp3のタグに付いてくる）
+const cleanTag=s=>String(s==null?'':s).replace(/[\u0000\uFFFD]/g,'').trim();
+// 以前のデータに残ったNUL付きタグを直す
+function fixTags(k){const d=doc(k);let ch=false;for(const o of Object.values(d.items))for(const f of['tt','ta','tal'])if(typeof o[f]==='string'){const v=cleanTag(o[f]);if(v!==o[f]){o[f]=v;o.t=o.t||{};if(!(o.t[f]>2))o.t[f]=2;ch=true}}if(ch){saveDoc(k);syncSoon(k,3000)}return ch}
 async function metaOf(kind,blob,name){const o={};const url=URL.createObjectURL(blob);try{
  if(kind==='video'){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=url;await once(v,'loadedmetadata',15000);o.dur=v.duration;const t=Math.min(isFinite(v.duration)?v.duration*.2:1,60)||1;v.currentTime=t;await once(v,'seeked',15000);if(v.readyState<2)await once(v,'loadeddata',5000).catch(()=>{});o.thumb=toThumb(v,320,180);v.removeAttribute('src');v.load()}
  else{let t=null;const ex=extOf(name);try{if(ex==='mp3'||/mpeg/.test(blob.type))t=id3(await blob.slice(0,Math.min(blob.size,8<<20)).arrayBuffer());else if(['m4a','mp4','m4v','aac','alac','m4b'].includes(ex)||/mp4/.test(blob.type))t=await mp4Tags(blob);else if(ex==='flac')t=await flacTags(blob)}catch(e){}
-  if(t){if(t.tt)o.tt=t.tt;if(t.ta)o.ta=t.ta;if(t.tal)o.tal=t.tal;if(t.pic){const pu=URL.createObjectURL(t.pic);try{o.thumb=toThumb(await loadImg(pu),300,300)}catch(e){}URL.revokeObjectURL(pu)}}
+  if(t){for(const f of['tt','ta','tal'])if(t[f]){const v=cleanTag(t[f]);if(v)o[f]=v}if(t.pic){const pu=URL.createObjectURL(t.pic);try{o.thumb=toThumb(await loadImg(pu),300,300)}catch(e){}URL.revokeObjectURL(pu)}}
   const a=document.createElement('audio');a.preload='metadata';a.src=url;try{await once(a,'loadedmetadata',10000);if(isFinite(a.duration))o.dur=a.duration}catch(e){}a.removeAttribute('src')}
  }catch(e){o.bad=1}finally{URL.revokeObjectURL(url)}return o}
 // 音量そろえ：曲は全体を解析、動画は再生中に測る

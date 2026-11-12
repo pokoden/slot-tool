@@ -25,12 +25,12 @@ function lib(k){k=k||MODE;const m=new Map();for(const f of DEV[k].values())m.set
 const libMap=k=>new Map(lib(k).map(e=>[e.key,e]));
 const baseName=p=>p.split('/').pop().replace(/\.[^.]+$/,'');
 function pathArtist(k,p){const s=p.split('/');if(k==='music'&&s.length>=3)return s[s.length-3];if(s.length>=2)return s[s.length-2];const b=baseName(p),i=b.indexOf(' - ');return i>0?b.slice(0,i).trim():''}
-function autoTitle(k,e){const d=it(k,e.key);if(d.tt)return d.tt;const b=baseName(e.path),s=e.path.split('/');const i=b.indexOf(' - ');return s.length<2&&i>0?b.slice(i+3).trim():b}
-const titleOf=(k,e)=>it(k,e.key).n||autoTitle(k,e);
-const autoArtist=(k,e)=>it(k,e.key).ta||pathArtist(k,e.path)||'その他';
-const artistOf=(k,e)=>it(k,e.key).a||autoArtist(k,e);
-function autoAlbum(k,e){const d=it(k,e.key);if(d.tal)return d.tal;const s=e.path.split('/');return k==='music'&&s.length>=3?s[s.length-2]:''}
-const albumOf=(k,e)=>it(k,e.key).al||autoAlbum(k,e);
+function autoTitle(k,e){const d=it(k,e.key);if(cleanTag(d.tt))return cleanTag(d.tt);const b=baseName(e.path),s=e.path.split('/');const i=b.indexOf(' - ');return s.length<2&&i>0?b.slice(i+3).trim():b}
+const titleOf=(k,e)=>cleanTag(it(k,e.key).n)||autoTitle(k,e);
+const autoArtist=(k,e)=>cleanTag(it(k,e.key).ta)||pathArtist(k,e.path)||'その他';
+const artistOf=(k,e)=>cleanTag(it(k,e.key).a)||autoArtist(k,e);
+function autoAlbum(k,e){const d=it(k,e.key);if(cleanTag(d.tal))return cleanTag(d.tal);const s=e.path.split('/');return k==='music'&&s.length>=3?s[s.length-2]:''}
+const albumOf=(k,e)=>cleanTag(it(k,e.key).al)||autoAlbum(k,e);
 const added=(k,e)=>e.added||0;
 function sortL(k,a,s){const t=x=>titleOf(k,x);if(s==='name')return a.sort((x,y)=>t(x).localeCompare(t(y),'ja'));if(s==='add')return a.sort((x,y)=>added(k,y)-added(k,x));return a.sort((x,y)=>(it(k,y.key).last||0)-(it(k,x.key).last||0)||added(k,y)-added(k,x))}
 function groupCount(L,f){const m=new Map();for(const e of L){const a=f(e);m.set(a,(m.get(a)||0)+1)}return[...m].sort((a,b)=>a[0].localeCompare(b[0],'ja'))}
@@ -87,14 +87,14 @@ function render(){if(!MODE){$('choose').hidden=false;$('app').hidden=true;return
 function push(v){(NAV[TAB]=NAV[TAB]||[]).push(v);MS.on=false;MS.keys.clear();render();scrollTo(0,0)}
 function filtered(){const k=MODE,f=fil();let L=lib(k);const q=(f.q||'').trim().toLowerCase();
  if(q)L=L.filter(e=>(titleOf(k,e)+' '+artistOf(k,e)+' '+albumOf(k,e)+' '+e.path+' '+(it(k,e.key).tags||[]).join(' ')).toLowerCase().includes(q));
- if(f.artist)L=L.filter(e=>artistOf(k,e)===f.artist);if(f.album)L=L.filter(e=>albumOf(k,e)===f.album);if(f.fav)L=L.filter(e=>it(k,e.key).fav);if(f.unw)L=L.filter(e=>!it(k,e.key).plays);
+ if(f.artist){const a=cleanTag(f.artist);L=L.filter(e=>artistOf(k,e)===a)}if(f.album){const a=cleanTag(f.album);L=L.filter(e=>albumOf(k,e)===a)}if(f.fav)L=L.filter(e=>it(k,e.key).fav);if(f.unw)L=L.filter(e=>!it(k,e.key).plays);
  if(f.tags.length)L=L.filter(e=>{const t=it(k,e.key).tags||[];return f.tags.every(x=>t.includes(x))});return sortL(k,L,f.sort)}
 function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  if(DEV[k].size&&EST.quota&&EST.free<LOW)h+=`<div class="warn" data-go="cand">空きが少ない（${fmtB(EST.free)}）</div>`;
  if(!L.length)return h+`<div class="empty"><button data-tab="send">PCから送る</button></div>`;
  const ar=artists(k),al=albums(k);
  h+=`<div class="srch"><input id="f_q" type="search" placeholder="曲名・アーティスト・アルバム" value="${esc(f.q||'')}" autocomplete="off"></div>
- <div class="ctl"><select id="f_art"><option value="">アーティスト</option>${ar.map(([a])=>`<option${f.artist===a?' selected':''}>${esc(a)}</option>`).join('')}</select><select id="f_alb"><option value="">アルバム</option>${al.map(([a])=>`<option${f.album===a?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
+ <div class="ctl"><select id="f_art"><option value="">アーティスト</option>${ar.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.artist)===a?' selected':''}>${esc(a)}</option>`).join('')}</select><select id="f_alb"><option value="">アルバム</option>${al.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.album)===a?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
  <div class="ctl">${sortSel()}${layBtn()}${selBtn()}</div>
  <div class="chips"><button class="chip${f.fav?' on':''}" data-ff="fav">★ お気に入り</button><button class="chip${f.unw?' on':''}" data-ff="unw">${k==='video'?'未視聴':'未再生'}</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
  <div class="seg">${[['all','すべて'],['folder','フォルダ'],['artist','アーティスト'],['album','アルバム']].map(([v,t])=>`<button class="${f.view===v?'on':''}" data-view="${v}">${t}</button>`).join('')}</div>`;
@@ -323,8 +323,8 @@ async function refreshEst(){EST=await storageEst();if(MODE)render()}
 let LASTDEV='';TX.on=()=>{const dv=TX.peer&&TX.peer.dev||'';if(dv&&dv!==LASTDEV){if(LASTDEV&&!SENDING){for(const k of['music','video'])SST[k].clear();SUM=null}LASTDEV=dv}if(!MODE)return;if(TAB==='send')sendRender();else $('hd_st').innerHTML=hdStatus();if(TX.peer)qhCollisions(MODE)};
 RX.ui=()=>{if(!MODE)return;if(TAB==='send')sendRender();else $('hd_st').innerHTML=hdStatus()};
 RX.onFile=k=>{refreshEst()};
-SY.on=()=>{if(!MODE)return;$('hd_st').innerHTML=hdStatus();if(TAB==='set'||(/^最終/.test(SY.msg)&&!MS.on&&$('sheet').hidden&&!(document.activeElement&&document.activeElement.matches('input,select'))))render()};
+SY.on=()=>{if(/^最終/.test(SY.msg)&&!SY.busy.music&&!SY.busy.video)for(const k of['music','video'])fixTags(k);if(!MODE)return;$('hd_st').innerHTML=hdStatus();if(TAB==='set'||(/^最終/.test(SY.msg)&&!MS.on&&$('sheet').hidden&&!(document.activeElement&&document.activeElement.matches('input,select'))))render()};
 document.addEventListener('visibilitychange',()=>{if(MODE)syncNow(MODE)});
 addEventListener('online',()=>MODE&&syncNow(MODE));
-(async()=>{buildPlayers();render();await ST.init();await loadDev();await restoreDirs();EST=await storageEst();render();for(const k of['music','video'])syncNow(k);
+(async()=>{buildPlayers();render();await ST.init();await loadDev();for(const k of['music','video'])fixTags(k);await restoreDirs();EST=await storageEst();render();for(const k of['music','video'])syncNow(k);
  if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v='+APPV).catch(()=>{})})();
