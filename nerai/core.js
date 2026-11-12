@@ -168,7 +168,7 @@ function stat(a){const n=a.length;if(!n)return{m:0,sd:0,n:0};let s=0;for(const x
 // 指数。確率は「1回転あたりの当たり率」で計算するので、高いほど良い（=分母が小さいほど高い）
 // 各種数値設定（index から setP で変える）
 const PDEF={devM:50,devS:10,cmpHy:55,cmpTk:55,wRb:0.4,wRot:0.6,wPr:0.4,wOk:0.2,wTk:0.4,prev:55,subDiv:10000,stMax:3};let P=Object.assign({},PDEF);
-function setP(o){const n=Object.assign({},PDEF);for(const k in PDEF)if(o&&o[k]!==''&&o[k]!=null&&isFinite(+o[k]))n[k]=+o[k];if(JSON.stringify(n)!==JSON.stringify(P)){P=n;PBC=new WeakMap();AFM=new WeakMap();HOK=new WeakMap();NSC=new WeakMap();return true}return false}
+function setP(o){const n=Object.assign({},PDEF);for(const k in PDEF)if(o&&o[k]!==''&&o[k]!=null&&isFinite(+o[k]))n[k]=+o[k];if(JSON.stringify(n)!==JSON.stringify(P)){P=n;PBC=new WeakMap();AFM=new WeakMap();HOK=new WeakMap();return true}return false}
 const dev=(x,st)=>x==null||!st||!st.n?null:Math.round(st.sd>0?P.devM+P.devS*(x-st.m)/st.sd:P.devM);
 const dowC=new Map();const dowF=d=>{let v=dowC.get(d);if(v==null){v=dow(d);dowC.set(d,v)}return v};
 const segOf=(d,type)=>type==='matsu'?+d.slice(8)%10:type==='hi'?+d.slice(8):type==='you'?dowF(d):'all';
@@ -274,7 +274,7 @@ const skOrd=k=>{const[b,n]=String(k).split('~');return RANK_KEYS.indexOf(b)*10+(
 const round4=v=>Math.round(v*1e4)/1e4;
 const NEAR=['zen','d2','d3','d6'];// 前日を含む期間
 // 1台1日ぶんの標準指数（回転・RB確率・合算確率・総合）。標準指数の母集団は to までの全データ
-let PBC=new WeakMap();let NSC=new WeakMap();
+let PBC=new WeakMap();
 function stdBaseAt(rows,set,to){let m=PBC.get(rows);if(!m)PBC.set(rows,m=new Map());let b=m.get(to);if(!b){if(m.size>40)m.clear();b=stdBase(rows,set,to);m.set(to,b)}return b}
 function rowIdx(r,set,base){const gr=groupOf(r.m,set),zr=base.zr||{rb:new Set(),both:new Set()};const pb=base.prob[gr]||{};const rT=dev(r.g,base.rot[typeOf(r.m,set)]);const rbT=zr.rb.has(gr)||zr.both.has(gr)?null:dev(r.g>0?r.rb/r.g:0,pb.rb);const gsT=zr.both.has(gr)?null:dev(r.g>0?(r.bb+r.rb)/r.g:0,pb.gs);const i=idx(rT,rbT,gsT);return{g:rT,rb:rbT,gs:gsT,p:i.p,t:i.t}}
 const PREV_BORDER=55;
@@ -321,26 +321,7 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    const sub=Math.max(...a.map(x=>x.sub));const pv=a.some(x=>x.prev);const mk=useP&&pv?'':comboMark(code,cfg);const PT=GPT.get(b.g)||PT0;
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),parts:a,mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
-
-// 狙い点数：直近4ヶ月（狙い日前日まで）の十分回転○率＋回転加重総合。k=20 で shrink
-function addMonths(d,n){const y=+d.slice(0,4),mo=+d.slice(5,7)-1+n,day=+d.slice(8,10);const yy=y+Math.floor(mo/12),mm=((mo%12)+12)%12;const last=new Date(Date.UTC(yy,mm+1,0)).getUTCDate();const dd=Math.min(day,last);return yy+'-'+String(mm+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0')}
-function rollWin(d,k){return[addMonths(d,-(k==null?4:k)),addDay(d,-1)]}
-function clipIx(x){return x==null||x!==x?null:Math.max(0,Math.min(100,x))}
-function okStd(ix){if(ix.g==null||ix.g<55)return false;if(ix.rb!=null&&ix.rb<55)return false;if(ix.gs!=null&&ix.gs<55)return false;if(ix.t==null||ix.t<55)return false;return true}
-// 店×機種・店×日末尾の点数関数。rows と date でキャッシュ
-function neraiScoreFn(rows,set,date){let m=NSC.get(rows);if(!m)NSC.set(rows,m=new Map());const sig=date+'|'+(set&&JSON.stringify(set.groups||{})||'');const hit=m.get(sig);if(hit)return hit;if(m.size>24)m.clear();
- const[from,to]=rollWin(date,4);const base=stdBaseAt(rows,set,to);
- const ST=new Map(),GR=new Map(),MT=new Map();
- const acc=(map,k)=>{let a=map.get(k);if(!a)map.set(k,a={n:0,ok:0,np:0,okp:0,sw:0,swt:0,nxt:0});return a};
- for(const r of rows){if(r.d<from||r.d>to)continue;const ix=rowIdx(r,set,base);const played=ix.g!=null&&ix.g>=55;const ok=okStd(ix)?1:0;const s=r.s,g=groupOf(r.m,set),ms=+r.d.slice(8)%10;
-  const st=acc(ST,s);st.n++;st.ok+=ok;
-  const a=acc(GR,s+'|'+g);if(played){a.np++;a.okp+=ok}const tc=clipIx(ix.t);if(tc!=null){a.nxt++;const w=+r.g||0;a.sw+=w;a.swt+=tc*w}
-  const b=acc(MT,s+'|'+ms);if(played){b.np++;b.okp+=ok}}
- const fn=(store,grp,matsu)=>{const st=ST.get(store);const prior=st&&st.n?st.ok/st.n:0.06;const a=GR.get(store+'|'+grp)||{np:0,okp:0,sw:0,swt:0,nxt:0};const b=MT.get(store+'|'+matsu)||{np:0,okp:0};
-  const ratep_sh=(a.okp+20*prior)/(a.np+20);const wt=a.sw?a.swt/a.sw:NaN;const wt_sh=a.nxt&&wt===wt?(a.nxt*wt+20*50)/(a.nxt+20):50;const ratep_matsu_sh=(b.okp+20*prior)/(b.np+20);
-  return 100*ratep_sh+(wt_sh-50)+30*ratep_matsu_sh};
- fn.from=from;fn.to=to;m.set(sig,fn);return fn}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();NSC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,addMonths,rollWin,clipIx,okStd,neraiScoreFn,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,storeMembers,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,storeMembers,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
