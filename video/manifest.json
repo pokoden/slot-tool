@@ -1,0 +1,1 @@
+{"name":"メディアプレイヤー","short_name":"プレイヤー","start_url":"./","scope":"./","display":"standalone","orientation":"any","background_color":"#0f0f0f","theme_color":"#0f0f0f","icons":[{"src":"icon.png?v=1","sizes":"180x180","type":"image/png"},{"src":"icon-512.png?v=1","sizes":"512x512","type":"image/png","purpose":"any"}]}
