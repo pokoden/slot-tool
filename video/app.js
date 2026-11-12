@@ -43,7 +43,9 @@ function plKeys(k,id){if(id[0]==='_')return autoPl(k,id);const p=doc(k).pls[id];
 const plName=(k,id)=>id==='_often'?(k==='music'?'よく聴く':'よく見る'):id==='_new'?'最近追加':(doc(k).pls[id]||{}).name||'';
 // 再生不可（この端末で）
 const BADC=new Map();
-function badOf(k,e){const r=LS.get('md_bad',{})[k+'|'+e.key];if(r&&r!==1)return r;const ck=k+'|'+extOf(e.path)+'|'+e.mime+'|'+(e.conv?1:0);if(!BADC.has(ck))BADC.set(ck,badHere(k,e));return BADC.get(ck)||(r===1?'再生できない':'')}
+// 再生不可は「実際に再生して失敗した」ものだけ
+function badOf(k,e){const r=LS.get('md_bad',{})[k+'|'+e.key];return typeof r==='string'&&r!=='meta'?r:''}
+if(LS.get('md_bad_v',0)<8){LS.set('md_bad',{});LS.set('md_bad_v',8)}
 // 重複（この端末の中）
 function devDup(k){const out=new Map(),ns=new Map(),qs=new Map();for(const f of[...DEV[k].values()].sort((a,b)=>(a.added||0)-(b.added||0))){const n=(f.name||'').toLowerCase()+'|'+f.size;if(ns.has(n)){out.set(f.key,'「'+ns.get(n)+'」と同じ');continue}if(f.qh&&qs.has(f.qh)){out.set(f.key,'「'+qs.get(f.qh)+'」と同じ中身');continue}ns.set(n,f.name);if(f.qh)qs.set(f.qh,f.name)}return out}
 // 重複（PCのフォルダとiPhone）
@@ -51,7 +53,10 @@ async function quickHash(file){const M=1<<20,a=await file.slice(0,M).arrayBuffer
 async function ensureQH(k,list){for(const e of list){const id=k+'|'+e.key;if(QH.has(id))continue;try{QH.set(id,await quickHash(await e.get()))}catch(x){}}}
 async function qhCollisions(k){const cnt=new Map();for(const e of PCF[k].values())cnt.set(e.size,(cnt.get(e.size)||0)+1);const ps=TX.peer&&TX.peer.have?(TX.peer.have[k]||[]).map(x=>+x.slice(x.lastIndexOf('|')+1)):[];for(const s of ps)cnt.set(s,(cnt.get(s)||0)+1);
  const L=[...PCF[k].values()].filter(e=>cnt.get(e.size)>1&&!QH.has(k+'|'+e.key));if(!L.length)return;await ensureQH(k,L);if(MODE===k&&TAB==='send')render()}
-function eligible(k){const D=dupPC(k),dupOK=LS.get('md_dupsend',false),conv=LS.get('md_conv',true);return e=>(dupOK||!D.has(e.key))&&(conv||!badIOS(k,e.name))}
+const PROBE=new Map();
+const badSend=(k,e)=>badIOS(k,e.name)||probeIOS(PROBE.get(k+'|'+e.key));
+async function probePC(k){if(k!=='video')return;let n=0;for(const e of[...PCF[k].values()]){const id=k+'|'+e.key;if(PROBE.has(id)||!MP4X.includes(extOf(e.name)))continue;try{PROBE.set(id,await mp4Probe(await e.get()))}catch(x){PROBE.set(id,null)}if(++n%20===0&&MODE===k&&TAB==='send'&&!SENDING)sendRender()}if(n&&MODE===k&&TAB==='send'&&!SENDING)render()}
+function eligible(k){const D=dupPC(k),dupOK=LS.get('md_dupsend',false),conv=LS.get('md_conv',true);return e=>(dupOK||!D.has(e.key))&&(conv||!badSend(k,e))}
 function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.peer&&TX.peer.have?TX.peer.have[k]||[]:[];
  const pns=new Set(peer.map(x=>keyPath(x).split('/').pop().toLowerCase()+'|'+x.slice(x.lastIndexOf('|')+1)));const pq=new Set(Object.values((TX.peer&&TX.peer.hq&&TX.peer.hq[k])||{}));
  for(const e of[...PCF[k].values()].sort((a,b)=>a.path.localeCompare(b.path))){const n=e.name.toLowerCase()+'|'+e.size,q=QH.get(k+'|'+e.key);
@@ -141,7 +146,7 @@ function vTx(k){const F=PCF[k];let h=`<div class="card">`;
  const conv=LS.get('md_conv',true),dupOK=LS.get('md_dupsend',false);
  h+=`<div class="card"><label class="tg"><span>再生不可はmp4に変換して送る</span><input type="checkbox" id="s_conv"${conv?' checked':''}></label><label class="tg"><span>重複も送る</span><input type="checkbox" id="s_dups"${dupOK?' checked':''}></label></div>`;
  const NW=new Set(LS.get('md_new_'+k,[]));const L=[...F.values()].sort((a,b)=>a.path.localeCompare(b.path,'ja'));const D=dupPC(k),ST2=SST[k];
- const sent=e=>sentTo(k,e.key),isNew=e=>!sent(e)&&NW.has(e.key),bad=e=>badIOS(k,e.name);
+ const sent=e=>sentTo(k,e.key),isNew=e=>!sent(e)&&NW.has(e.key),bad=e=>badSend(k,e);
  const sf=LS.get('md_sf_'+k,'all');const S=SEL[k];let selB=0;for(const x of S){const e=F.get(x);if(e)selB+=e.size}const over=TX.peer&&selB>TX.peer.free;
  // 全体の状態
  let sum='';if(SUM&&SUM.k===k){const ks=SUM.keys,c={done:0,fail:0,dup:0};let b=0;for(const x of ks){const st=ST2.get(x),e=F.get(x);if(!st||!e)continue;if(c[st.s]!=null)c[st.s]++;if(st.s==='done')b+=e.size;else if(st.s==='send')b+=(st.p||0)*e.size}
@@ -188,7 +193,7 @@ const TH={mem:new Map(),q:[],busy:false,io:null,
  async get(id){if(this.mem.has(id))return this.mem.get(id);const v=await IDB.get('thumbs',id);if(v)this.mem.set(id,v);return v},
  set(id,v){this.mem.set(id,v);for(const img of document.querySelectorAll('img[data-tk]'))if(img.dataset.tk===id)img.src=v;return IDB.put('thumbs',id,v)},
  want(id){if(!this.q.includes(id))this.q.push(id);this.run()},
- async run(){if(this.busy)return;this.busy=true;try{while(this.q.length){const id=this.q.shift();const[k,...r]=id.split('|');const key=r.join('|');if(await this.get(id))continue;if(LS.get('md_bad',{})[id]==='meta')continue;try{const b=await blobOf(k,key);if(!b)continue;const name=keyPath(key);const o=await metaOf(k,b,name);if(o.bad&&k==='video'){const B=LS.get('md_bad',{});if(!B[id]){B[id]='meta';LS.set('md_bad',B)}}
+ async run(){if(this.busy)return;this.busy=true;try{while(this.q.length){const id=this.q.shift();const[k,...r]=id.split('|');const key=r.join('|');if(await this.get(id))continue;if(LS.get('md_nometa',{})[id])continue;try{const b=await blobOf(k,key);if(!b)continue;const name=keyPath(key);const o=await metaOf(k,b,name);if(o.bad&&k==='video'){const B=LS.get('md_nometa',{});if(!B[id]){B[id]=1;LS.set('md_nometa',B)}}
    let ch=false;for(const f of['dur','ta','tt','tal'])if(o[f]!=null)if(setF(k,key,f,o[f],1)){ch=true;syncSoon(k,8000)}if(ch&&(o.ta||o.tt||o.tal))softRender();if(o.thumb)await this.set(id,o.thumb);else this.mem.set(id,'');}catch(e){}}}finally{this.busy=false}}};
 let srT=null;function softRender(){clearTimeout(srT);srT=setTimeout(()=>{if(!MODE||!$('sheet').hidden||(document.activeElement&&document.activeElement.matches('input,select')))return;const y=scrollY;render();scrollTo(0,y)},1200)}
 function afterRender(){if(!TH.io)TH.io=new IntersectionObserver(es=>{for(const en of es)if(en.isIntersecting){const img=en.target;TH.io.unobserve(img);const id=img.dataset.tk;TH.get(id).then(v=>{if(v)img.src=v;else if(v!==''){TH.want(id)}})}},{rootMargin:'300px'});
@@ -202,7 +207,7 @@ function scanFiles(k,files){const m=new Map();for(const f of files){const rp=(f.
 function setPC(k,m,name){PCF[k]=m;if(!PCDIR[k])PCDIR[k]={name};const kn=LS.get('md_known_'+k,null);
  if(kn){const ks=new Set(kn),nw=new Set(LS.get('md_new_'+k,[]));for(const x of m.keys())if(!ks.has(x))nw.add(x);LS.set('md_new_'+k,[...nw].filter(x=>m.has(x)&&!sentTo(k,x)))}
  LS.set('md_known_'+k,[...new Set([...(kn||[]),...m.keys()])]);
- for(const e of m.values())if(it(k,e.key).add==null)setF(k,e.key,'add',e.lm,1);qhCollisions(k);if(MODE)render()}
+ for(const e of m.values())if(it(k,e.key).add==null)setF(k,e.key,'add',e.lm,1);qhCollisions(k);probePC(k);if(MODE)render()}
 async function pickDir(){const k=MODE;if(window.showDirectoryPicker){try{const h=await showDirectoryPicker({id:'media_'+k,mode:'read'});PCDIR[k]=h;PCNEED[k]=false;await IDB.put('kv','dir_'+k,h);const m=await scanDir(k,h);setPC(k,m,h.name)}catch(e){if(e.name!=='AbortError')alert(e.message)}return}
  const inp=document.createElement('input');inp.type='file';inp.webkitdirectory=true;inp.multiple=true;inp.onchange=()=>{const fs=[...inp.files];const root=(fs[0]&&fs[0].webkitRelativePath||'').split('/')[0];PCDIR[k]={name:root};setPC(k,scanFiles(k,fs),root)};inp.click()}
 async function reopenDir(){const k=MODE,h=PCDIR[k];try{if(await h.requestPermission({mode:'read'})==='granted'){PCNEED[k]=false;const m=await scanDir(k,h);setPC(k,m,h.name)}}catch(e){alert(e.message)}}
@@ -211,7 +216,7 @@ let rT=0;function sendRender(){const n=Date.now();if(n-rT>300){rT=n;if(TAB==='se
 async function doSend(){const k=MODE;if(SENDING)return;const S=[...SEL[k]].map(x=>PCF[k].get(x)).filter(Boolean).sort((a,b)=>a.path.localeCompare(b.path,'ja'));if(!S.length)return;
  const conv=LS.get('md_conv',true),dupOK=LS.get('md_dupsend',false);SENDING=true;SST[k]=new Map();for(const e of S)SST[k].set(e.key,{s:'wait'});SUM={k,keys:S.map(e=>e.key),total:S.reduce((a,e)=>a+e.size,0),sp:0};render();
  await ensureQH(k,S);const D=dupPC(k);const list=[];
- for(const e of S){if(!dupOK&&D.has(e.key)){SST[k].set(e.key,{s:'dup',why:D.get(e.key)});SEL[k].delete(e.key);continue}const x={kind:k,key:e.key,path:e.path,name:e.name,size:e.size,mime:mimeOf(e.name),get:e.get,conv:!!(badIOS(k,e.name)&&conv)};
+ for(const e of S){if(!dupOK&&D.has(e.key)){SST[k].set(e.key,{s:'dup',why:D.get(e.key)});SEL[k].delete(e.key);continue}const x={kind:k,key:e.key,path:e.path,name:e.name,size:e.size,mime:mimeOf(e.name),get:e.get,conv:!!(badSend(k,e)&&conv)};
   x.prep=async()=>{const id=k+'|'+x.key,d=it(k,x.key);let th=await TH.get(id);if(th==null||d.dur==null){try{const o=await metaOf(k,new Blob([await x.get()],{type:x.mime}),x.name);if(o.thumb){th=o.thumb;await TH.set(id,th)}for(const f of['dur','ta','tt','tal'])if(o[f]!=null)setF(k,x.key,f,o[f],1)}catch(er){}}
    if(k==='music'&&d.g==null&&LS.get('md_norm',true)&&!x.conv){const g=await loudOf(await x.get());if(g)setF(k,x.key,'g',g,1)}
    const dd=it(k,x.key);return{thumb:th||null,dur:dd.dur,ta:dd.ta,tt:dd.tt,tal:dd.tal,g:dd.g,qh:QH.get(id)||null}};list.push(x)}
@@ -278,7 +283,11 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.addpl){addPlMenu(ds.addpl);return}
  if(ds.esave){saveEdit(ds.esave);return}
  if(ds.delk){ev.stopPropagation();delDev(ds.delk);return}
- if(ds.rth){const id=MODE+'|'+ds.rth;await IDB.del('thumbs',id);TH.mem.delete(id);const B=LS.get('md_bad',{});delete B[id];LS.set('md_bad',B);BADC.clear();TH.want(id);closeSheet();return}
+ if(ds.rth){const id=MODE+'|'+ds.rth;await IDB.del('thumbs',id);TH.mem.delete(id);const B=LS.get('md_nometa',{});delete B[id];LS.set('md_nometa',B);TH.want(id);closeSheet();return}
+ if(ds.pfre){const k=MODE,key=ds.pfre;closeSheet();P.stop();await delDevKey(k,key);syncSoon(k);EST=await storageEst();render();alert('この端末から消したよ。PCの送る画面で未送信に戻るので、送り直してね');return}
+ if(ds.pfdel){closeSheet();P.stop();delDev(ds.pfdel);return}
+ if(ds.pfnext){closeSheet();P._failK=null;P.next(true);return}
+ if(ds.pfretry){closeSheet();if(P.el)P.el.dataset.k='';P._failK=null;P.load();return}
  if(ds.close){closeSheet();return}
  if(ds.side){LS.set('md_side',ds.side);render();return}
  if(ds.pickdir){pickDir();return}if(ds.reopen){reopenDir();return}
@@ -294,7 +303,7 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.savetok){const v=$('s_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set('v2_token',v);$('s_tok').value='';syncNow(MODE);render();return}
  if(ds.savedname){const v=$('s_dname').value.trim();LS.set('md_dev_name',v===autoDevName(MYDEV)?'':v);if(RX.dc&&RX.dc.readyState==='open')RX.hello();render();return}
  if(ds.syncnow){syncNow(MODE);return}
- if(ds.thall){if(!confirm('サムネを全部作り直す？'))return;for(const e of lib(MODE)){const id=MODE+'|'+e.key;await IDB.del('thumbs',id);TH.mem.delete(id)}LS.set('md_bad',{});BADC.clear();render();return}
+ if(ds.thall){if(!confirm('サムネを全部作り直す？'))return;for(const e of lib(MODE)){const id=MODE+'|'+e.key;await IDB.del('thumbs',id);TH.mem.delete(id)}LS.set('md_nometa',{});render();return}
  if(ds.home){goHome();return}
  if(t.id==='rx_btn'){if(RX.on){RX.stopListen();WL.off();render()}else if(!LS.get('md_mic_ok',0))micNote('rx');else startRx();return}
 });

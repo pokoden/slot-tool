@@ -37,8 +37,10 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
   let el;if(k==='video'){const o=this.els[1-this.ci];if(o.dataset.k===key){this.ci=1-this.ci}el=this.els[this.ci];const other=this.els[1-this.ci];try{other.pause()}catch(e){}el.classList.add('on');other.classList.remove('on')}else el=$('au');
   this.el=el;let u;try{u=await this.url(key)}catch(e){this.toast(e.message);return}if(tok!==this.loading)return;
   const fresh=el.dataset.k!==key;if(fresh){el.dataset.k=key;el.src=u;el.preload='auto'}
-  const go=()=>{if(tok!==this.loading)return;try{const t=this.startAt(key,el);if(fresh||Math.abs(el.currentTime-t)>1)el.currentTime=t}catch(e){}el.playbackRate=this.rate;const p=el.play();if(p)p.catch(err=>{if(err&&err.name==='NotAllowedError'){this.ui()}})};
-  if(el.readyState>=1&&!fresh)go();else el.addEventListener('loadedmetadata',go,{once:true});
+  clearTimeout(this._wd);this._failK=null;this._na=false;const wdEl=el;const arm=()=>{clearTimeout(this._wd);this._wd=setTimeout(()=>{if(tok===this.loading&&this.el===wdEl&&wdEl.readyState<2&&!wdEl.error&&!this._na)this.fail(wdEl,key,'読み込みが終わらない')},15000)};arm();this._arm=arm;
+  setTimeout(()=>{if(tok===this.loading&&wdEl.readyState<2&&!wdEl.error)this.ind('読み込み中…',3000)},1200);
+  const go=()=>{if(tok!==this.loading)return;try{const t=this.startAt(key,el);if(fresh||Math.abs(el.currentTime-t)>1)el.currentTime=t}catch(e){}el.playbackRate=this.rate;const p=el.play();if(p)p.catch(err=>{if(err&&err.name==='NotAllowedError'){this._na=true;clearTimeout(this._wd);this.ui()}})};
+  go();
   this.gain();this.ms();setF(k,key,'last',Date.now());this.ui();setTimeout(()=>{if(tok===this.loading){this.preload();this.gc()}},1500);
   if(k==='music'&&!isIOS&&it(k,key).g==null&&LS.get('md_norm',true)){blobOf(k,key).then(loudOf).then(g=>{if(g){setF(k,key,'g',g,1);syncSoon(k,8000);if(this.key===key)this.gain()}})}
   this.measure()},
@@ -56,7 +58,13 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
   if(this.rep==='one'){try{this.el.currentTime=0}catch(e){}this.el.play().catch(()=>{});return}this.next(true)},
  next(auto){if(auto&&!LS.get('md_auto',true)){this.el.pause();return}if(this.i+1<this.q.length)this.i++;else if(this.rep==='all'){if(this.shuf){const c=this.cur();shuffle(this.q);if(this.q[0]===c&&this.q.length>1)this.q.push(this.q.shift())}this.i=0}else{if(auto){this.el.pause();this.ui()}return}this.load()},
  prev(){const el=this.el,rs=0;if(el&&el.currentTime-rs>3||this.i===0){try{el.currentTime=rs}catch(e){}return}this.i--;this.load()},
- toggle(){const el=this.el;if(!el)return;if(el.paused){AU.ensure();el.play().catch(()=>{})}else el.pause()},
+ toggle(){const el=this.el;if(!el)return;if(this.key&&(el.error||(el.paused&&el.readyState===0))){if(el.error)el.dataset.k='';this._failK=null;this.load();return}if(el.paused){if(this._arm&&el.readyState<2){this._na=false;this._arm()}AU.ensure();el.play().catch(()=>{})}else el.pause()},
+ // 再生できない時：実際に中身を調べて理由を出し、再送・削除を選べるようにする
+ async fail(el,key,base){if(this._failK===key)return;this._failK=key;clearTimeout(this._wd);const k=this.kind,e=this.entry(key),f=DEV[k].get(key);let why='',cods='';
+  try{const b=await blobOf(k,key);if(!b)why='ファイルが見つからない';else if(MP4X.includes(extOf(e.path))){const o=await mp4Probe(b,f?f.size:0);why=probeWhy(o,k);if(o.codecs.length)cods=o.codecs.map(codecName).join('・')}else if(f&&b.size<f.size)why='未完了の受信（'+fmtB(b.size)+' / '+fmtB(f.size)+'）'}catch(x){}
+  why=why||(base+(cods?'（'+cods+'）':''));const B=LS.get('md_bad',{});B[k+'|'+key]=why;LS.set('md_bad',B);if(typeof softRender==='function')softRender();
+  if(this.key!==key||this.el!==el)return;try{el.pause()}catch(x){}this.ui();const dev=f&&DEV[k].has(key);
+  sheet(`<h3>再生できない</h3><div class="red">${esc(why)}</div>${/非対応|デコード/.test(why)?'<p>PCの送る画面で「再生不可はmp4に変換して送る」をONにして送り直すと見られるよ</p>':/未完了|壊れ/.test(why)?'<p>送り直すと直るよ</p>':/終わらない/.test(why)?'<p>もう一度で直らなければ、送り直すかPCでmp4に変換して送ってね</p>':''}<div class="pbar">${dev?`<button data-pfre="${esc(key)}">再送</button><button class="sub dng" data-pfdel="${esc(key)}">削除</button>`:''}</div><div class="pbar"><button class="sub" data-pfretry="1">もう一度</button><button class="sub" data-pfnext="1">次へ</button></div><button class="sub" data-close="1">閉じる</button>`)},
  seekBy(s){const el=this.el;if(!el)return;try{el.currentTime=Math.max(0,Math.min((el.duration||1e9)-.1,el.currentTime+s))}catch(e){}this.ind((s>0?'+':'−')+Math.abs(s)+'秒')},
  frame(d){const el=this.el;if(!el)return;el.pause();try{el.currentTime=Math.max(0,el.currentTime+d/30)}catch(e){}},
  speed(){const i=SPEEDS.indexOf(this.rate);this.rate=SPEEDS[(i+1)%SPEEDS.length];if(this.el)this.el.playbackRate=this.rate;this.ind(this.rate+'x');this.ui()},
@@ -100,7 +108,8 @@ function buildPlayers(){
  for(const el of[...P.els,$('au')]){el.addEventListener('timeupdate',()=>P.onTime(el));el.addEventListener('ended',()=>{if(el===P.el)P.onEnd()});
   el.addEventListener('play',()=>{if(el!==P.el)return;if(P.kind==='video'){WL.on();P.showCtl()}P.lastT=performance.now();P.ui();try{navigator.mediaSession.playbackState='playing'}catch(e){}});
   el.addEventListener('pause',()=>{if(el!==P.el)return;if(P.kind==='video'){WL.off();$('pv').classList.remove('hid')}P.savePos();syncSoon(P.kind,3000);P.ui();try{navigator.mediaSession.playbackState='paused'}catch(e){}});
-  el.addEventListener('error',()=>{if(el!==P.el||!el.src||el.src===SILENT||!P.key)return;const k=P.kind,key=P.key,e=P.entry(key),c=el.error&&el.error.code;const why=badHere(k,e)||({2:'読み込みに失敗',3:'中身を読めない（壊れているか対応していない圧縮方式）',4:'.'+extOf(e.path)+'はこの端末で再生できない形式'}[c]||'再生できない');const B=LS.get('md_bad',{});B[k+'|'+key]=why;LS.set('md_bad',B);P.toast('再生不可：'+why,3000);if(typeof softRender==='function')softRender();setTimeout(()=>{if(P.el===el&&P.key===key)P.next(true)},2500)});
+  el.addEventListener('error',()=>{if(el!==P.el||!el.src||el.src===SILENT||!P.key)return;const c=el.error&&el.error.code;P.fail(el,P.key,({1:'読み込みが中断された',2:'読み込みに失敗',3:'壊れたファイル（デコードできない）',4:'非対応の形式'}[c]||'再生できない'))});
+  el.addEventListener('playing',()=>{if(el!==P.el||!P.key)return;clearTimeout(P._wd);const id=P.kind+'|'+P.key,B=LS.get('md_bad',{});if(B[id]){delete B[id];LS.set('md_bad',B);if(typeof softRender==='function')softRender()}});
   el.addEventListener('loadedmetadata',()=>{if(el!==P.el)return;const k=P.kind,key=P.key;if(k&&key&&isFinite(el.duration)&&it(k,key).dur==null)setF(k,key,'dur',el.duration,1);P.tick()})}
  for(const box of[$('pv'),$('pm')]){
   box.addEventListener('click',e=>{const b=e.target.closest('[data-pc],[data-qi]');if(!b)return;if(b.dataset.qi!=null){P.i=+b.dataset.qi;P.load();return}const c=b.dataset.pc;e.stopPropagation();if(P.kind==='video')P.showCtl();
