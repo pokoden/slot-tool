@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=3;
+const APPV=4;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -94,9 +94,13 @@ const waitIce=(pc,ms)=>new Promise(res=>{if(pc.iceGatheringState==='complete')re
 const NET={st:'',err:'',s:null,
  live(){return!!(this.s&&this.s.getTracks().some(t=>t.readyState==='live'))},
  async start(){if(this.live())return'ok';try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){this.st='none';this.err='この端末では使えない';return this.st}
-  this.s=await navigator.mediaDevices.getUserMedia({audio:true});this.st='ok';this.err='';LS.set('md_mic_ok',1);for(const t of this.s.getTracks())t.addEventListener('ended',()=>{if(this.s&&!this.live())this.st='off'})}
-  catch(e){this.s=null;this.st='ng';this.err=((e&&e.name)||'')+(e&&e.message?'：'+e.message:'')}return this.st},
- stop(){if(this.s){for(const t of this.s.getTracks())t.stop();this.s=null}if(this.st==='ok')this.st='off'},
+  // 音楽用の再生専用モードのままだとiPhoneはマイクを使えないので、一時的に録音もできるモードにする
+  const AS=navigator.audioSession;if(AS){this.prevAS=this.prevAS||AS.type;try{AS.type='play-and-record'}catch(e){}}
+  try{this.s=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){if(AS&&e&&e.name==='InvalidStateError'){try{AS.type='auto'}catch(x){}this.s=await navigator.mediaDevices.getUserMedia({audio:true})}else throw e}
+  this.st='ok';this.err='';LS.set('md_mic_ok',1);for(const t of this.s.getTracks())t.addEventListener('ended',()=>{if(this.s&&!this.live())this.st='off'})}
+  catch(e){this.s=null;this.st='ng';this.err=((e&&e.name)||'')+(e&&e.message?'：'+e.message:'');this.restoreAS()}return this.st},
+ restoreAS(){const AS=navigator.audioSession;if(AS&&this.prevAS!=null){try{AS.type=this.prevAS==='play-and-record'?'playback':this.prevAS}catch(e){}this.prevAS=null}},
+ stop(){if(this.s){for(const t of this.s.getTracks())t.stop();this.s=null}this.restoreAS();if(this.st==='ok')this.st='off'},
  txt(){return this.st==='ok'?(this.live()?'マイクON（接続用・録音なし）':'マイク停止'):this.st==='ng'?'マイク許可なし（'+this.err+'）':this.st==='none'?'マイク使えない':this.st==='off'?'マイク停止':''}};
 function candSum(sdp){const o={host:0,mdns:0,v6:0,srflx:0,relay:0,ip4:[]};for(const l of String(sdp||'').split(/\r?\n/)){if(!l.startsWith('a=candidate:'))continue;const p=l.split(' '),addr=p[4]||'',typ=p[7];if(typ==='host'){if(/\.local$/i.test(addr))o.mdns++;else{o.host++;if(/^\d+\.\d+\.\d+\.\d+$/.test(addr)&&!o.ip4.includes(addr))o.ip4.push(addr)}}else if(typ==='srflx'||typ==='prflx')o.srflx++;else if(typ==='relay')o.relay++;if(addr.includes(':'))o.v6++}return o}
 const candTxt=o=>[o.host?'端末アドレス'+o.host+(o.ip4.length?'('+o.ip4.join(',')+')':''):'',o.mdns?'隠しアドレス'+o.mdns:'',o.srflx?'外向き'+o.srflx:'',o.v6?'うちIPv6 '+o.v6:''].filter(Boolean).join('・')||'なし';
@@ -110,7 +114,7 @@ async function failWhy(pc){const l=candSum(pc.localDescription&&pc.localDescript
  else if(!l.host&&!r.host)w='両方の端末アドレスが隠れてる';
  else if(!l.host)w='こっちの端末アドレスが隠れてる';else if(!r.host)w='相手の端末アドレスが隠れてる';else w='届かない';
  if(!l.host)w+='（'+(NET.txt()||'マイク未確認')+'）';
- if(r.host&&!l.host&&!seen.length)w+='｜相手からの通信が一度も届いてない';
+ if(l.host&&r.host&&!seen.length&&!(lip.length&&rip.length))w+='｜相手からの通信が届いてない（ネットワークが分かれてるか、ルーターが止めてるかも）';
  return w+'｜こっち：'+candTxt(l)+'｜相手：'+candTxt(r)+(seen.length?'｜届いた相手：'+seen.join(','):'')}
 // 失敗の見張り（つながらないまま25秒でも失敗扱い）
 function watchPc(pc,cur,onFail,onOk){let done=false;const fail=async()=>{if(done||!cur())return;done=true;const w=await failWhy(pc);if(cur())onFail(w)};
