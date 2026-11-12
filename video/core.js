@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=2;
+const APPV=3;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -90,33 +90,48 @@ const SIG={async put(name,data){for(let i=0;i<4;i++){const g=await ghGet('media/
 // ===== PC⇔iPhone 直接転送（WebRTC） =====
 const ICE=[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},{urls:'stun:stun.cloudflare.com:3478'}];
 const waitIce=(pc,ms)=>new Promise(res=>{if(pc.iceGatheringState==='complete')return res();const t=setTimeout(res,ms||5000);pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete'){clearTimeout(t);res()}})});
-// マイク許可を1回だけ取る（許可があると、mDNSで隠れない本当の端末アドレスで直接つながれる）
-const NET={mic:null,
- async unlock(){if(this.mic==='ok')return'ok';try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){this.mic='none';return this.mic}const s=await navigator.mediaDevices.getUserMedia({audio:true});s.getTracks().forEach(t=>t.stop());this.mic='ok';LS.set('md_mic_ok',1)}catch(e){this.mic='ng'}return this.mic}};
-function candSum(sdp){const o={host:0,mdns:0,v6:0,srflx:0,relay:0};for(const l of String(sdp||'').split(/\r?\n/)){if(!l.startsWith('a=candidate:'))continue;const p=l.split(' '),addr=p[4]||'',typ=p[7];if(typ==='host'){if(/\.local$/i.test(addr))o.mdns++;else o.host++}else if(typ==='srflx'||typ==='prflx')o.srflx++;else if(typ==='relay')o.relay++;if(addr.includes(':'))o.v6++}return o}
-const candTxt=o=>[o.host?'端末アドレス'+o.host:'',o.mdns?'隠しアドレス'+o.mdns:'',o.srflx?'外向き'+o.srflx:'',o.v6?'うちIPv6 '+o.v6:''].filter(Boolean).join('・')||'なし';
-function failWhy(pc){const l=candSum(pc.localDescription&&pc.localDescription.sdp),r=candSum(pc.remoteDescription&&pc.remoteDescription.sdp);let w;
- if(!l.host&&!r.host)w='両方の端末アドレスが隠れてる（マイク許可なし）';else if(!l.host)w='こっちの端末アドレスが隠れてる（マイク許可なし）';else if(!r.host)w='相手の端末アドレスが隠れてる（相手のマイク許可なし）';else w='家の中で届かない（ルーターが機器同士の通信を止めてるかも）';
- return w+'｜こっち：'+candTxt(l)+'｜相手：'+candTxt(r)}
+// マイク（録音はしない）。iPhoneのSafariはマイクが動いている間だけ本当の端末アドレスを出すので、接続が終わるまで止めない
+const NET={st:'',err:'',s:null,
+ live(){return!!(this.s&&this.s.getTracks().some(t=>t.readyState==='live'))},
+ async start(){if(this.live())return'ok';try{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){this.st='none';this.err='この端末では使えない';return this.st}
+  this.s=await navigator.mediaDevices.getUserMedia({audio:true});this.st='ok';this.err='';LS.set('md_mic_ok',1);for(const t of this.s.getTracks())t.addEventListener('ended',()=>{if(this.s&&!this.live())this.st='off'})}
+  catch(e){this.s=null;this.st='ng';this.err=((e&&e.name)||'')+(e&&e.message?'：'+e.message:'')}return this.st},
+ stop(){if(this.s){for(const t of this.s.getTracks())t.stop();this.s=null}if(this.st==='ok')this.st='off'},
+ txt(){return this.st==='ok'?(this.live()?'マイクON（接続用・録音なし）':'マイク停止'):this.st==='ng'?'マイク許可なし（'+this.err+'）':this.st==='none'?'マイク使えない':this.st==='off'?'マイク停止':''}};
+function candSum(sdp){const o={host:0,mdns:0,v6:0,srflx:0,relay:0,ip4:[]};for(const l of String(sdp||'').split(/\r?\n/)){if(!l.startsWith('a=candidate:'))continue;const p=l.split(' '),addr=p[4]||'',typ=p[7];if(typ==='host'){if(/\.local$/i.test(addr))o.mdns++;else{o.host++;if(/^\d+\.\d+\.\d+\.\d+$/.test(addr)&&!o.ip4.includes(addr))o.ip4.push(addr)}}else if(typ==='srflx'||typ==='prflx')o.srflx++;else if(typ==='relay')o.relay++;if(addr.includes(':'))o.v6++}return o}
+const candTxt=o=>[o.host?'端末アドレス'+o.host+(o.ip4.length?'('+o.ip4.join(',')+')':''):'',o.mdns?'隠しアドレス'+o.mdns:'',o.srflx?'外向き'+o.srflx:'',o.v6?'うちIPv6 '+o.v6:''].filter(Boolean).join('・')||'なし';
+const isPriv=a=>/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a);
+const net24=a=>a.split('.').slice(0,3).join('.');
+async function failWhy(pc){const l=candSum(pc.localDescription&&pc.localDescription.sdp),r=candSum(pc.remoteDescription&&pc.remoteDescription.sdp);
+ // 実際に届いた相手のアドレス（prflx）も見る
+ const seen=[];let pairs=0;try{(await pc.getStats()).forEach(x=>{if(x.type==='remote-candidate'&&(x.candidateType==='prflx')){const ad=x.address||x.ip;if(ad&&!seen.includes(ad))seen.push(ad)}if(x.type==='candidate-pair')pairs++})}catch(e){}
+ const rip=[...r.ip4,...seen.filter(a=>/^\d+\.\d+\.\d+\.\d+$/.test(a))].filter(isPriv),lip=l.ip4.filter(isPriv);let w;
+ if(lip.length&&rip.length){w=lip.some(a=>rip.some(b=>net24(a)===net24(b)))?'同じネットワークなのに届かない（ルーターの「機器同士の通信を止める」設定かも）':`ネットワークが別（こっち${lip.join(',')}／相手${rip.join(',')}）。ルーターが2台あるかも`}
+ else if(!l.host&&!r.host)w='両方の端末アドレスが隠れてる';
+ else if(!l.host)w='こっちの端末アドレスが隠れてる';else if(!r.host)w='相手の端末アドレスが隠れてる';else w='届かない';
+ if(!l.host)w+='（'+(NET.txt()||'マイク未確認')+'）';
+ if(r.host&&!l.host&&!seen.length)w+='｜相手からの通信が一度も届いてない';
+ return w+'｜こっち：'+candTxt(l)+'｜相手：'+candTxt(r)+(seen.length?'｜届いた相手：'+seen.join(','):'')}
 // 失敗の見張り（つながらないまま25秒でも失敗扱い）
-function watchPc(pc,cur,onFail,onOk){let done=false;const fail=()=>{if(done||!cur())return;done=true;onFail(failWhy(pc))};
- pc.addEventListener('connectionstatechange',()=>{if(pc.connectionState==='failed')fail();if(pc.connectionState==='connected'){done=true;onOk&&onOk()}});
- pc.addEventListener('iceconnectionstatechange',()=>{if(pc.iceConnectionState==='failed')fail();if(pc.iceConnectionState==='checking'&&!pc._t)pc._t=setTimeout(()=>{if(!['connected','completed'].includes(pc.iceConnectionState))fail()},25000)})}
+function watchPc(pc,cur,onFail,onOk){let done=false;const fail=async()=>{if(done||!cur())return;done=true;const w=await failWhy(pc);if(cur())onFail(w)};
+ pc.addEventListener('connectionstatechange',()=>{if(pc.connectionState==='failed')fail();if(pc.connectionState==='connected'&&!done){done=true;onOk&&onOk()}});
+ pc.addEventListener('iceconnectionstatechange',()=>{if(pc.iceConnectionState==='failed')fail();if((pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed')&&!done){done=true;onOk&&onOk()}if(pc.iceConnectionState==='checking'&&!pc._t)pc._t=setTimeout(()=>{if(!['connected','completed'].includes(pc.iceConnectionState))fail()},25000)})}
 const BATCH=4<<20,WIN=16<<20,HIWAT=8<<20;
 // 送る側（PC）
 const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,on:null,sessId:null,
  ui(){if(this.on)this.on()},
- close(){this.sessId=null;try{this.dc&&this.dc.close()}catch(e){}try{this.pc&&this.pc.close()}catch(e){}this.pc=this.dc=null;this.peer=null;this.st='';this.ui()},
+ close(){this.sessId=null;NET.stop();try{this.dc&&this.dc.close()}catch(e){}try{this.pc&&this.pc.close()}catch(e){}this.pc=this.dc=null;this.peer=null;this.st='';this.ui()},
  async connect(){this.close();if(!tok()){this.st='トークン未設定';this.ui();return}const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);this.sessId=id;
-  this.why='';this.st='準備中';this.ui();await NET.unlock();if(this.sessId!==id)return;
+  this.why='';this.st='準備中';this.ui();await NET.start();if(this.sessId!==id)return;
   const pc=this.pc=new RTCPeerConnection({iceServers:ICE});const dc=this.dc=pc.createDataChannel('m',{ordered:true});dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=1<<20;
   dc.onopen=()=>{this.st='接続済み';this.ui()};dc.onclose=()=>{if(this.pc===pc){if(this.st!=='接続失敗')this.st='切断';this.peer=null;this.stop=true;for(const w of Object.values(this.waits))w.rej&&w.rej(new Error('切断'));this.ui()}};
   dc.onmessage=e=>this.msg(JSON.parse(e.data));
-  watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗';this.why=w;this.ui()});
+  watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗';this.why=w;NET.stop();this.ui()},()=>NET.stop());
   await pc.setLocalDescription(await pc.createOffer());await waitIce(pc,10000);
-  await SIG.put('sig_offer',{id,sdp:pc.localDescription.sdp,at:Date.now()});this.st='iPhone待ち';this.ui();
+  if(this.sessId!==id){try{pc.close()}catch(e){}return}// 古い接続が新しい合図を上書きしないように
+  await SIG.put('sig_offer',{id,sdp:pc.localDescription.sdp,at:Date.now()});if(this.sessId!==id)return;this.st='iPhone待ち';this.ui();
   const t0=Date.now();while(this.sessId===id&&Date.now()-t0<300000){await sleep(2000);if(this.sessId!==id||pc.remoteDescription)break;try{const a=await SIG.get('sig_answer');if(a&&a.id===id&&this.sessId===id){await pc.setRemoteDescription({type:'answer',sdp:a.sdp});this.st='接続中';this.ui();break}}catch(e){}}
-  if(this.sessId===id&&!pc.remoteDescription){this.st='時間切れ';this.ui()}},
+  if(this.sessId===id&&!pc.remoteDescription){this.st='時間切れ';NET.stop();this.ui()}},
  msg(m){if(m.t==='hello'||m.t==='est'){this.peer=m;if(m.have)for(const k of['music','video'])for(const key of m.have[k]||[])if(!(it(k,key).sent>0)){setF(k,key,'sent',Date.now())}if(m.have){syncSoon('music');syncSoon('video')}this.ui();return}
   const w=this.waits[m.t+'|'+m.key];if(m.t==='ack'){if(this.cur&&this.cur.key===m.key){this.acked=m.got;if(this.ackW){const f=this.ackW;this.ackW=null;f()}}return}
   if(m.t==='done'&&this.peer){this.peer.free=m.free}
@@ -142,15 +157,15 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
   this.cur=null}
 };
 // 受け取る側（iPhone）
-const RX={on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:0,onFile:null,
+const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:0,onFile:null,
  upd(){if(this.ui)this.ui()},
- async listen(){if(this.on)return;this.on=true;this.st='待機中';this.upd();try{const o=await SIG.get('sig_offer');if(o){const a=await SIG.get('sig_answer').catch(()=>null);if(Date.now()-o.at>600000||(a&&a.id===o.id))this.lastId=o.id}}catch(e){}
-  let idle=Date.now();while(this.on){if(this.dc&&this.dc.readyState==='open')idle=Date.now();else if(Date.now()-idle>1200000){this.stopListen();if(typeof WL!=='undefined')WL.off();break}if(!this.dc||this.dc.readyState!=='open'){try{const o=await SIG.get('sig_offer');if(o&&o.id!==this.lastId&&Math.abs(Date.now()-o.at)<600000){this.lastId=o.id;await this.answer(o)}}catch(e){this.st='待機中（'+(e.message||e)+'）';this.upd()}}await sleep(2500)}},
- stopListen(){this.on=false;try{this.dc&&this.dc.close()}catch(e){}try{this.pc&&this.pc.close()}catch(e){}this.pc=this.dc=null;this.st='';this.upd()},
- async answer(o){try{this.pc&&this.pc.close()}catch(e){}await NET.unlock();const pc=this.pc=new RTCPeerConnection({iceServers:ICE});this.why='';
-  watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗（PCで再接続を押してね）';this.why=w;this.upd()});
+ async listen(){if(this.on)return;this.on=true;const g=++this.gen;this.st='待機中';this.upd();try{const o=await SIG.get('sig_offer');if(o){const a=await SIG.get('sig_answer').catch(()=>null);if(Date.now()-o.at>600000||(a&&a.id===o.id))this.lastId=o.id}}catch(e){}
+  let idle=Date.now();while(this.on&&g===this.gen){if(this.dc&&this.dc.readyState==='open')idle=Date.now();else if(Date.now()-idle>1200000){this.stopListen();if(typeof WL!=='undefined')WL.off();break}if(!this.dc||this.dc.readyState!=='open'){try{const o=await SIG.get('sig_offer');if(g!==this.gen)break;if(o&&o.id!==this.lastId&&Math.abs(Date.now()-o.at)<600000){this.lastId=o.id;await this.answer(o,g)}}catch(e){this.st='待機中（'+(e.message||e)+'）';this.upd()}}await sleep(2500)}},
+ stopListen(){this.on=false;this.gen++;NET.stop();try{this.dc&&this.dc.close()}catch(e){}try{this.pc&&this.pc.close()}catch(e){}this.pc=this.dc=null;this.st='';this.upd()},
+ async answer(o,g){try{this.pc&&this.pc.close()}catch(e){}this.pc=null;await NET.start();if(g!==this.gen)return;const pc=this.pc=new RTCPeerConnection({iceServers:ICE});this.why='';
+  watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗（PCで再接続を押してね）';this.why=w;this.upd()},()=>NET.stop());
   pc.ondatachannel=e=>{const dc=this.dc=e.channel;dc.binaryType='arraybuffer';dc.onopen=async()=>{this.st='接続済み';this.upd();this.hello()};if(dc.readyState==='open')dc.onopen();dc.onclose=()=>{if(this.dc===dc){this.st=this.on?'待機中':'';this.cur=null;this.upd()}};dc.onmessage=e=>this.msg(e.data)};
-  this.st='接続中';this.upd();await pc.setRemoteDescription({type:'offer',sdp:o.sdp});await pc.setLocalDescription(await pc.createAnswer());await waitIce(pc,10000);await SIG.put('sig_answer',{id:o.id,sdp:pc.localDescription.sdp,at:Date.now()})},
+  this.st='接続中';this.upd();await pc.setRemoteDescription({type:'offer',sdp:o.sdp});await pc.setLocalDescription(await pc.createAnswer());await waitIce(pc,10000);if(g!==this.gen||this.pc!==pc){try{pc.close()}catch(e){}return}await SIG.put('sig_answer',{id:o.id,sdp:pc.localDescription.sdp,at:Date.now()})},
  send(o){try{this.dc&&this.dc.readyState==='open'&&this.dc.send(JSON.stringify(o))}catch(e){}},
  async hello(){const e=await storageEst();this.send({t:'hello',free:e.free,usage:e.usage,quota:e.quota,have:{music:[...DEV.music.keys()],video:[...DEV.video.keys()]}})},
  q:Promise.resolve(),
