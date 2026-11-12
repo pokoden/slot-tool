@@ -53,7 +53,6 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .th img{width:100%;height:100%;object-fit:cover;display:block}.th img:not([src]){visibility:hidden}
 .du{position:absolute;right:5px;bottom:5px;background:rgba(0,0,0,.8);color:#fff;font-size:12px;font-weight:700;padding:1px 5px;border-radius:5px}
 .fv{position:absolute;left:6px;top:4px;color:var(--gd);font-style:normal;text-shadow:0 0 3px #000}
-.rg{position:absolute;left:5px;bottom:5px;background:var(--gd);color:#000;font-style:normal;font-size:12px;font-weight:700;padding:0 5px;border-radius:5px}
 .tx{padding:6px 30px 0 2px;min-width:0}.tx b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-weight:700}.tx span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .mo{position:absolute;right:0;bottom:0;background:none;color:var(--tx);padding:6px 6px;font-size:16px}
 .list{display:flex;flex-direction:column;gap:8px}
@@ -67,7 +66,7 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .pbar{display:flex;gap:8px;margin:8px 0;align-items:center}.pbar>button{flex:1}.pbar .nar{flex:none}.cnt{flex:none}
 .ctl{display:flex;gap:8px;margin:8px 0}.ctl select{flex:1}.ic{flex:none;width:44px;padding:9px 0}
 .srch{margin:4px 0}
-.seg{display:flex;background:var(--sf);border-radius:10px;padding:3px;margin:8px 0;gap:3px}.seg button{flex:1;background:none;color:var(--tx);padding:8px 4px}.seg button.on{background:var(--sf2);color:var(--gd)}
+.seg{display:flex;background:var(--sf);border-radius:10px;padding:3px;margin:8px 0;gap:3px}.seg button{flex:1;background:none;color:var(--tx);padding:8px 4px}.seg button.on{background:var(--sf2);color:var(--gd)}.seg button{white-space:nowrap;letter-spacing:-1px;padding:8px 2px}
 .rows{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .rowb{display:flex;justify-content:space-between;align-items:center;text-align:left;background:var(--sf);color:var(--tx);padding:12px}.rowb i{font-style:normal;color:var(--gd)}
 .crumb{display:flex;flex-wrap:wrap;align-items:center;margin:6px 0}
@@ -81,8 +80,8 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .fl{display:flex;align-items:center;gap:10px;margin:8px 0}.fl span{width:96px;flex:none}
 /* タブ */
 #tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:rgba(15,15,15,.98);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom)}
-#tabs button{flex:1;min-width:0;background:none;color:#aaa;padding:7px 0 6px;border-radius:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-weight:700}
-#tabs button span{white-space:nowrap}
+#tabs button{flex:1;min-width:0;background:none;color:#aaa;padding:7px 0 6px;border-radius:0;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:14px;font-weight:700}
+#tabs button span{white-space:nowrap;letter-spacing:-1.5px}
 #tabs button.on{color:var(--gd)}#tabs svg{width:24px;height:24px}
 /* ミニプレイヤー */
 #mini{position:fixed;left:6px;right:6px;bottom:calc(60px + env(safe-area-inset-bottom));z-index:29;background:var(--sf2);border-radius:12px;display:flex;align-items:center;gap:10px;padding:6px;overflow:hidden;cursor:pointer}
@@ -106,7 +105,7 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .ct{display:flex;align-items:center;gap:4px;padding:4px}.ct b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cm{display:flex;justify-content:center;align-items:center;gap:6px}#ctl .cm button{font-size:16px}#ctl .cm .pp{font-size:26px;width:64px;height:64px;border-radius:32px;background:rgba(0,0,0,.45)}
 .cb{display:flex;align-items:center;gap:6px;padding:0 6px 4px}.cb .zr{display:none}#pv.zoomed .cb .zr{display:block}
-.sk{position:relative;flex:1;display:flex;align-items:center}.rng{position:absolute;height:6px;background:rgba(233,196,106,.45);border-radius:3px;pointer-events:none;top:50%;transform:translateY(-50%)}
+.sk{position:relative;flex:1;display:flex;align-items:center}
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:0;padding:0;height:24px;width:100%;position:relative}
 input[type=range]::-webkit-slider-runnable-track{height:4px;background:rgba(255,255,255,.3);border-radius:2px}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:7px;background:var(--gd);margin-top:-5px}
@@ -123,11 +122,27 @@ input[type=range]::-moz-range-track{height:4px;background:rgba(255,255,255,.3)}i
 #pm .pmw{max-width:480px;margin:0 auto;padding:6px 16px}#pm .ct button{background:none;color:var(--tx);font-size:18px}
 #pm .art{position:relative;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#222;margin:6px 0 12px}#pm .art img{width:100%;height:100%;object-fit:cover}
 #pm .p_q{max-width:480px;margin:0 auto}
+/* r267 */
+.hst{display:flex;flex-direction:column;align-items:flex-end;gap:0;padding:2px 4px!important;font-size:14px;line-height:1.25;max-width:52%}.hst span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.gd{color:var(--gd)}.bl{color:#7aa7ff}
+.ck{display:none;position:absolute;right:6px;top:5px;width:24px;height:24px;border-radius:12px;background:rgba(0,0,0,.55);border:2px solid #fff;color:transparent;font-style:normal;text-align:center;line-height:20px;font-weight:700}
+.it.sel .ck{background:var(--gd);border-color:var(--gd);color:#000}body.hasbulk .ck{display:block}
+.it.sel .th{outline:3px solid var(--gd);outline-offset:-3px}.list .ck{right:auto;left:4px}
+.bdg{display:flex!important;gap:4px;flex-wrap:wrap}.bad,.dp{font-style:normal;font-weight:700;border-radius:5px;padding:0 5px;flex:none}.bad{background:#5a1f1a;color:#ffb4ab}.dp{background:#3a3014;color:var(--gd)}
+.fr b{flex:none;font-weight:700;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:1 0 30%}
+.nar.on{background:var(--gd);color:#000}
+#bulk{position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom));z-index:31;background:#1d1a12;border-top:2px solid var(--gd);padding:8px 8px}
+#bulk .bk1,#bulk .bk2{display:flex;gap:6px;align-items:center}#bulk .bk1{margin-bottom:6px}#bulk .bk1 b{flex:1;color:var(--gd)}#bulk .bk2{flex-wrap:wrap}#bulk .bk2 button{flex:1 0 30%;padding:9px 4px}
+#bulk .dngb{background:#7a2a22}
+body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important}
+.pk{max-height:50vh;overflow:auto}.pk .fr em{max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* PC 横長 */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
  body{padding-bottom:0;padding-left:96px}body.hasmini{padding-bottom:70px}
  #tabs{top:0;bottom:0;right:auto;width:96px;flex-direction:column;justify-content:flex-start;border-top:0;border-right:1px solid var(--ln);padding-top:60px}
- #tabs button{flex:none;padding:12px 0;font-size:12px}
+ #tabs button{flex:none;padding:12px 0;font-size:14px}
+ #bulk{left:96px}
  main{max-width:none;padding:6px 24px}
  .grid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}.grid.music{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
  .hrow .it{width:260px}body[data-mode=music] .hrow .it{width:170px}
@@ -140,16 +155,18 @@ input[type=range]::-moz-range-track{height:4px;background:rgba(255,255,255,.3)}i
 </head><body>
 <div id="choose" hidden><div class="logo"><img src="icon.png?v=1" alt=""></div><button data-mode="music"><span>🎵</span>音楽</button><button data-mode="video"><span>🎬</span>動画</button></div>
 <div id="app" hidden>
-<header><button id="hd_home"><img src="icon.png?v=1" alt=""></button><button id="hd_back" hidden>‹</button><b id="hd_t"></b></header>
+<header><button id="hd_home"><img src="icon.png?v=1" alt=""></button><button id="hd_back" hidden>‹</button><b id="hd_t"></b><button id="hd_st" class="hst"></button></header>
 <main id="main"></main>
 <div id="mini" hidden><img id="mini_img" alt=""><div class="mt"><b id="mini_t"></b><span id="mini_a"></span></div><button id="mini_pp">▶</button><button id="mini_nx">⏭</button><div id="mini_bar"></div></div>
+<div id="bulk" hidden></div>
 <nav id="tabs"></nav>
 </div>
 <div id="pv" class="pl"></div>
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=4"></script>
-<script src="player.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="core.js?v=5"></script>
+<script src="conv.js?v=5"></script>
+<script src="player.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body></html>
