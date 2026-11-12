@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=5;
+const APPV=6;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -74,6 +74,10 @@ const canon=o=>Array.isArray(o)?o.map(canon):o&&typeof o==='object'?Object.keys(
 function mergeRec(a,b){a=a||{};b=b||{};const ta=a.t||{},tb=b.t||{},o={t:{}};for(const f of new Set([...Object.keys(a),...Object.keys(b)])){if(f==='t')continue;const x=ta[f]||0,y=tb[f]||0;let s=y>x?b:a,t=Math.max(x,y);if(!(f in s)){s=s===a?b:a}if(f in s){o[f]=s[f];o.t[f]=t}}return o}
 function mergeMap(a,b){const o={};for(const k of new Set([...Object.keys(a||{}),...Object.keys(b||{})]))o[k]=mergeRec((a||{})[k],(b||{})[k]);return o}
 const mergeDoc=(a,b)=>canon({items:mergeMap(a.items,b.items),pls:mergeMap(a.pls,b.pls)});
+// この端末のID（iPhoneごとの送信済み管理用）と名前
+const MYDEV=(()=>{let id=LS.get('md_dev_id','');if(!id){id=Math.random().toString(36).slice(2,10);LS.set('md_dev_id',id)}return id})();
+const autoDevName=id=>'iPhone-'+String(id||'').slice(0,4).toUpperCase();
+const devName=()=>LS.get('md_dev_name','')||autoDevName(MYDEV);
 const SY={busy:{},again:{},tm:{},msg:LS.get('md_sync_msg',''),on:null};
 function syMsg(t){SY.msg=t;LS.set('md_sync_msg',t);if(SY.on)SY.on()}
 function syncSoon(k,ms){clearTimeout(SY.tm[k]);SY.tm[k]=setTimeout(()=>syncNow(k),ms||2000)}
@@ -136,7 +140,7 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
   await SIG.put('sig_offer',{id,sdp:pc.localDescription.sdp,at:Date.now()});if(this.sessId!==id)return;this.st='iPhone待ち';this.ui();
   const t0=Date.now();while(this.sessId===id&&Date.now()-t0<300000){await sleep(2000);if(this.sessId!==id||pc.remoteDescription)break;try{const a=await SIG.get('sig_answer');if(a&&a.id===id&&this.sessId===id){await pc.setRemoteDescription({type:'answer',sdp:a.sdp});this.st='接続中';this.ui();break}}catch(e){}}
   if(this.sessId===id&&!pc.remoteDescription){this.st='時間切れ';NET.stop();this.ui()}},
- msg(m){if(m.t==='hello'||m.t==='est'){this.peer={...(this.peer||{}),...m};if(m.have)for(const k of['music','video'])for(const key of m.have[k]||[])if(!(it(k,key).sent>0)){setF(k,key,'sent',Date.now())}if(m.have){syncSoon('music');syncSoon('video')}this.ui();return}
+ msg(m){if(m.t==='hello'||m.t==='est'){this.peer={...(this.peer||{}),...m};if(m.have&&m.dev){const f='s_'+m.dev,now=Date.now();this.peer.hv={};for(const k of['music','video']){const hv=new Set(m.have[k]||[]);this.peer.hv[k]=hv;for(const key of hv)if(!(it(k,key)[f]>0))setF(k,key,f,now);for(const[key,o]of Object.entries(doc(k).items))if(o[f]>0&&!hv.has(key))setF(k,key,f,0)}const pe=LS.get('md_peers',{});pe[m.dev]=m.dname||pe[m.dev]||'';LS.set('md_peers',pe);LS.set('md_last_peer',m.dev)}else if(m.have)for(const k of['music','video'])for(const key of m.have[k]||[])if(!(it(k,key).sent>0)){setF(k,key,'sent',Date.now())}if(m.have){syncSoon('music');syncSoon('video')}this.ui();return}
   const w=this.waits[m.t+'|'+m.key];if(m.t==='ack'){if(this.cur&&this.cur.key===m.key){this.acked=m.got;if(this.ackW){const f=this.ackW;this.ackW=null;f()}}return}
   if(m.t==='done'&&this.peer){this.peer.free=m.free}
   if(w){delete this.waits[m.t+'|'+m.key];w.res(m)}},
@@ -152,7 +156,7 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
     if(!this.dc||this.dc.readyState!=='open')throw new Error('iPhoneとの接続が切れた');
     this.cur={key:x.key,name:x.name};this.acked=0;
     const rdy=this.wait('ready',x.key);this.dc.send(JSON.stringify({t:'file',kind:x.kind,key:x.key,path:x.path,name:x.name,size,mime,conv,meta:x.meta||{}}));
-    const r=await rdy;if(r.skip){setF(x.kind,x.key,'sent',Date.now());ev(x,'dup',r.why||'iPhoneに同じものがある');continue}
+    const r=await rdy;if(r.skip){ev(x,'dup',r.why||'iPhoneに同じものがある');continue}
     const dn=this.wait('done',x.key);let off=r.at||0;this.acked=off;ev(x,'send',off/size);
     const CH=Math.max(16384,Math.min(65536,(this.pc.sctp&&this.pc.sctp.maxMessageSize)||65536));
     while(off<size){if(this.stop)throw new Error('中止');const end=Math.min(off+BATCH,size);const u=new Uint8Array(await file.slice(off,end).arrayBuffer());
@@ -162,7 +166,7 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
       this.dc.send(u.subarray(p,Math.min(p+CH,u.length)))}
      off=end;ev(x,'send',off/size,end-off)}
     this.dc.send(JSON.stringify({t:'end',key:x.key}));const d=await dn;if(d.err)throw new Error('iPhone側：'+d.err);
-    setF(x.kind,x.key,'sent',Date.now());syncSoon(x.kind,4000);ev(x,'done',size)}
+    const pd=this.peer&&this.peer.dev;if(pd){setF(x.kind,x.key,'s_'+pd,Date.now());if(this.peer.hv)this.peer.hv[x.kind].add(x.key)}else setF(x.kind,x.key,'sent',Date.now());syncSoon(x.kind,4000);ev(x,'done',size)}
    catch(e){ev(x,'fail',e.message||String(e))}}
   this.cur=null}
 };
@@ -175,9 +179,9 @@ const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:
  async answer(o,g){try{this.pc&&this.pc.close()}catch(e){}this.pc=null;await NET.start();if(g!==this.gen)return;const pc=this.pc=new RTCPeerConnection({iceServers:ICE});this.why='';
   watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗（PCで再接続を押してね）';this.why=w;this.upd()},()=>NET.stop());
   pc.ondatachannel=e=>{const dc=this.dc=e.channel;dc.binaryType='arraybuffer';dc.onopen=async()=>{this.st='接続済み';this.upd();this.hello()};if(dc.readyState==='open')dc.onopen();dc.onclose=()=>{if(this.dc===dc){this.st=this.on?'待機中':'';for(const l of this.log)if(l.st==='recv'){l.st='fail';l.why='接続が切れた'}this.cur=null;this.upd()}};dc.onmessage=e=>this.msg(e.data)};
-  this.st='接続中';this.upd();await pc.setRemoteDescription({type:'offer',sdp:o.sdp});await pc.setLocalDescription(await pc.createAnswer());await waitIce(pc,10000);if(g!==this.gen||this.pc!==pc){try{pc.close()}catch(e){}return}await SIG.put('sig_answer',{id:o.id,sdp:pc.localDescription.sdp,at:Date.now()})},
+  this.st='接続中';this.upd();await pc.setRemoteDescription({type:'offer',sdp:o.sdp});await pc.setLocalDescription(await pc.createAnswer());await waitIce(pc,10000);if(g!==this.gen||this.pc!==pc){try{pc.close()}catch(e){}return}try{const a=await SIG.get('sig_answer');if(a&&a.id===o.id&&a.dev&&a.dev!==MYDEV){try{pc.close()}catch(e){}this.pc=null;NET.stop();this.st='待機中（PCは他のiPhoneとつないだ）';this.upd();return}}catch(e){}await SIG.put('sig_answer',{id:o.id,dev:MYDEV,sdp:pc.localDescription.sdp,at:Date.now()})},
  send(o){try{this.dc&&this.dc.readyState==='open'&&this.dc.send(JSON.stringify(o))}catch(e){}},
- async hello(){const e=await storageEst();const hq={music:{},video:{}};for(const k of['music','video'])for(const f of DEV[k].values())if(f.qh)hq[k][f.key]=f.qh;this.send({t:'hello',free:e.free,usage:e.usage,quota:e.quota,have:{music:[...DEV.music.keys()],video:[...DEV.video.keys()]},hq})},
+ async hello(){const e=await storageEst();const hq={music:{},video:{}};for(const k of['music','video'])for(const f of DEV[k].values())if(f.qh)hq[k][f.key]=f.qh;this.send({t:'hello',dev:MYDEV,dname:devName(),free:e.free,usage:e.usage,quota:e.quota,have:{music:[...DEV.music.keys()],video:[...DEV.video.keys()]},hq})},
  log:[],L(key){return this.log.find(x=>x.key===key)},
  q:Promise.resolve(),
  msg(d){if(typeof d!=='string'){const c=this.cur;if(!c)return;const u=new Uint8Array(d);c.buf.push(u);c.bl+=u.length;c.recv+=u.length;if(c.bl>=BATCH)this.flush();return}
@@ -193,7 +197,7 @@ const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:
    this.send({t:'ready',key:m.key,at})}
   else if(m.t==='end'){const c=this.cur;if(!c||c.key!==m.key)return;this.flush();await c.pend;if(c.err)throw c.err;await ST.end(c.fn);if(c.got!==c.size)throw new Error('サイズ不一致');
    const id=c.kind+'|'+c.key,rec=await IDB.get('files',id);rec.done=true;rec.added=Date.now();await IDB.put('files',id,rec);DEV[c.kind].set(c.key,rec);
-   const mt=c.meta;if(mt.thumb)await IDB.put('thumbs',id,mt.thumb);for(const f of['dur','ta','tt','tal','g'])if(mt[f]!=null)setF(c.kind,c.key,f,mt[f],1);setF(c.kind,c.key,'sent',Date.now());syncSoon(c.kind,5000);
+   const mt=c.meta;if(mt.thumb)await IDB.put('thumbs',id,mt.thumb);for(const f of['dur','ta','tt','tal','g'])if(mt[f]!=null)setF(c.kind,c.key,f,mt[f],1);setF(c.kind,c.key,'s_'+MYDEV,Date.now());syncSoon(c.kind,5000);
    this.cur=null;const lg=this.L(c.key);if(lg){lg.st='done';lg.got=c.size}const e=await storageEst();this.send({t:'done',key:c.key,free:e.free});if(this.onFile)this.onFile(c.kind,c.key);this.upd()}
   else if(m.t==='est'){const e=await storageEst();this.send({t:'est',free:e.free,usage:e.usage,quota:e.quota})}}
 };

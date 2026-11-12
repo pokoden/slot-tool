@@ -14,6 +14,10 @@ let SENDING=false,SUM=null;
 const MS={on:false,keys:new Set()};                        // 一覧の複数選択
 const PICK=new Set();let PICKPL=null;                      // プレイリストへ追加の選択
 const QH=new Map();                                        // 重複判定用の簡易ハッシュ
+// 送り先のiPhone（つながっているiPhone、なければ前回のiPhone）
+const tgtDev=()=>(TX.peer&&TX.peer.dev)||LS.get('md_last_peer','')||'';
+const peerName=id=>id?(LS.get('md_peers',{})[id]||autoDevName(id)):'';
+function sentTo(k,key){const d=tgtDev();if(!d)return it(k,key).sent>0;if(TX.peer&&TX.peer.dev===d&&TX.peer.hv)return TX.peer.hv[k].has(key);return it(k,key)['s_'+d]>0}
 const SIDE=()=>LS.get('md_side',isPhone?'rx':'tx');
 
 // ===== ライブラリ =====
@@ -47,11 +51,12 @@ async function quickHash(file){const M=1<<20,a=await file.slice(0,M).arrayBuffer
 async function ensureQH(k,list){for(const e of list){const id=k+'|'+e.key;if(QH.has(id))continue;try{QH.set(id,await quickHash(await e.get()))}catch(x){}}}
 async function qhCollisions(k){const cnt=new Map();for(const e of PCF[k].values())cnt.set(e.size,(cnt.get(e.size)||0)+1);const ps=TX.peer&&TX.peer.have?(TX.peer.have[k]||[]).map(x=>+x.slice(x.lastIndexOf('|')+1)):[];for(const s of ps)cnt.set(s,(cnt.get(s)||0)+1);
  const L=[...PCF[k].values()].filter(e=>cnt.get(e.size)>1&&!QH.has(k+'|'+e.key));if(!L.length)return;await ensureQH(k,L);if(MODE===k&&TAB==='send')render()}
+function eligible(k){const D=dupPC(k),dupOK=LS.get('md_dupsend',false),conv=LS.get('md_conv',true);return e=>(dupOK||!D.has(e.key))&&(conv||!badIOS(k,e.name))}
 function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.peer&&TX.peer.have?TX.peer.have[k]||[]:[];
  const pns=new Set(peer.map(x=>keyPath(x).split('/').pop().toLowerCase()+'|'+x.slice(x.lastIndexOf('|')+1)));const pq=new Set(Object.values((TX.peer&&TX.peer.hq&&TX.peer.hq[k])||{}));
  for(const e of[...PCF[k].values()].sort((a,b)=>a.path.localeCompare(b.path))){const n=e.name.toLowerCase()+'|'+e.size,q=QH.get(k+'|'+e.key);
   if(ns.has(n)){out.set(e.key,'「'+ns.get(n)+'」と同じ');continue}if(q&&qs.has(q)){out.set(e.key,'「'+qs.get(q)+'」と同じ中身');continue}ns.set(n,e.path);if(q)qs.set(q,e.path);
-  if(!(it(k,e.key).sent>0)&&(pns.has(n)||(q&&pq.has(q))))out.set(e.key,'iPhoneに同じものがある')}return out}
+  if(!sentTo(k,e.key)&&(pns.has(n)||(q&&pq.has(q))))out.set(e.key,'iPhoneに同じものがある')}return out}
 
 // ===== 描画部品 =====
 const IC={search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5l5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',pl:'<path d="M3 5h13v2.4H3zm0 5h13v2.4H3zm0 5h8v2.4H3zm12 0l7 4-7 4z"/>',fav:'<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/>',send:'<path d="M2 4h20v12H2zm2 2v8h16V6zM8 19h8v2H8z"/><path d="M12 7l3.5 3.5h-2.3v2.8h-2.4v-2.8H8.5z"/>',set:'<path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.6v-2.2l-2.4-.6-.7-1.6 1.3-2.1-1.6-1.6-2.1 1.3-1.6-.7L13.1 3h-2.2l-.6 2.4-1.6.7-2.1-1.3L5 6.4l1.3 2.1-.7 1.6-2.6.8v2.2l2.4.6.7 1.6-1.3 2.1L6.4 19l2.1-1.3 1.6.7.8 2.6h2.2l.6-2.4 1.6-.7 2.1 1.3 1.6-1.6-1.3-2.1.7-1.6z"/>'};
@@ -71,7 +76,7 @@ const stTxt=st=>!st?'':st.s==='wait'?'待機':st.s==='prep'?'準備中':st.s==='
 const stCls=st=>!st?'':st.s==='done'?'ok':st.s==='fail'?'red':st.s==='dup'?'gd':'bl';
 
 // ===== 画面 =====
-function hdStatus(){let s=!tok()?'同期：未設定':SY.busy[MODE]?'同期中…':/^エラー/.test(SY.msg)?'同期エラー':SY.msg?SY.msg.replace('最終同期 ','同期 '):'';const c=TX.st==='接続済み'?'iPhone接続中':RX.st==='接続済み'?'PC接続中':SENDING?'送信中':'';const cl=/エラー|未設定/.test(s)?'red':'';return`<span class="${cl}">${esc(s)}</span>${c?`<span class="ok">${c}</span>`:''}`}
+function hdStatus(){let s=!tok()?'同期：未設定':SY.busy[MODE]?'同期中…':/^エラー/.test(SY.msg)?'同期エラー':SY.msg?SY.msg.replace('最終同期 ','同期 '):'';const c=TX.st==='接続済み'?((TX.peer&&TX.peer.dev?peerName(TX.peer.dev):'iPhone')+'と接続中'):RX.st==='接続済み'?'PC接続中':SENDING?'送信中':'';const cl=/エラー|未設定/.test(s)?'red':'';return`<span class="${cl}">${esc(s)}</span>${c?`<span class="ok">${c}</span>`:''}`}
 function render(){if(!MODE){$('choose').hidden=false;$('app').hidden=true;return}$('choose').hidden=true;$('app').hidden=false;document.body.dataset.mode=MODE;
  for(const k in LISTS)delete LISTS[k];DD=devDup(MODE);
  const nav=NAV[TAB]||[];$('hd_back').hidden=!nav.length;$('hd_t').textContent=nav.length?nav[nav.length-1].title:NAME[MODE];$('hd_st').innerHTML=hdStatus();
@@ -121,7 +126,7 @@ function vSend(){const side=SIDE();let h=`<div class="seg">${[['tx','PCから送
  return h+(side==='tx'?vTx(MODE):vRx(MODE))}
 const micRow=()=>NET.st?`<div class="kv"><span>マイク</span><b class="${NET.st==='ng'?'red':''}">${esc(NET.txt())}</b></div>`:'';
 function vRx(k){const L=RX.log.filter(x=>x.kind===k);const n=L.length,dn=L.filter(x=>x.st==='done').length,fl=L.filter(x=>x.st==='fail').length,dp=L.filter(x=>x.st==='dup').length;
- let h=`<div class="card"><div class="kv"><span>状態</span><b class="${/失敗/.test(RX.st)?'red':RX.st==='接続済み'?'ok':''}">${esc(RX.st||'停止')}</b></div>${micRow()}<div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div>
+ let h=`<div class="card"><div class="kv"><span>この端末</span><b>${esc(devName())}</b></div><div class="kv"><span>状態</span><b class="${/失敗/.test(RX.st)?'red':RX.st==='接続済み'?'ok':''}">${esc(RX.st||'停止')}</b></div>${micRow()}<div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div>
  ${RX.why?`<div class="red">${esc(RX.why)}</div>`:''}<button id="rx_btn" class="${RX.on?'sub':''}">${RX.on?'受け取りをやめる':'受け取りを始める'}</button>${RX.on?'<button data-rxre="1">再接続</button>':''}</div>`;
  if(n){const tot=L.reduce((a,x)=>a+x.size,0),got=L.reduce((a,x)=>a+(x.st==='done'?x.size:x.st==='recv'?x.got||0:0),0);
   h+=`<div class="card"><div class="kv"><span>完了 ${dn} / ${n}${fl?'・失敗 '+fl:''}${dp?'・重複 '+dp:''}</span><b>${fmtB(got)} / ${fmtB(tot)}</b></div><div class="prog"><div style="width:${tot?(got/tot*100).toFixed(1):0}%"></div></div>
@@ -129,27 +134,28 @@ function vRx(k){const L=RX.log.filter(x=>x.kind===k);const n=L.length,dn=L.filte
  return h}
 function vTx(k){const F=PCF[k];let h=`<div class="card">`;
  h+=`<div class="pbar"><button data-pickdir="1">${PCDIR[k]?'フォルダを選び直す':'フォルダを選ぶ'}</button>${PCNEED[k]?`<button data-reopen="1">「${esc(PCDIR[k].name)}」を開く</button>`:''}</div>`;
- h+=`<div class="kv"><span>iPhone</span><b class="${/失敗|切れ|エラー|時間切れ/.test(TX.st)?'red':TX.st==='接続済み'?'ok':''}">${esc(TX.st||'未接続')}</b></div>${micRow()}${TX.why&&/失敗|切断/.test(TX.st)?`<div class="red">${esc(TX.why)}</div>`:''}${TX.peer?`<div class="kv"><span>iPhoneの空き</span><b>${fmtB(TX.peer.free)}</b></div>`:''}
+ const pn=TX.peer&&TX.peer.dev?peerName(TX.peer.dev):'',ln=peerName(LS.get('md_last_peer',''));
+ h+=`<div class="kv"><span>${pn?esc(pn):'iPhone'}</span><b class="${/失敗|切れ|エラー|時間切れ/.test(TX.st)?'red':TX.st==='接続済み'?'ok':''}">${esc(TX.st||'未接続')}</b></div>${!pn&&ln?`<div class="kv"><span>✓の基準</span><b>前回の${esc(ln)}</b></div>`:''}${micRow()}${TX.why&&/失敗|切断/.test(TX.st)?`<div class="red">${esc(TX.why)}</div>`:''}${TX.peer?`<div class="kv"><span>iPhoneの空き</span><b>${fmtB(TX.peer.free)}</b></div>`:''}
  <div class="pbar"><button data-conn="1" class="${TX.st==='接続済み'?'sub':''}">${TX.st==='接続済み'?'つなぎ直す':/失敗|時間切れ|切断|エラー/.test(TX.st)?'再接続':'iPhoneとつなぐ'}</button>${TX.st?'<button class="sub" data-disc="1">切断</button>':''}</div></div>`;
  if(!F.size)return h;
  const conv=LS.get('md_conv',true),dupOK=LS.get('md_dupsend',false);
  h+=`<div class="card"><label class="tg"><span>再生不可はmp4に変換して送る</span><input type="checkbox" id="s_conv"${conv?' checked':''}></label><label class="tg"><span>重複も送る</span><input type="checkbox" id="s_dups"${dupOK?' checked':''}></label></div>`;
  const NW=new Set(LS.get('md_new_'+k,[]));const L=[...F.values()].sort((a,b)=>a.path.localeCompare(b.path,'ja'));const D=dupPC(k),ST2=SST[k];
- const sent=e=>it(k,e.key).sent>0,isNew=e=>!sent(e)&&NW.has(e.key),bad=e=>badIOS(k,e.name);
+ const sent=e=>sentTo(k,e.key),isNew=e=>!sent(e)&&NW.has(e.key),bad=e=>badIOS(k,e.name);
  const sf=LS.get('md_sf_'+k,'all');const S=SEL[k];let selB=0;for(const x of S){const e=F.get(x);if(e)selB+=e.size}const over=TX.peer&&selB>TX.peer.free;
  // 全体の状態
  let sum='';if(SUM&&SUM.k===k){const ks=SUM.keys,c={done:0,fail:0,dup:0};let b=0;for(const x of ks){const st=ST2.get(x),e=F.get(x);if(!st||!e)continue;if(c[st.s]!=null)c[st.s]++;if(st.s==='done')b+=e.size;else if(st.s==='send')b+=(st.p||0)*e.size}
   sum=`<div class="kv"><span>${SENDING?'送信中':'終了'}：完了 ${c.done} / ${ks.length}${c.fail?'・失敗 '+c.fail:''}${c.dup?'・重複スキップ '+c.dup:''}</span><b>${fmtB(b)} / ${fmtB(SUM.total)}${SENDING&&SUM.sp?'・'+fmtB(SUM.sp)+'/秒':''}</b></div><div class="prog"><div style="width:${SUM.total?(b/SUM.total*100).toFixed(1):0}%"></div></div>`}
  h+=`<div class="card sendbox"><div class="kv"><span>選択 ${S.size}件</span><b class="${over?'red':''}">${fmtB(selB)}${TX.peer?' / 空き '+fmtB(TX.peer.free):''}</b></div>${sum}
- <div class="pbar">${SENDING?'<button class="sub dng" data-sstop="1">中止</button>':`<button data-dosend="1" ${S.size&&TX.st==='接続済み'?'':'disabled'}>送る</button>`}<button class="sub" data-selnew="1">未送信を全部選ぶ</button><button class="sub" data-selclr="1">選択解除</button></div></div>`;
+ <div class="pbar">${SENDING?'<button class="sub dng" data-sstop="1">中止</button>':`<button data-dosend="1" ${S.size&&TX.st==='接続済み'?'':'disabled'}>送る</button>`}</div><div class="pbar"><button class="sub" data-selall="1">全て選択</button><button class="sub" data-selclr="1">全て解除</button><button class="sub" data-selnew="1">未送信だけ選択</button></div></div>`;
  const cnt=f=>L.filter(f).length;
  h+=`<div class="seg wrap">${[['all','すべて '+L.length],['un','未送信 '+cnt(e=>!sent(e))],['new','NEW '+cnt(isNew)],['sent','送信済み '+cnt(sent)],['bad','再生不可 '+cnt(e=>bad(e))],['dup','重複 '+D.size]].map(([v,t])=>`<button class="${sf===v?'on':''}" data-sf="${v}">${t}</button>`).join('')}</div>`;
  const V=L.filter(e=>sf==='un'?!sent(e):sf==='new'?isNew(e):sf==='sent'?sent(e):sf==='bad'?bad(e):sf==='dup'?D.has(e.key):true);
  const G=new Map();for(const e of V){const d=e.path.includes('/')?e.path.slice(0,e.path.lastIndexOf('/')):'';if(!G.has(d))G.set(d,[]);G.get(d).push(e)}
- for(const[d,a]of G){const all=a.every(e=>S.has(e.key));h+=`<div class="fold"><label class="fh"><input type="checkbox" data-selfold="${esc(d)}"${all?' checked':''}><b>📁 ${esc(d||PCDIR[k]&&PCDIR[k].name||'/')}</b><i>${a.length}件・${fmtB(a.reduce((s,e)=>s+e.size,0))}</i></label>
+ const EL=eligible(k);for(const[d,a]of G){const ae=a.filter(EL);const all=ae.length?ae.every(e=>S.has(e.key)):a.every(e=>S.has(e.key));h+=`<div class="fold"><label class="fh"><input type="checkbox" data-selfold="${esc(d)}"${all?' checked':''}><b>📁 ${esc(d||PCDIR[k]&&PCDIR[k].name||'/')}</b><i>${a.length}件・${fmtB(a.reduce((s,e)=>s+e.size,0))}</i></label>
   ${a.map(e=>{const st=ST2.get(e.key),b=bad(e);return`<label class="fr"><input type="checkbox" data-sel="${esc(e.key)}"${S.has(e.key)?' checked':''}><span>${esc(e.name)}</span>${sent(e)?'<i class="ok">✓</i>':isNew(e)?'<i class="nw">NEW</i>':''}${b?`<i class="bad" title="${esc(b)}">再生不可${conv?'→mp4':''}</i>`:''}${D.has(e.key)?`<i class="dp" title="${esc(D.get(e.key))}">重複</i>`:''}${st?`<b class="${stCls(st)}">${esc(stTxt(st))}</b>`:`<em>${fmtB(e.size)}</em>`}</label>`}).join('')}</div>`}
  return h}
-function vSet(){const k=MODE;return`<div class="card"><h3>GitHubトークン</h3><div class="pbar"><input id="s_tok" type="password" autocomplete="off" placeholder="${tok()?'保存済み':'github_pat_…'}"><button class="nar" data-savetok="1">保存</button></div>
+function vSet(){const k=MODE;return`<div class="card"><h3>この端末の名前</h3><div class="pbar"><input id="s_dname" type="text" value="${esc(devName())}" autocomplete="off"><button class="nar" data-savedname="1">保存</button></div></div><div class="card"><h3>GitHubトークン</h3><div class="pbar"><input id="s_tok" type="password" autocomplete="off" placeholder="${tok()?'保存済み':'github_pat_…'}"><button class="nar" data-savetok="1">保存</button></div>
  <div class="kv"><span>同期</span><b class="${/エラー/.test(SY.msg)||!tok()?'red':''}">${esc(tok()?SY.msg||'':'未設定')}</b></div><button class="sub" data-syncnow="1">今すぐ同期</button></div>
  <div class="card"><h3>保存</h3><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div><div class="kv"><span>${NAME[k]}（この端末）</span><b>${DEV[k].size}件</b></div><div class="kv"><span>保存方式</span><b>${ST.mode==='opfs'?'OPFS':'IndexedDB'}</b></div><div class="kv"><span>消えない設定</span><b id="s_pers">…</b></div>
  <button class="sub" data-go="cand">消す候補</button></div>
@@ -194,7 +200,7 @@ async function blobOf(k,key){const f=DEV[k].get(key);if(f)return ST.file(f.fn,f.
 async function scanDir(k,dh){const m=new Map();async function walk(h,pre){for await(const[n,e]of h.entries()){if(n[0]==='.')continue;if(e.kind==='directory')await walk(e,pre+n+'/');else if(kindOf(n)===k){const f=await e.getFile();const path=pre+n,key=fkey(path,f.size);m.set(key,{key,path,name:n,size:f.size,lm:f.lastModified,get:()=>e.getFile()})}}}await walk(dh,'');return m}
 function scanFiles(k,files){const m=new Map();for(const f of files){const rp=(f.webkitRelativePath||f.name).split('/');if(rp.length>1)rp.shift();const path=rp.join('/');if(kindOf(f.name)!==k)continue;const key=fkey(path,f.size);m.set(key,{key,path,name:f.name,size:f.size,lm:f.lastModified,get:async()=>f})}return m}
 function setPC(k,m,name){PCF[k]=m;if(!PCDIR[k])PCDIR[k]={name};const kn=LS.get('md_known_'+k,null);
- if(kn){const ks=new Set(kn),nw=new Set(LS.get('md_new_'+k,[]));for(const x of m.keys())if(!ks.has(x))nw.add(x);LS.set('md_new_'+k,[...nw].filter(x=>m.has(x)&&!(it(k,x).sent>0)))}
+ if(kn){const ks=new Set(kn),nw=new Set(LS.get('md_new_'+k,[]));for(const x of m.keys())if(!ks.has(x))nw.add(x);LS.set('md_new_'+k,[...nw].filter(x=>m.has(x)&&!sentTo(k,x)))}
  LS.set('md_known_'+k,[...new Set([...(kn||[]),...m.keys()])]);
  for(const e of m.values())if(it(k,e.key).add==null)setF(k,e.key,'add',e.lm,1);qhCollisions(k);if(MODE)render()}
 async function pickDir(){const k=MODE;if(window.showDirectoryPicker){try{const h=await showDirectoryPicker({id:'media_'+k,mode:'read'});PCDIR[k]=h;PCNEED[k]=false;await IDB.put('kv','dir_'+k,h);const m=await scanDir(k,h);setPC(k,m,h.name)}catch(e){if(e.name!=='AbortError')alert(e.message)}return}
@@ -233,7 +239,7 @@ function saveEdit(key){const k=MODE,e=libMap(k).get(key)||{key,path:keyPath(key)
  syncSoon(k);closeSheet();render();if(P.key===key)P.ui()}
 function addPlMenu(key){const k=MODE,U=userPls(k);sheet(`<h3>プレイリストに追加</h3><div class="rows">${U.map(p=>`<label class="fr"><input type="checkbox" data-plt="${esc(p.id)}" data-key="${esc(key)}"${(p.keys||[]).includes(key)?' checked':''}><span>${esc(p.name)}</span></label>`).join('')}</div><div class="pbar"><button class="sub" data-newpl="1" data-key="${esc(key)}">＋ 新しいプレイリスト</button></div><button class="sub" data-close="1">閉じる</button>`)}
 function newPl(keys,after){sheetIn('新しいプレイリストの名前','',v=>{if(!v)return;const k=MODE,id='p'+Date.now().toString(36);setPl(k,id,'name',v);setPl(k,id,'at',Date.now());setPl(k,id,'keys',keys||[]);if(after)setTimeout(after,0)})}
-async function delDevKey(k,key){const f=DEV[k].get(key);if(!f)return;if(P.key===key&&P.kind===k)P.stop();await ST.remove(f.fn);await IDB.del('files',k+'|'+key);DEV[k].delete(key);setF(k,key,'sent',0)}
+async function delDevKey(k,key){const f=DEV[k].get(key);if(!f)return;if(P.key===key&&P.kind===k)P.stop();await ST.remove(f.fn);await IDB.del('files',k+'|'+key);DEV[k].delete(key);setF(k,key,'s_'+MYDEV,0)}
 async function delDev(key){const k=MODE,f=DEV[k].get(key);if(!f)return;if(!confirm(`「${titleOf(k,libMap(k).get(key)||{key,path:f.path})}」をこの端末から削除する？\nPCの元ファイルは消えないよ`))return;
  await delDevKey(k,key);syncSoon(k);EST=await storageEst();closeSheet();render()}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -282,10 +288,11 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.conn){TX.connect().catch(e=>{TX.st='エラー：'+(e.message||e);render()});return}
  if(ds.disc){TX.close();render();return}
  if(ds.dosend){doSend();return}if(ds.sstop){TX.stop=true;return}
- if(ds.selnew){const k=MODE;for(const e of PCF[k].values())if(!(it(k,e.key).sent>0))SEL[k].add(e.key);render();return}
+ if(ds.selnew||ds.selall){const k=MODE,el=eligible(k);for(const e of PCF[k].values())if(el(e)&&(ds.selall||!sentTo(k,e.key)))SEL[k].add(e.key);render();return}
  if(ds.selclr){SEL[MODE].clear();render();return}
  if(ds.sf){LS.set('md_sf_'+MODE,ds.sf);render();return}
  if(ds.savetok){const v=$('s_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set('v2_token',v);$('s_tok').value='';syncNow(MODE);render();return}
+ if(ds.savedname){const v=$('s_dname').value.trim();LS.set('md_dev_name',v===autoDevName(MYDEV)?'':v);if(RX.dc&&RX.dc.readyState==='open')RX.hello();render();return}
  if(ds.syncnow){syncNow(MODE);return}
  if(ds.thall){if(!confirm('サムネを全部作り直す？'))return;for(const e of lib(MODE)){const id=MODE+'|'+e.key;await IDB.del('thumbs',id);TH.mem.delete(id)}LS.set('md_bad',{});BADC.clear();render();return}
  if(ds.home){goHome();return}
@@ -296,7 +303,7 @@ document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  else if(t.id==='f_art'){fil().artist=t.value;saveFil();render()}
  else if(t.id==='f_alb'){fil().album=t.value;saveFil();render()}
  else if(ds.sel!=null){const S=SEL[MODE];t.checked?S.add(ds.sel):S.delete(ds.sel);render()}
- else if(ds.selfold!=null){const S=SEL[MODE];for(const e of PCF[MODE].values()){const d=e.path.includes('/')?e.path.slice(0,e.path.lastIndexOf('/')):'';if(d===ds.selfold)t.checked?S.add(e.key):S.delete(e.key)}render()}
+ else if(ds.selfold!=null){const k=MODE,S=SEL[k],sh=new Set([...document.querySelectorAll('[data-sel]')].map(x=>x.dataset.sel)),el=eligible(k);for(const e of PCF[k].values()){const d=e.path.includes('/')?e.path.slice(0,e.path.lastIndexOf('/')):'';if(d===ds.selfold&&sh.has(e.key)){if(!t.checked)S.delete(e.key);else if(el(e))S.add(e.key)}}render()}
  else if(ds.plt){const k=MODE,p=doc(k).pls[ds.plt];let a=(p.keys||[]).slice();a=t.checked?[...a.filter(x=>x!==ds.key),ds.key]:a.filter(x=>x!==ds.key);setPl(k,ds.plt,'keys',a);syncSoon(k)}
  else if(ds.pk!=null){t.checked?PICK.add(ds.pk):PICK.delete(ds.pk);pkBtn()}
  else if(t.id==='s_norm'){LS.set('md_norm',t.checked);if(P.el)P.gain()}
@@ -313,7 +320,7 @@ function goHome(){P.stop();MODE=null;MS.on=false;MS.keys.clear();closeSheet();re
 async function refreshEst(){EST=await storageEst();if(MODE)render()}
 
 // ===== 起動 =====
-TX.on=()=>{if(!MODE)return;if(TAB==='send')sendRender();else $('hd_st').innerHTML=hdStatus();if(TX.peer)qhCollisions(MODE)};
+let LASTDEV='';TX.on=()=>{const dv=TX.peer&&TX.peer.dev||'';if(dv&&dv!==LASTDEV){if(LASTDEV&&!SENDING){for(const k of['music','video'])SST[k].clear();SUM=null}LASTDEV=dv}if(!MODE)return;if(TAB==='send')sendRender();else $('hd_st').innerHTML=hdStatus();if(TX.peer)qhCollisions(MODE)};
 RX.ui=()=>{if(!MODE)return;if(TAB==='send')sendRender();else $('hd_st').innerHTML=hdStatus()};
 RX.onFile=k=>{refreshEst()};
 SY.on=()=>{if(!MODE)return;$('hd_st').innerHTML=hdStatus();if(TAB==='set'||(/^最終/.test(SY.msg)&&!MS.on&&$('sheet').hidden&&!(document.activeElement&&document.activeElement.matches('input,select'))))render()};
