@@ -167,7 +167,7 @@ function vSet(){const k=MODE;return`<div class="card"><h3>この端末の名前<
  <div class="kv"><span>同期</span><b class="${/エラー/.test(SY.msg)||!tok()?'red':''}">${esc(tok()?SY.msg||'':'未設定')}</b></div><button class="sub" data-syncnow="1">今すぐ同期</button></div>
  <div class="card"><h3>保存</h3><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div><div class="kv"><span>${NAME[k]}（この端末）</span><b>${DEV[k].size}件</b></div><div class="kv"><span>保存方式</span><b>${ST.mode==='opfs'?'OPFS':'IndexedDB'}</b></div><div class="kv"><span>消えない設定</span><b id="s_pers">…</b></div>
  <button class="sub" data-go="cand">消す候補</button></div>
- <div class="card"><h3>再生</h3><label class="tg"><span>音量をそろえる</span><input type="checkbox" id="s_norm"${LS.get('md_norm',true)?' checked':''}></label><label class="tg"><span>自動で次へ</span><input type="checkbox" id="s_auto"${LS.get('md_auto',true)?' checked':''}></label></div>
+ <div class="card"><h3>再生</h3><label class="tg"><span>音量をそろえる</span><input type="checkbox" id="s_norm"${LS.get('md_norm',true)?' checked':''}></label><label class="tg"><span>画面を消さない時間</span><select id="s_wl" class="wsel">${[[30,'30分'],[60,'60分'],[120,'120分'],[0,'ずっと']].map(([v,t])=>`<option value="${v}"${LS.get('md_wl_min',60)===v?' selected':''}>${t}</option>`).join('')}</select></label><label class="tg"><span>自動で次へ</span><input type="checkbox" id="s_auto"${LS.get('md_auto',true)?' checked':''}></label></div>
  <div class="card"><button class="sub" data-thall="1">サムネを作り直す</button><button class="sub" data-home="1">最初の画面に戻る</button></div>`}
 // --- 複数選択のバー ---
 function bulkBar(){const b=$('bulk');if(!MS.on||!MODE){b.hidden=true;document.body.classList.remove('hasbulk');return}b.hidden=false;document.body.classList.add('hasbulk');const n=MS.keys.size,dv=[...MS.keys].filter(x=>DEV[MODE].has(x)).length;
@@ -309,7 +309,7 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.syncnow){syncNow(MODE);return}
  if(ds.thall){if(!confirm('サムネを全部作り直す？'))return;for(const e of lib(MODE)){const id=MODE+'|'+e.key;await IDB.del('thumbs',id);TH.mem.delete(id)}LS.set('md_nometa',{});render();return}
  if(ds.home){goHome();return}
- if(t.id==='rx_btn'){if(RX.on){RX.stopListen();WL.off();render()}else if(!LS.get('md_mic_ok',0))micNote('rx');else startRx();return}
+ if(t.id==='rx_btn'){if(RX.on){RX.stopListen();WL.off('rx');render()}else if(!LS.get('md_mic_ok',0))micNote('rx');else startRx();return}
 });
 document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  if(t.id==='f_sort'){fil().sort=t.value;saveFil();render()}
@@ -321,6 +321,7 @@ document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  else if(ds.pk!=null){t.checked?PICK.add(ds.pk):PICK.delete(ds.pk);pkBtn()}
  else if(t.id==='s_norm'){LS.set('md_norm',t.checked);if(P.el)P.gain()}
  else if(t.id==='s_auto'){LS.set('md_auto',t.checked)}
+ else if(t.id==='s_wl'){LS.set('md_wl_min',+t.value);WL.touch();WL.sync()}
  else if(t.id==='s_conv'){LS.set('md_conv',t.checked);render()}
  else if(t.id==='s_dups'){LS.set('md_dupsend',t.checked);render()}});
 let qT=null;document.addEventListener('input',ev=>{if(ev.target.id==='f_q'){fil().q=ev.target.value;saveFil();clearTimeout(qT);qT=setTimeout(()=>{const r=$('sres');if(r){for(const k in LISTS)delete LISTS[k];r.innerHTML=searchRes();afterRender()}},250)}else if(ev.target.id==='pk_q'){clearTimeout(qT);qT=setTimeout(pkList,200)}});
@@ -328,7 +329,7 @@ $('hd_back').onclick=()=>{(NAV[TAB]||[]).pop();MS.on=false;MS.keys.clear();rende
 $('hd_home').onclick=()=>goHome();
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
 function micNote(w){sheet(`<h3>接続の準備</h3><p>PCとiPhoneを家のネットで直接つなぐために、マイクの許可を聞くよ。つなぐためだけで、録音はしないし、つながったら止めるよ。</p><button data-micok="${w}">OK</button><button class="sub" data-close="1">やめる</button>`)}
-async function startRx(){const m=NET.start();WL.on();RX.why='';RX.st='準備中';render();await m;RX.listen();refreshEst();render()}
+async function startRx(){const m=NET.start();WL.on('rx');RX.why='';RX.st='準備中';render();await m;RX.listen();refreshEst();render()}
 function goHome(){P.stop();MODE=null;MS.on=false;MS.keys.clear();closeSheet();render()}
 async function refreshEst(){EST=await storageEst();if(MODE)render()}
 

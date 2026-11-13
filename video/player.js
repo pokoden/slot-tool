@@ -1,7 +1,18 @@
 'use strict';
 // ===== 画面を消さない =====
-const WL={s:null,want:false,async on(){this.want=true;try{if('wakeLock'in navigator&&!this.s){this.s=await navigator.wakeLock.request('screen');this.s.addEventListener('release',()=>{this.s=null})}}catch(e){}},off(){this.want=false;if(this.s){this.s.release().catch(()=>{});this.s=null}}};
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&WL.want)WL.on()});
+// 再生中（play）と受信中（rx）は画面を消さない。再生中は設定の時間だけ操作がないと解除（iPhoneの自動ロックに任せる）
+const WL={s:null,r:new Set(),last:Date.now(),iv:null,p:null,
+ lim(){const m=LS.get('md_wl_min',60);return m?m*60000:0},
+ idle(){const l=this.lim();return!!l&&Date.now()-this.last>l},
+ want(){for(const x of this.r)if(x!=='play'||!this.idle())return true;return false},
+ on(why){this.r.add(why||'rx');this.tick();return this.sync()},
+ off(why){if(why)this.r.delete(why);else this.r.clear();this.tick();return this.sync()},
+ tick(){if(this.r.has('play')&&!this.iv)this.iv=setInterval(()=>this.sync(),15000);else if(!this.r.has('play')&&this.iv){clearInterval(this.iv);this.iv=null}},
+ touch(){const was=this.idle();this.last=Date.now();if(was)this.sync()},
+ sync(){return this.p=(this.p||Promise.resolve()).then(()=>this._sync()).catch(()=>{})},
+ async _sync(){const w=this.want();if(w&&!this.s&&document.visibilityState==='visible'){if(!('wakeLock'in navigator))return;try{const s=await navigator.wakeLock.request('screen');if(!this.want()){s.release().catch(()=>{});return}this.s=s;s.addEventListener('release',()=>{if(this.s===s)this.s=null})}catch(e){}}else if(!w&&this.s){const s=this.s;this.s=null;try{await s.release()}catch(e){}}}};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')WL.sync()});
+for(const ev of['pointerdown','touchstart','keydown','wheel'])addEventListener(ev,()=>WL.touch(),{capture:true,passive:true});
 try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
 // ===== 音量（Web Audio） =====
 const AU={ctx:null,n:new Map(),
@@ -26,7 +37,7 @@ const P={kind:null,q:[],orig:null,i:0,shuf:false,rep:LS.get('md_rep','off'),rate
  open(){const b=this.box();b.classList.add('open');document.body.classList.add('noscroll');$('mini').hidden=true;if(this.kind==='video')this.showCtl()},
  minimize(){if(this.kind==='video'){this.stop();return}$('pm').classList.remove('open');document.body.classList.remove('noscroll');this.mini()},
  stop(){const el=this.el;if(el){this.savePos();try{el.pause()}catch(e){}}for(const e of[...this.els,$('au')]){try{e.pause();e.removeAttribute('src');e.load();e.dataset.k=''}catch(x){}e._ok=e._ok}for(const u of this.urls.values())URL.revokeObjectURL(u);this.urls.clear();
-  WL.off();$('pv').classList.remove('open','fs');$('pm').classList.remove('open');document.body.classList.remove('noscroll');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+  WL.off('play');$('pv').classList.remove('open','fs');$('pm').classList.remove('open');document.body.classList.remove('noscroll');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
   if(this.kind)syncSoon(this.kind,1000);this.kind=null;this.key=null;this.el=null;this.mini();clearInterval(this.measT)},
  cur(){return this.q[this.i]},
  entry(key){return libMap(this.kind).get(key)||{key,path:keyPath(key)}},
@@ -139,8 +150,8 @@ function buildPlayers(){
  <div id="pmini" class="mbar" data-pc="totop"><img id="pmini_img" alt=""><div class="mt"><b class="p_t"></b><span class="p_a"></span></div><button data-pc="prev">${SV.prev}</button><button data-pc="pp" class="mpp">▶</button><button data-pc="next">${SV.next}</button></div>`;
  P.els=[$('v0'),$('v1')];
  for(const el of[...P.els,$('au')]){el.addEventListener('timeupdate',()=>P.onTime(el));el.addEventListener('ended',()=>{if(el===P.el)P.onEnd()});
-  el.addEventListener('play',()=>{if(el!==P.el)return;if(P.kind==='video')WL.on();P.showCtl();P.lastT=performance.now();P.ui();try{navigator.mediaSession.playbackState='playing'}catch(e){}});
-  el.addEventListener('pause',()=>{if(el!==P.el)return;if(P.kind==='video')WL.off();P.box().classList.remove('hid');P.savePos();syncSoon(P.kind,3000);P.ui();try{navigator.mediaSession.playbackState='paused'}catch(e){}});
+  el.addEventListener('play',()=>{if(el!==P.el)return;WL.on('play');P.showCtl();P.lastT=performance.now();P.ui();try{navigator.mediaSession.playbackState='playing'}catch(e){}});
+  el.addEventListener('pause',()=>{if(el!==P.el)return;WL.off('play');P.box().classList.remove('hid');P.savePos();syncSoon(P.kind,3000);P.ui();try{navigator.mediaSession.playbackState='paused'}catch(e){}});
   el.addEventListener('error',()=>{if(el!==P.el||!el.src||el.src===SILENT||!P.key)return;const c=el.error&&el.error.code;P.fail(el,P.key,({1:'読み込みが中断された',2:'読み込みに失敗',3:'壊れたファイル（デコードできない）',4:'非対応の形式'}[c]||'再生できない'))});
   el.addEventListener('playing',()=>{if(el!==P.el||!P.key)return;clearTimeout(P._wd);const id=P.kind+'|'+P.key,B=LS.get('md_bad',{});if(B[id]){delete B[id];LS.set('md_bad',B);if(typeof softRender==='function')softRender()}});
   el.addEventListener('loadedmetadata',()=>{if(el!==P.el)return;const k=P.kind,key=P.key;if(k&&key&&isFinite(el.duration)&&it(k,key).dur==null)setF(k,key,'dur',el.duration,1);P.tick()})}

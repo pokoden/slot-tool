@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=11;
+const APPV=12;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -174,7 +174,7 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
 const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:0,onFile:null,
  upd(){if(this.ui)this.ui()},
  async listen(){if(this.on)return;this.on=true;const g=++this.gen;this.st='待機中';this.upd();try{const o=await SIG.get('sig_offer');if(o){const a=await SIG.get('sig_answer').catch(()=>null);if(Date.now()-o.at>600000||(a&&a.id===o.id))this.lastId=o.id}}catch(e){}
-  let idle=Date.now();while(this.on&&g===this.gen){if(this.dc&&this.dc.readyState==='open')idle=Date.now();else if(Date.now()-idle>1200000){this.stopListen();if(typeof WL!=='undefined')WL.off();break}if(!this.dc||this.dc.readyState!=='open'){try{const o=await SIG.get('sig_offer');if(g!==this.gen)break;if(o&&o.id!==this.lastId&&Math.abs(Date.now()-o.at)<600000){this.lastId=o.id;await this.answer(o,g)}}catch(e){this.st='待機中（'+(e.message||e)+'）';this.upd()}}await sleep(2500)}},
+  let idle=Date.now();while(this.on&&g===this.gen){if(this.dc&&this.dc.readyState==='open')idle=Date.now();else if(Date.now()-idle>1200000){this.stopListen();if(typeof WL!=='undefined')WL.off('rx');break}if(!this.dc||this.dc.readyState!=='open'){try{const o=await SIG.get('sig_offer');if(g!==this.gen)break;if(o&&o.id!==this.lastId&&Math.abs(Date.now()-o.at)<600000){this.lastId=o.id;await this.answer(o,g)}}catch(e){this.st='待機中（'+(e.message||e)+'）';this.upd()}}await sleep(2500)}},
  stopListen(){this.on=false;this.gen++;NET.stop();try{this.dc&&this.dc.close()}catch(e){}try{this.pc&&this.pc.close()}catch(e){}this.pc=this.dc=null;this.st='';this.upd()},
  async answer(o,g){try{this.pc&&this.pc.close()}catch(e){}this.pc=null;await NET.start();if(g!==this.gen)return;const pc=this.pc=new RTCPeerConnection({iceServers:ICE});this.why='';
   watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗（PCで再接続を押してね）';this.why=w;this.upd()},()=>NET.stop());

@@ -1,6 +1,6 @@
 // オフラインでも開けるように、アプリ本体だけ保存（動画・音楽は端末内の保存領域）
-const C='media-app-v11';
-const A=['./','index.html','core.js?v=11','player.js?v=11','conv.js?v=11','app.js?v=11','opfs-worker.js?v=11','manifest.json?v=1','icon.png?v=1','icon-512.png?v=1'];
+const C='media-app-v12';
+const A=['./','index.html','core.js?v=12','player.js?v=12','conv.js?v=12','app.js?v=12','opfs-worker.js?v=12','manifest.json?v=1','icon.png?v=1','icon-512.png?v=1'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==location.origin||u.pathname.includes('/lib/ffmpeg/')||!u.pathname.startsWith(new URL('./',self.registration.scope).pathname))return;
