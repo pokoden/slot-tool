@@ -3,7 +3,7 @@
 let MODE=null,TAB='search';const NAV={};const LISTS={};let LSEQ=0;
 const NAME={music:'音楽',video:'動画'};
 const FIL={music:LS.get('md_fil_music',null)||{},video:LS.get('md_fil_video',null)||{}};
-const fil=()=>{const f=FIL[MODE];f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];return f};
+const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];return f};
 const saveFil=()=>LS.set('md_fil_'+MODE,FIL[MODE]);
 const lay=()=>LS.get('md_lay_'+MODE,'grid');
 const PCF={music:new Map(),video:new Map()},PCDIR={music:null,video:null},PCNEED={music:false,video:false};
@@ -40,7 +40,11 @@ const allTags=k=>[...new Set(lib(k).flatMap(e=>it(k,e.key).tags||[]))].sort();
 function userPls(k){return Object.entries(doc(k).pls).filter(([,p])=>!p.del).map(([id,p])=>({id,...p})).sort((a,b)=>(a.at||0)-(b.at||0))}
 function autoPl(k,id){const L=lib(k);if(id==='_often')return L.filter(e=>(it(k,e.key).plays||0)>0).sort((a,b)=>(it(k,b.key).plays||0)-(it(k,a.key).plays||0)).slice(0,50).map(e=>e.key);return sortL(k,L,'add').slice(0,50).map(e=>e.key)}
 function plKeys(k,id){if(id[0]==='_')return autoPl(k,id);const p=doc(k).pls[id];const m=libMap(k);return(p&&p.keys||[]).filter(x=>m.has(x))}
-const plName=(k,id)=>id==='_often'?(k==='music'?'よく聴く':'よく見る'):id==='_new'?'最近追加':(doc(k).pls[id]||{}).name||'';
+// お気に入り＝「お気に入り」という普通のプレイリスト（id: fav）
+const isFav=(k,key)=>{const p=doc(k).pls.fav;return!!(p&&!p.del&&(p.keys||[]).includes(key))};
+function setFav(k,keys,on){const d=doc(k);let p=d.pls.fav;if(!p||p.del){setPl(k,'fav','name','お気に入り');setPl(k,'fav','at',1);if(p&&p.del)setPl(k,'fav','del',false);p=d.pls.fav}
+ let a=(p.keys||[]).slice();a=on?[...a,...keys.filter(x=>!a.includes(x))]:a.filter(x=>!keys.includes(x));setPl(k,'fav','keys',a);syncSoon(k)}
+const plName=(k,id)=>id==='fav'?'お気に入り':id==='_often'?(k==='music'?'よく聴く':'よく見る'):id==='_new'?'最近追加':(doc(k).pls[id]||{}).name||'';
 // 再生不可（この端末で）
 const BADC=new Map();
 // 再生不可は「実際に再生して失敗した」ものだけ
@@ -64,13 +68,13 @@ function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.pe
   if(!sentTo(k,e.key)&&(pns.has(n)||(q&&pq.has(q))))out.set(e.key,'iPhoneに同じものがある')}return out}
 
 // ===== 描画部品 =====
-const IC={search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5l5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',pl:'<path d="M3 5h13v2.4H3zm0 5h13v2.4H3zm0 5h8v2.4H3zm12 0l7 4-7 4z"/>',fav:'<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/>',send:'<path d="M2 4h20v12H2zm2 2v8h16V6zM8 19h8v2H8z"/><path d="M12 7l3.5 3.5h-2.3v2.8h-2.4v-2.8H8.5z"/>',set:'<path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.6v-2.2l-2.4-.6-.7-1.6 1.3-2.1-1.6-1.6-2.1 1.3-1.6-.7L13.1 3h-2.2l-.6 2.4-1.6.7-2.1-1.3L5 6.4l1.3 2.1-.7 1.6-2.6.8v2.2l2.4.6.7 1.6-1.3 2.1L6.4 19l2.1-1.3 1.6.7.8 2.6h2.2l.6-2.4 1.6-.7 2.1 1.3 1.6-1.6-1.3-2.1.7-1.6z"/>'};
+const IC={home:'<path d="M12 3l9 8h-2.6v9h-4.9v-6h-3v6H5.6v-9H3z"/>',search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5l5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',pl:'<path d="M3 5h13v2.4H3zm0 5h13v2.4H3zm0 5h8v2.4H3zm12 0l7 4-7 4z"/>',fav:'<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/>',send:'<path d="M2 4h20v12H2zm2 2v8h16V6zM8 19h8v2H8z"/><path d="M12 7l3.5 3.5h-2.3v2.8h-2.4v-2.8H8.5z"/>',set:'<path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.6v-2.2l-2.4-.6-.7-1.6 1.3-2.1-1.6-1.6-2.1 1.3-1.6-.7L13.1 3h-2.2l-.6 2.4-1.6.7-2.1-1.3L5 6.4l1.3 2.1-.7 1.6-2.6.8v2.2l2.4.6.7 1.6-1.3 2.1L6.4 19l2.1-1.3 1.6.7.8 2.6h2.2l.6-2.4 1.6-.7 2.1 1.3 1.6-1.6-1.3-2.1.7-1.6z"/>'};
 const svg=p=>`<svg viewBox="0 0 24 24" fill="currentColor">${p}</svg>`;
-const TABS=[['search','検索'],['pl','プレイリスト'],['fav','お気に入り'],['send','PCから送る'],['set','設定']];
+const TABS=[['home','ホーム'],['search','検索'],['pl','プレイリスト'],['send','PCから送る'],['set','設定']];
 function reg(keys){const id='l'+(++LSEQ);LISTS[id]=keys;return id}
 let DD=new Map();
 function card(k,e,l,i){const d=it(k,e.key),ti=titleOf(k,e),bad=badOf(k,e),dp=DD.get(e.key);const dur=d.dur?`<span class="du">${fmtT(d.dur)}</span>`:'';
- return`<div class="it${MS.on&&MS.keys.has(e.key)?' sel':''}" data-l="${l}" data-i="${i}" data-key="${esc(e.key)}"><div class="th ${k}"><img data-tk="${esc(k+'|'+e.key)}" alt=""${k==='music'?` src="${letterArt(ti)}"`:''}>${dur}${d.fav?'<i class="fv">★</i>':''}<i class="ck">✓</i></div><div class="tx"><b>${esc(ti)}</b><span>${esc(artistOf(k,e))}${albumOf(k,e)?'・'+esc(albumOf(k,e)):''}</span>${bad||dp?`<span class="bdg">${bad?`<em class="bad">再生不可</em>`:''}${dp?`<em class="dp">重複</em>`:''}</span>`:''}</div>${MS.on?'':`<button class="mo" data-mk="${esc(e.key)}">⋯</button>`}</div>`}
+ return`<div class="it${MS.on&&MS.keys.has(e.key)?' sel':''}" data-l="${l}" data-i="${i}" data-key="${esc(e.key)}"><div class="th ${k}"><img data-tk="${esc(k+'|'+e.key)}" alt=""${k==='music'?` src="${letterArt(ti)}"`:''}>${dur}${isFav(k,e.key)?'<i class="fv">★</i>':''}<i class="ck">✓</i></div><div class="tx"><b>${esc(ti)}</b><span>${esc(artistOf(k,e))}${albumOf(k,e)?'・'+esc(albumOf(k,e)):''}</span>${bad||dp?`<span class="bdg">${bad?`<em class="bad">再生不可</em>`:''}${dp?`<em class="dp">重複</em>`:''}</span>`:''}</div>${MS.on?'':`<button class="mo" data-mk="${esc(e.key)}">⋯</button>`}</div>`}
 function items(k,list){if(!list.length)return'';const l=reg(list.map(e=>e.key));return`<div class="${lay()==='grid'?'grid '+k:'list'}">${list.map((e,i)=>card(k,e,l,i)).join('')}</div>`}
 const playBar=(keys,extra)=>{const l=reg(keys);return`<div class="pbar"><button data-play="${l}">▶ 再生</button><button class="sub" data-shuf="${l}">🔀 ランダム</button>${extra||''}</div>`};
 const selBtn=()=>`<button class="sub nar${MS.on?' on':''}" data-msel="1">${MS.on?'選択終了':'選択'}</button>`;
@@ -87,12 +91,12 @@ function render(){if(!MODE){$('choose').hidden=false;$('app').hidden=true;return
  const nav=NAV[TAB]||[];$('hd_back').hidden=!nav.length;$('hd_t').textContent=nav.length?nav[nav.length-1].title:NAME[MODE];$('hd_st').innerHTML=hdStatus();
  $('tabs').innerHTML=TABS.map(([id,t])=>`<button class="${TAB===id?'on':''}" data-tab="${id}">${svg(IC[id])}<span>${t}</span></button>`).join('');
  const top=nav[nav.length-1];let h='';
- try{h=top?subView(top):({search:vSearch,pl:vPls,fav:vFav,send:vSend,set:vSet})[TAB]()}catch(e){h=`<div class="card red">${esc(e.message||e)}</div>`;console.error(e)}
+ try{h=top?subView(top):({search:vSearch,pl:vPls,send:vSend,set:vSet})[TAB]()}catch(e){h=`<div class="card red">${esc(e.message||e)}</div>`;console.error(e)}
  $('main').innerHTML=h;bulkBar();afterRender()}
 function push(v){(NAV[TAB]=NAV[TAB]||[]).push(v);MS.on=false;MS.keys.clear();render();scrollTo(0,0)}
 function filtered(){const k=MODE,f=fil();let L=lib(k);const q=(f.q||'').trim().toLowerCase();
  if(q)L=L.filter(e=>(titleOf(k,e)+' '+artistOf(k,e)+' '+albumOf(k,e)+' '+e.path+' '+(it(k,e.key).tags||[]).join(' ')).toLowerCase().includes(q));
- if(f.artist){const a=cleanTag(f.artist);L=L.filter(e=>artistOf(k,e)===a)}if(f.album){const a=cleanTag(f.album);L=L.filter(e=>albumOf(k,e)===a)}if(f.fav)L=L.filter(e=>it(k,e.key).fav);if(f.unw)L=L.filter(e=>!it(k,e.key).plays);
+ if(f.artist){const a=cleanTag(f.artist);L=L.filter(e=>artistOf(k,e)===a)}if(f.album){const a=cleanTag(f.album);L=L.filter(e=>albumOf(k,e)===a)}if(f.unw)L=L.filter(e=>!it(k,e.key).plays);
  if(f.tags.length)L=L.filter(e=>{const t=it(k,e.key).tags||[];return f.tags.every(x=>t.includes(x))});return sortL(k,L,f.sort)}
 function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  if(DEV[k].size&&EST.quota&&EST.free<LOW)h+=`<div class="warn" data-go="cand">空きが少ない（${fmtB(EST.free)}）</div>`;
@@ -101,7 +105,7 @@ function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  h+=`<div class="srch"><input id="f_q" type="search" placeholder="曲名・アーティスト・アルバム" value="${esc(f.q||'')}" autocomplete="off"></div>
  <div class="ctl"><select id="f_art"><option value="">アーティスト</option>${ar.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.artist)===a?' selected':''}>${esc(a)}</option>`).join('')}</select><select id="f_alb"><option value="">アルバム</option>${al.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.album)===a?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
  <div class="ctl">${sortSel()}${layBtn()}${selBtn()}</div>
- <div class="chips"><button class="chip${f.fav?' on':''}" data-ff="fav">★ お気に入り</button><button class="chip${f.unw?' on':''}" data-ff="unw">${k==='video'?'未視聴':'未再生'}</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
+ <div class="chips"><button class="chip${f.unw?' on':''}" data-ff="unw">${k==='video'?'未視聴':'未再生'}</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
  <div class="seg">${[['all','すべて'],['folder','フォルダ'],['artist','アーティスト'],['album','アルバム']].map(([v,t])=>`<button class="${f.view===v?'on':''}" data-view="${v}">${t}</button>`).join('')}</div>`;
  return h+`<div id="sres">${searchRes()}</div>`}
 function searchRes(){const k=MODE,f=fil();let h='';const L=filtered();
@@ -113,15 +117,14 @@ function searchRes(){const k=MODE,f=fil();let h='';const L=filtered();
  if(f.view==='album'&&!f.album){return`<div class="rows">${groupCount(L,e=>albumOf(k,e)||'').map(([a,n])=>`<button class="rowb" data-falb="${esc(a)}">${a?esc(a):'アルバムなし'}<i>${n}</i></button>`).join('')}</div>`}
  const af=[f.artist,f.album].filter(Boolean);if(af.length)h+=`<div class="chips">${f.artist?`<button class="chip on" data-clr="artist">${esc(f.artist)} ✕</button>`:''}${f.album?`<button class="chip on" data-clr="album">${esc(f.album)} ✕</button>`:''}</div>`;
  if(L.length)h+=playBar(L.map(e=>e.key),`<span class="cnt">${L.length}件</span>`);return h+items(k,L)}
-function vPls(){const k=MODE;const P=[['_often',plName(k,'_often')],['_new','最近追加'],...userPls(k).map(p=>[p.id,p.name])];
- return`<div class="pbar"><button data-newpl="1">＋ 新しいプレイリスト</button></div><div class="rows">${P.map(([id,n])=>`<button class="rowb" data-pl="${esc(id)}">${id[0]==='_'?'⚡ ':'≡ '}${esc(n)}<i>${plKeys(k,id).length}</i></button>`).join('')}</div>`}
+function vPls(){const k=MODE;const P=[['fav','お気に入り'],['_often',plName(k,'_often')],['_new','最近追加'],...userPls(k).filter(p=>p.id!=='fav').map(p=>[p.id,p.name])];
+ return`<div class="pbar"><button data-newpl="1">＋ 新しいプレイリスト</button></div><div class="rows">${P.map(([id,n])=>`<button class="rowb" data-pl="${esc(id)}">${id==='fav'?'★ ':id[0]==='_'?'⚡ ':'≡ '}${esc(n)}<i>${plKeys(k,id).length}</i></button>`).join('')}</div>`}
 function vPl(id){const k=MODE,keys=plKeys(k,id),m=libMap(k),L=keys.map(x=>m.get(x));const auto=id[0]==='_';
  let h=keys.length?playBar(keys):'';
- if(!auto)h+=`<div class="pbar"><button data-pick="${esc(id)}">＋ 追加</button><button class="sub" data-plren="${esc(id)}">名前</button><button class="sub dng" data-pldel="${esc(id)}">削除</button></div>`;
+ if(!auto)h+=`<div class="pbar"><button data-pick="${esc(id)}">＋ 追加</button>${id==='fav'?'':`<button class="sub" data-plren="${esc(id)}">名前</button><button class="sub dng" data-pldel="${esc(id)}">削除</button>`}</div>`;
  h+=`<div class="ctl">${auto?layBtn():''}${selBtn()}</div>`;
  if(auto||MS.on)return h+items(k,L);const l=reg(keys);
  return h+`<div class="list ed">${L.map((e,i)=>{const ti=titleOf(k,e);return`<div class="it" data-l="${l}" data-i="${i}" data-key="${esc(e.key)}"><div class="th ${k}"><img data-tk="${esc(k+'|'+e.key)}" alt=""${k==='music'?` src="${letterArt(ti)}"`:''}></div><div class="tx"><b>${esc(ti)}</b><span>${esc(artistOf(k,e))}</span>${badOf(k,e)?'<span class="bdg"><em class="bad">再生不可</em></span>':''}</div><div class="ord"><button class="sub" data-mv="${i}" data-pid="${esc(id)}" data-d="-1">▲</button><button class="sub" data-mv="${i}" data-pid="${esc(id)}" data-d="1">▼</button><button class="sub" data-rm="${i}" data-pid="${esc(id)}">✕</button></div></div>`}).join('')}</div>`}
-function vFav(){const k=MODE,f=fil();const L=sortL(k,lib(k).filter(e=>it(k,e.key).fav),f.sort);return`<div class="ctl">${sortSel()}${layBtn()}${selBtn()}</div>`+(L.length?playBar(L.map(e=>e.key)):'')+items(k,L)}
 function subView(v){if(v.t==='pl')return vPl(v.id);if(v.t==='cand')return vCand();return''}
 function cands(k){return[...DEV[k].values()].map(f=>({...f,d:it(k,f.key)})).sort((a,b)=>(a.d.plays||0)-(b.d.plays||0)||(a.d.last||0)-(b.d.last||0)||b.size-a.size).slice(0,30)}
 function vCand(){const k=MODE,m=libMap(k);const L=cands(k);return`<div class="card"><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div></div><div class="list">${L.map(f=>{const e=m.get(f.key)||{key:f.key,path:f.path};const ti=titleOf(k,e);return`<div class="it"><div class="th ${k}"><img data-tk="${esc(k+'|'+f.key)}" alt=""${k==='music'?` src="${letterArt(ti)}"`:''}></div><div class="tx"><b>${esc(ti)}</b><span>${fmtB(f.size)}・${f.d.plays||0}回</span></div><button class="sub dng nar" data-delk="${esc(f.key)}">削除</button></div>`}).join('')}</div>`}
@@ -179,7 +182,7 @@ async function bulk(act){const k=MODE,keys=[...MS.keys],m=libMap(k),E=keys.map(x
  if(act==='al'){sheetIn('アルバム名（'+keys.length+'件）',common(E,e=>albumOf(k,e)),v=>{for(const e of E)setF(k,e.key,'al',v)});return}
  if(act==='ar'){sheetIn('アーティスト名（'+keys.length+'件）',common(E,e=>artistOf(k,e)),v=>{for(const e of E)setF(k,e.key,'a',v)});return}
  if(act==='tag'){sheetIn('タグを追加（'+keys.length+'件）','',v=>{const t=v.split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean);for(const e of E){const o=it(k,e.key).tags||[];setF(k,e.key,'tags',[...new Set([...o,...t])])}},'例：ライブ, 好き');return}
- if(act==='fav'){const all=keys.every(x=>it(k,x).fav);for(const x of keys)setF(k,x,'fav',!all);syncSoon(k);render();return}
+ if(act==='fav'){const all=keys.every(x=>isFav(k,x));setFav(k,keys,!all);render();return}
  if(act==='del'){const dv=keys.filter(x=>DEV[k].has(x));if(!dv.length)return;if(!confirm(`${dv.length}件をこのiPhoneから削除する？\nPCの元ファイルは消えないよ`))return;for(const x of dv)await delDevKey(k,x);MS.keys.clear();EST=await storageEst();syncSoon(k);render();return}}
 function addToPl(k,id,keys){const p=doc(k).pls[id];const a=(p&&p.keys||[]).slice();for(const x of keys)if(!a.includes(x))a.push(x);setPl(k,id,'keys',a);syncSoon(k)}
 // --- プレイリストに曲・動画を追加（検索して複数選択） ---
@@ -232,7 +235,7 @@ async function doSend(){const k=MODE;if(SENDING)return;const S=[...SEL[k]].map(x
 function sheet(h){$('sheet_in').innerHTML=h;$('sheet').hidden=false}
 function closeSheet(){$('sheet').hidden=true;$('sheet_in').innerHTML='';SHCB=null}
 function itemMenu(key){const k=MODE,e=libMap(k).get(key)||{key,path:keyPath(key)},d=it(k,key),bad=badOf(k,e),dp=devDup(k).get(key);
- sheet(`<h3>${esc(titleOf(k,e))}</h3>${bad?`<div class="red">再生不可：${esc(bad)}</div>`:''}${dp?`<div class="gd">重複：${esc(dp)}</div>`:''}<div class="pbar"><button class="sub" data-sfav="${esc(key)}">${d.fav?'★ お気に入り解除':'☆ お気に入り'}</button><button class="sub" data-addpl="${esc(key)}">＋ プレイリスト</button></div>
+ sheet(`<h3>${esc(titleOf(k,e))}</h3>${bad?`<div class="red">再生不可：${esc(bad)}</div>`:''}${dp?`<div class="gd">重複：${esc(dp)}</div>`:''}<div class="pbar"><button class="sub" data-sfav="${esc(key)}">${isFav(k,key)?'★ お気に入り解除':'☆ お気に入り'}</button><button class="sub" data-addpl="${esc(key)}">＋ プレイリスト</button></div>
  <label class="fl"><span>名前</span><input id="e_n" type="text" value="${esc(titleOf(k,e))}"></label><label class="fl"><span>アーティスト</span><input id="e_a" type="text" value="${esc(artistOf(k,e))}"></label><label class="fl"><span>アルバム</span><input id="e_al" type="text" value="${esc(albumOf(k,e))}"></label>
  <label class="fl"><span>タグ</span><input id="e_t" type="text" value="${esc((d.tags||[]).join(', '))}"></label>
  <div class="pbar"><button data-esave="${esc(key)}">保存</button></div><div class="pbar">${DEV[k].has(key)?`<button class="sub dng" data-delk="${esc(key)}">この端末から削除</button>`:''}<button class="sub" data-rth="${esc(key)}">サムネを作り直す</button></div><button class="sub" data-close="1">閉じる</button>`)}
@@ -253,6 +256,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
 document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[data-l],[data-go],[data-tab],.warn,label,#hd_st');if(!t)return;const ds=t.dataset;
  if(t.id==='hd_st'){TAB=SENDING||TX.st||RX.st?'send':'set';NAV[TAB]=[];render();return}
  if(ds.mode){MODE=ds.mode;for(const x in NAV)delete NAV[x];LS.set('md_last',MODE);TAB='search';MS.on=false;MS.keys.clear();render();syncNow(MODE);return}
+ if(ds.tab==='home'){goHome();return}
  if(ds.tab){if(TAB===ds.tab)NAV[TAB]=[];TAB=ds.tab;MS.on=false;MS.keys.clear();closeSheet();render();scrollTo(0,0);if(TAB==='send'||TAB==='set')refreshEst();return}
  if(ds.mk){ev.stopPropagation();itemMenu(ds.mk);return}
  if(ds.l&&!t.closest('.ord')&&!ds.delk){if(MS.on){const key=ds.key;if(!key)return;MS.keys.has(key)?MS.keys.delete(key):MS.keys.add(key);t.classList.toggle('sel',MS.keys.has(key));bulkBar();return}const keys=LISTS[ds.l];if(keys)P.play(MODE,keys,+ds.i,false);return}
@@ -279,7 +283,7 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.pldel){if(confirm('このプレイリストを削除する？')){setPl(MODE,ds.pldel,'del',true);syncSoon(MODE);NAV[TAB].pop();render()}return}
  if(ds.mv!=null){const k=MODE,id=ds.pid,a=plKeys(k,id),i=+ds.mv,j=i+(+ds.d);if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];const full=(doc(k).pls[id].keys||[]).filter(x=>!a.includes(x));setPl(k,id,'keys',[...a,...full]);syncSoon(k);render();return}
  if(ds.rm!=null){const k=MODE,id=ds.pid,a=plKeys(k,id);a.splice(+ds.rm,1);setPl(k,id,'keys',a);syncSoon(k);render();return}
- if(ds.sfav){const k=MODE;setF(k,ds.sfav,'fav',!it(k,ds.sfav).fav);syncSoon(k);if($('sheet').hidden===false&&!$('pv').classList.contains('open')&&!$('pm').classList.contains('open'))itemMenu(ds.sfav);render();if(P.key===ds.sfav)P.ui();return}
+ if(ds.sfav){const k=MODE;setFav(k,[ds.sfav],!isFav(k,ds.sfav));if($('sheet').hidden===false&&!$('pv').classList.contains('open')&&!$('pm').classList.contains('open'))itemMenu(ds.sfav);render();if(P.key===ds.sfav)P.ui();return}
  if(ds.addpl){addPlMenu(ds.addpl);return}
  if(ds.esave){saveEdit(ds.esave);return}
  if(ds.delk){ev.stopPropagation();delDev(ds.delk);return}

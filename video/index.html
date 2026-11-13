@@ -93,7 +93,7 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 #sheet_in{background:var(--sf);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
 #sheet_in>button{width:100%;margin-top:8px}#sheet_in h3{margin-bottom:6px}
 /* 再生画面 */
-.pl{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;display:none;padding-top:env(safe-area-inset-top)}
+.pl{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;display:none;padding-top:calc(52px + env(safe-area-inset-top))}
 .pl.open{display:block}
 #stage{position:relative;width:100%;aspect-ratio:16/9;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform-origin:center;visibility:hidden}#stage video.on{visibility:visible}
@@ -120,7 +120,7 @@ input[type=range]::-moz-range-track{height:4px;background:rgba(255,255,255,.3)}i
 #pv.fs #stage,#pv.fs{overflow:hidden}#pv.fs #stage{position:fixed;inset:0;aspect-ratio:auto;z-index:2}
 @media (orientation:landscape) and (max-height:500px){#pv #stage{position:fixed;inset:0;aspect-ratio:auto;z-index:2}}
 #pm .pmw{max-width:480px;margin:0 auto;padding:6px 16px}#pm .ct button{background:none;color:var(--tx);font-size:18px}
-#pm .art{position:relative;width:100%;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#222;margin:6px 0 12px}#pm .art img{width:100%;height:100%;object-fit:cover}
+#pm .art{position:relative;width:min(56.25vw,360px);aspect-ratio:1;margin-left:auto!important;margin-right:auto!important;touch-action:none;border-radius:14px;overflow:hidden;background:#222;margin:6px 0 12px}#pm .art img{width:100%;height:100%;object-fit:cover}
 #pm .p_q{max-width:480px;margin:0 auto}
 /* r267 */
 .hst{display:flex;flex-direction:column;align-items:flex-end;gap:0;padding:2px 4px!important;font-size:14px;line-height:1.25;max-width:52%}.hst span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -137,6 +137,16 @@ input[type=range]::-moz-range-track{height:4px;background:rgba(255,255,255,.3)}i
 #bulk .dngb{background:#7a2a22}
 body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important}
 .pk{max-height:50vh;overflow:auto}.pk .fr em{max-width:35%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 再生画面の戻る・ミニバー */
+.phd{position:fixed;top:0;left:0;right:0;z-index:7;display:flex;align-items:center;justify-content:space-between;height:calc(52px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 4px 0;background:var(--bg)}
+.phd button{background:none;color:var(--tx);padding:6px 10px}.bkv{width:30px;height:30px;display:block;color:var(--gd)}
+#pv:not(.fs) .ctlx [data-pc=close]{visibility:hidden}
+#vmini{display:none;position:fixed;left:6px;right:6px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:8;background:var(--sf2);border-radius:12px;align-items:center;gap:8px;padding:6px;cursor:pointer}
+#pv.vm #vmini{display:flex}#pv.vm{padding-bottom:80px}
+#vmini img{width:80px;height:45px;border-radius:6px;object-fit:cover;background:#000;flex:none}#vmini .mt{flex:1;min-width:0}#vmini .mt b,#vmini .mt span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#vmini button{background:none;color:var(--tx);padding:8px 6px;flex:none}#vmini .si{width:20px;height:20px}
+#pv.fs .phd{display:none}
+@media (orientation:landscape) and (max-height:500px){.phd{display:none}.pl{padding-top:0}#pv:not(.fs) .ctlx [data-pc=close]{visibility:visible}#vmini{display:none!important}}
 /* 音楽の横向き全画面 */
 .stg{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 #mstage{display:none;touch-action:none}
@@ -153,7 +163,7 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
  .hrow .it{width:260px}body[data-mode=music] .hrow .it{width:170px}
  #mini{left:106px;bottom:8px}
  .sendbox{top:52px}
- #pv.open{display:flex;align-items:flex-start}#pv .pvl{flex:1;min-width:0;height:100vh;overflow:auto}#pv #stage{max-height:76vh}#pv .p_q{width:380px;flex:none;height:100vh;overflow:auto}
+ #pv.open{display:flex;align-items:flex-start}#pv .pvl{flex:1;min-width:0;height:calc(100vh - 52px);overflow:auto}#pv #stage{max-height:76vh}#pv .p_q{width:380px;flex:none;height:calc(100vh - 52px);overflow:auto}
  #pm.open{display:grid;grid-template-columns:minmax(0,1fr) 420px}#pm .p_q{max-width:none;overflow:auto;max-height:100vh}
 }
 </style>
@@ -162,7 +172,7 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 <div id="app" hidden>
 <header><button id="hd_home"><img src="icon.png?v=1" alt=""></button><button id="hd_back" hidden>‹</button><b id="hd_t"></b><button id="hd_st" class="hst"></button></header>
 <main id="main"></main>
-<div id="mini" hidden><img id="mini_img" alt=""><div class="mt"><b id="mini_t"></b><span id="mini_a"></span></div><button id="mini_pp">▶</button><button id="mini_nx">⏭</button><div id="mini_bar"></div></div>
+<div id="mini" hidden><img id="mini_img" alt=""><div class="mt"><b id="mini_t"></b><span id="mini_a"></span></div><button id="mini_pv">⏮</button><button id="mini_pp">▶</button><button id="mini_nx">⏭</button><div id="mini_bar"></div></div>
 <div id="bulk" hidden></div>
 <nav id="tabs"></nav>
 </div>
@@ -170,8 +180,8 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=9"></script>
-<script src="conv.js?v=9"></script>
-<script src="player.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="core.js?v=10"></script>
+<script src="conv.js?v=10"></script>
+<script src="player.js?v=10"></script>
+<script src="app.js?v=10"></script>
 </body></html>
