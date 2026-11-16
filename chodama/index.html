@@ -98,7 +98,7 @@ function SMIG(v,storesKey){if(typeof v==='string')return smStr(v);if(Array.isArr
  let j;try{j=JSON.parse(s)}catch(e){continue}const n=SMIG(j,/_stores$/.test(k));const t=JSON.stringify(n);if(t!==s)localStorage.setItem(k,t)}}catch(e){}})();
 
 // ===== 版の確認：開いたとき・戻ったときにサーバーの最新版と比べ、古ければ読み込み直す（ホーム画面のキャッシュ対策） =====
-const APPV='r62';
+const APPV='r275';
 async function verCheck(){try{if(location.protocol==='file:')return;const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'});if(!r.ok)return;const m=(await r.text()).match(/const APPV='([^']+)'/);if(!m||m[1]===APPV)return;const k='cd_vtry_'+m[1];if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');location.replace(location.pathname+'?v='+m[1]+'&t='+Date.now()+location.hash)}catch(e){}}
 verCheck();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verCheck()});
 // ===== 貯玉管理（パチンコ＝貯玉 / スロット＝貯メダル）。データは各ツールの保存記録（localStorage＋同期データ）から計算 =====
@@ -118,11 +118,12 @@ function yenPer(k,name){const s=storesOf(k).find(x=>sk(x.name)===name);if(k==='p
 // 保存記録：ローカル＋同期データをidでマージ（新しい方）、削除済み除外、同じ記録の重複は最新のみ
 function records(k){const m=new Map();for(const x of[...(LS.get(KIND[k].hist,[])||[]),...((remote[k]&&remote[k].entries)||[])]){if(!x||!x.id)continue;const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}
  const best=new Map();for(const e of m.values()){if(e.deleted)continue;const key=(e.st&&e.st.recId)||e.id,o=best.get(key);if(!o||String(e.saved||'')>String(o.saved||''))best.set(key,e)}return[...best.values()]}
-// 1台の増減＝回収−使用持ち玉(メダル)−使用貯玉(メダル)（パチンコの自動値は表の上のボックスと同じ計算）
+// 1台の増減＝回収−使用持ち玉(メダル)−使用貯玉(メダル)（パチンコは収支欄の貯玉開始/終了・持ち玉開始/終了を優先。無いときだけ表のボックス。スロットは貯メダル開始/終了・所持開始/終了）
 function netOf(k,e){const s=e.st||{};
- if(k==='p'&&s.bx&&typeof s.bx==='object'&&s._p4){const st=storesOf('p').find(x=>sk(x.name)===sk(e.store))||{},per=st.mode==='ball'?1:(+st.per>0?+st.per:125);
-  const top=q=>{for(const w of s.rows||[]){const v=N((w||{})[q]);if(v!=null)return v}return null},bx=s.bx,used=(t,f)=>{const a=N(bx[t+'0'])??top(t+'0');return a==null?0:(a-(N(bx[t+'1'])??0))*f};
-  return Z(s.out)-(N(s.usv)??used('k',s.bxKball?1:per))-(N(s.uhb)??used('m',1))}
+ if(k==='p'){const st=storesOf('p').find(x=>sk(x.name)===sk(e.store))||{},per=st.mode==='ball'?1:(+st.per>0?+st.per:125),dif=(a,b)=>N(s[a])==null&&N(s[b])==null?0:Z(s[a])-Z(s[b]);
+  if(['cy0','cy1','cs0','cs1','ch0','ch1'].some(f=>N(s[f])!=null))return Z(s.out)-dif('cs0','cs1')*per-dif('ch0','ch1');
+  if(s.bx&&typeof s.bx==='object'&&s._p4){const top=q=>{for(const w of s.rows||[]){const v=N((w||{})[q]);if(v!=null)return v}return null},bx=s.bx,used=(t,f)=>{const a=N(bx[t+'0'])??top(t+'0');return a==null?0:(a-(N(bx[t+'1'])??0))*f};
+   return Z(s.out)-(N(s.usv)??used('k',s.bxKball?1:per))-(N(s.uhb)??used('m',1))}}
  return Z(s.out)-(Z(s.sv0)-Z(s.sv1))-(Z(s.hb0)-Z(s.hb1))}
 // タバコ交換状態 [{id:'p|店舗|日付',on,updatedAt}]
 const CASH='cd_cash',cashList=()=>LS.get(CASH,[])||[],cashOf=id=>{const x=cashList().find(t=>t.id===id);return x&&x.v!==''&&x.v!=null&&isFinite(+x.v)?+x.v:null};
@@ -293,7 +294,7 @@ let czS=null,czK='p',czEd=null,czF={store:'マルハン青森柏',date:'',k:'p'}
 const czStores=()=>{const s=[...CZ_ST];for(const x of evLive())if(!s.includes(x.store))s.push(x.store);return s};
 const czU=k=>k==='p'?'玉':'枚',czYp=(k,st)=>yenPer(k,st)||0,czTob=(k,st)=>{const y=czYp(k,st);return y?Math.round(TOB_YEN/y):0};
 // 1店・1種類の累積：日付順（同じ日は入力順）。手入力・引き出し＝その数に置き換え、タバコ＝6,000円分を引く
-// 記録ごとの貯玉増減：回収−使用持ち玉−使用貯玉（netOf）。エクセル取込はパチンコの 回収(retBalls)−使った玉(ballsUsed) があれば入れる（スロットのエクセルには該当欄なし）
+// 記録ごとの貯玉増減：回収−使用持ち玉−使用貯玉（netOf。パチンコは収支欄優先）。エクセル取込はパチンコの 回収(retBalls)−使った玉(ballsUsed) があれば入れる（スロットのエクセルには該当欄なし）
 const OV='cd_ov',ovList=()=>LS.get(OV,[])||[],ovOf=id=>{const x=ovList().find(t=>t.id===id);return x&&x.v!==''&&x.v!=null&&isFinite(+x.v)?+x.v:null};
 let czAutoC=null;function czAuto(){if(czAutoC)return czAutoC;const m=new Map();for(const k of['p','s'])for(const e of records(k)){let n=null,o=null;
   if(e.src==='excel'){if(k==='p'&&e.retBalls!=null&&e.ballsUsed!=null&&isFinite(+e.retBalls)&&isFinite(+e.ballsUsed)){n=+e.retBalls-(+e.ballsUsed);o=+e.retBalls}}else{n=netOf(k,e);o=Z((e.st||{}).out)}
