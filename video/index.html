@@ -44,6 +44,18 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .red{color:var(--rd)}
 .warn{background:#3a1d1a;color:#ffb4ab;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-weight:700;cursor:pointer}
 .empty{padding:40px 0;text-align:center}
+.tgh{margin:18px 0 8px;color:var(--gd)}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tgc{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:2px;height:84px;padding:12px;border-radius:14px;text-align:left;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.tgc b{font-size:14px}.tgc i{font-style:normal;font-size:14px;opacity:.85}
+.tgc em{position:absolute;top:10px;right:10px;font-style:normal;font-size:14px;font-weight:700;padding:1px 7px;border-radius:8px;background:rgba(0,0,0,.35);color:var(--gd)}
+.tgc[data-tc="0"]{background:linear-gradient(135deg,#7a5a12,#2a1e05)}
+.tgc[data-tc="1"]{background:linear-gradient(135deg,#a3245d,#2c0a1a)}
+.tgc[data-tc="2"]{background:linear-gradient(135deg,#1f7a4a,#08251a)}
+.tgc[data-tc="3"]{background:linear-gradient(135deg,#8c1f1f,#250808)}
+.tgc[data-tc="4"]{background:linear-gradient(135deg,#2b6fe8,#0b1a3a)}
+.tgc[data-tc="5"]{background:linear-gradient(135deg,#139a9a,#062626)}
+.tgc[data-tc="6"]{background:linear-gradient(135deg,#555,#1c1c1c)}
 /* 一覧 */
 .grid{display:grid;grid-template-columns:1fr;gap:14px}
 .grid.music{grid-template-columns:1fr 1fr}
@@ -181,8 +193,8 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=13"></script>
-<script src="conv.js?v=13"></script>
-<script src="player.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="core.js?v=14"></script>
+<script src="conv.js?v=14"></script>
+<script src="player.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body></html>

@@ -3,7 +3,9 @@
 let MODE=null,TAB='search';const NAV={};const LISTS={};let LSEQ=0;
 const NAME={music:'音楽',video:'動画'};
 const FIL={music:LS.get('md_fil_music',null)||{},video:LS.get('md_fil_video',null)||{}};
-const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];return f};
+const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];if(MODE==='music'){f.q='';f.artist='';f.album='';f.view='all';f.folder=''}return f};
+// 曲のタグ（固定の7つ）
+const TAGSET=['パチスロ','アニメ','ゲーム','ロック','POP','ボカロ','その他'];
 const saveFil=()=>LS.set('md_fil_'+MODE,FIL[MODE]);
 const lay=()=>LS.get('md_lay_'+MODE,'grid');
 const PCF={music:new Map(),video:new Map()},PCDIR={music:null,video:null},PCNEED={music:false,video:false};
@@ -32,19 +34,23 @@ const artistOf=(k,e)=>cleanTag(it(k,e.key).a)||autoArtist(k,e);
 function autoAlbum(k,e){const d=it(k,e.key);if(cleanTag(d.tal))return cleanTag(d.tal);const s=e.path.split('/');return k==='music'&&s.length>=3?s[s.length-2]:''}
 const albumOf=(k,e)=>cleanTag(it(k,e.key).al)||autoAlbum(k,e);
 const added=(k,e)=>e.added||0;
-function sortL(k,a,s){const t=x=>titleOf(k,x);if(s==='name')return a.sort((x,y)=>t(x).localeCompare(t(y),'ja'));if(s==='add')return a.sort((x,y)=>added(k,y)-added(k,x));return a.sort((x,y)=>(it(k,y.key).last||0)-(it(k,x.key).last||0)||added(k,y)-added(k,x))}
+function sortL(k,a,s){const t=x=>titleOf(k,x);if(s==='name')return a.sort((x,y)=>t(x).localeCompare(t(y),'ja'));if(s==='add')return a.sort((x,y)=>added(k,y)-added(k,x));
+ if(s==='plays')return a.sort((x,y)=>(it(k,y.key).plays||0)-(it(k,x.key).plays||0)||(it(k,y.key).last||0)-(it(k,x.key).last||0));
+ if(s==='artist')return a.sort((x,y)=>artistOf(k,x).localeCompare(artistOf(k,y),'ja')||t(x).localeCompare(t(y),'ja'));
+ if(s==='dur')return a.sort((x,y)=>(it(k,x.key).dur||1e9)-(it(k,y.key).dur||1e9));
+ if(s==='durd')return a.sort((x,y)=>(it(k,y.key).dur||0)-(it(k,x.key).dur||0));return a.sort((x,y)=>(it(k,y.key).last||0)-(it(k,x.key).last||0)||added(k,y)-added(k,x))}
 function groupCount(L,f){const m=new Map();for(const e of L){const a=f(e);m.set(a,(m.get(a)||0)+1)}return[...m].sort((a,b)=>a[0].localeCompare(b[0],'ja'))}
 const artists=k=>groupCount(lib(k),e=>artistOf(k,e));
 const albums=k=>groupCount(lib(k),e=>albumOf(k,e)).filter(([a])=>a);
-const allTags=k=>[...new Set(lib(k).flatMap(e=>it(k,e.key).tags||[]))].sort();
+const allTags=k=>{const u=new Set(lib(k).flatMap(e=>it(k,e.key).tags||[]));const fx=k==='music'?TAGSET.filter(t=>u.has(t)):[];return[...fx,...[...u].filter(t=>!fx.includes(t)).sort()]};
 function userPls(k){return Object.entries(doc(k).pls).filter(([,p])=>!p.del).map(([id,p])=>({id,...p})).sort((a,b)=>(a.at||0)-(b.at||0))}
-function autoPl(k,id){const L=lib(k);if(id==='_often')return L.filter(e=>(it(k,e.key).plays||0)>0).sort((a,b)=>(it(k,b.key).plays||0)-(it(k,a.key).plays||0)).slice(0,50).map(e=>e.key);return sortL(k,L,'add').slice(0,50).map(e=>e.key)}
+function autoPl(k,id){const L=lib(k);if(id.startsWith('_t:')){const tg=id.slice(3);return sortL(k,L.filter(e=>(it(k,e.key).tags||[]).includes(tg)),'name').map(e=>e.key)}if(id==='_often')return L.filter(e=>(it(k,e.key).plays||0)>0).sort((a,b)=>(it(k,b.key).plays||0)-(it(k,a.key).plays||0)).slice(0,50).map(e=>e.key);return sortL(k,L,'add').slice(0,50).map(e=>e.key)}
 function plKeys(k,id){if(id[0]==='_')return autoPl(k,id);const p=doc(k).pls[id];const m=libMap(k);return(p&&p.keys||[]).filter(x=>m.has(x))}
 // お気に入り＝「お気に入り」という普通のプレイリスト（id: fav）
 const isFav=(k,key)=>{const p=doc(k).pls.fav;return!!(p&&!p.del&&(p.keys||[]).includes(key))};
 function setFav(k,keys,on){const d=doc(k);let p=d.pls.fav;if(!p||p.del){setPl(k,'fav','name','お気に入り');setPl(k,'fav','at',1);if(p&&p.del)setPl(k,'fav','del',false);p=d.pls.fav}
  let a=(p.keys||[]).slice();a=on?[...a,...keys.filter(x=>!a.includes(x))]:a.filter(x=>!keys.includes(x));setPl(k,'fav','keys',a);syncSoon(k)}
-const plName=(k,id)=>id==='fav'?'お気に入り':id==='_often'?(k==='music'?'よく聴く':'よく見る'):id==='_new'?'最近追加':(doc(k).pls[id]||{}).name||'';
+const plName=(k,id)=>id==='fav'?'お気に入り':id==='_often'?(k==='music'?'よく聴く':'よく見る'):id==='_new'?'最近追加':id.startsWith('_t:')?id.slice(3):(doc(k).pls[id]||{}).name||'';
 // 再生不可（この端末で）
 const BADC=new Map();
 // 再生不可は「実際に再生して失敗した」ものだけ
@@ -70,6 +76,7 @@ function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.pe
 
 // ===== 描画部品 =====
 const IC={home:'<path d="M12 3l9 8h-2.6v9h-4.9v-6h-3v6H5.6v-9H3z"/>',search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5l5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',pl:'<path d="M3 5h13v2.4H3zm0 5h13v2.4H3zm0 5h8v2.4H3zm12 0l7 4-7 4z"/>',fav:'<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/>',send:'<path d="M2 4h20v12H2zm2 2v8h16V6zM8 19h8v2H8z"/><path d="M12 7l3.5 3.5h-2.3v2.8h-2.4v-2.8H8.5z"/>',set:'<path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.6v-2.2l-2.4-.6-.7-1.6 1.3-2.1-1.6-1.6-2.1 1.3-1.6-.7L13.1 3h-2.2l-.6 2.4-1.6.7-2.1-1.3L5 6.4l1.3 2.1-.7 1.6-2.6.8v2.2l2.4.6.7 1.6-1.3 2.1L6.4 19l2.1-1.3 1.6.7.8 2.6h2.2l.6-2.4 1.6-.7 2.1 1.3 1.6-1.6-1.3-2.1.7-1.6z"/>'};
+IC.play='<circle cx="12" cy="12" r="9.6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M10 7.8l6.2 4.2-6.2 4.2z"/>';
 const svg=p=>`<svg viewBox="0 0 24 24" fill="currentColor">${p}</svg>`;
 const TABS=[['home','ホーム'],['search','検索'],['pl','プレイリスト'],['send','PCから送る'],['set','設定']];
 function reg(keys){const id='l'+(++LSEQ);LISTS[id]=keys;return id}
@@ -80,7 +87,7 @@ function items(k,list){if(!list.length)return'';const l=reg(list.map(e=>e.key));
 const playBar=(keys,extra)=>{const l=reg(keys);return`<div class="pbar"><button data-play="${l}">▶ 再生</button><button class="sub" data-shuf="${l}">🔀 ランダム</button>${extra||''}</div>`};
 const selBtn=()=>`<button class="sub nar${MS.on?' on':''}" data-msel="1">${MS.on?'選択終了':'選択'}</button>`;
 const layBtn=()=>`<button class="sub ic" data-lay="1">${lay()==='grid'?'☰':'▦'}</button>`;
-const sortSel=()=>{const f=fil();return`<select id="f_sort">${[['last',MODE==='music'?'最近聴いた順':'最近見た順'],['add','追加した順'],['name','名前順']].map(([v,t])=>`<option value="${v}"${f.sort===v?' selected':''}>${t}</option>`).join('')}</select>`};
+const sortSel=()=>{const f=fil();const O=MODE==='music'?[['last','最近聴いた順'],['add','最近追加'],['plays','再生回数が多い順'],['name','名前順'],['artist','アーティスト名順'],['dur','長さ順（短い）'],['durd','長さ順（長い）']]:[['last','最近見た順'],['add','追加した順'],['name','名前順']];if(!O.some(o=>o[0]===f.sort))f.sort='last';return`<select id="f_sort">${O.map(([v,t])=>`<option value="${v}"${f.sort===v?' selected':''}>${t}</option>`).join('')}</select>`};
 const sec=(t,body,right)=>`<section><h2><span>${t}</span>${right||''}</h2>${body}</section>`;
 const stTxt=st=>!st?'':st.s==='wait'?'待機':st.s==='prep'?'準備中':st.s==='conv'?'mp4に変換中 '+Math.round((st.p||0)*100)+'%':st.s==='send'?'送信中 '+Math.round((st.p||0)*100)+'%':st.s==='done'?'完了':st.s==='fail'?'失敗：'+(st.why||''):st.s==='dup'?'重複スキップ：'+(st.why||''):st.s==='gone'?'削除済みスキップ':st.s==='recv'?'受信中 '+Math.round((st.p||0)*100)+'%':'';
 const stCls=st=>!st?'':st.s==='done'?'ok':st.s==='fail'?'red':st.s==='dup'||st.s==='gone'?'gd':'bl';
@@ -89,8 +96,8 @@ const stCls=st=>!st?'':st.s==='done'?'ok':st.s==='fail'?'red':st.s==='dup'||st.s
 function hdStatus(){let s=!tok()?'同期：未設定':SY.busy[MODE]?'同期中…':/^エラー/.test(SY.msg)?'同期エラー':SY.msg?SY.msg.replace('最終同期 ','同期 '):'';const c=TX.st==='接続済み'?((TX.peer&&TX.peer.dev?peerName(TX.peer.dev):'iPhone')+'と接続中'):RX.st==='接続済み'?'PC接続中':SENDING?'送信中':'';const cl=/エラー|未設定/.test(s)?'red':'';return`<span class="${cl}">${esc(s)}</span>${c?`<span class="ok">${c}</span>`:''}`}
 function render(){if(!MODE){$('choose').hidden=false;$('app').hidden=true;return}$('choose').hidden=true;$('app').hidden=false;document.body.dataset.mode=MODE;
  for(const k in LISTS)delete LISTS[k];DD=devDup(MODE);
- const nav=NAV[TAB]||[];$('hd_back').hidden=!nav.length;$('hd_t').textContent=nav.length?nav[nav.length-1].title:NAME[MODE];$('hd_st').innerHTML=hdStatus();
- $('tabs').innerHTML=TABS.map(([id,t])=>`<button class="${TAB===id?'on':''}" data-tab="${id}">${svg(IC[id])}<span>${t}</span></button>`).join('');
+ const nav=NAV[TAB]||[];$('hd_back').hidden=!nav.length;$('hd_t').textContent=nav.length?nav[nav.length-1].title:MODE==='music'&&TAB==='search'?'再生':NAME[MODE];$('hd_st').innerHTML=hdStatus();
+ $('tabs').innerHTML=TABS.map(([id,t])=>[id,id==='search'&&MODE==='music'?'再生':t]).map(([id,t])=>`<button class="${TAB===id?'on':''}" data-tab="${id}">${svg(IC[id==='search'&&MODE==='music'?'play':id])}<span>${t}</span></button>`).join('');
  const top=nav[nav.length-1];let h='';
  try{h=top?subView(top):({search:vSearch,pl:vPls,send:vSend,set:vSet})[TAB]()}catch(e){h=`<div class="card red">${esc(e.message||e)}</div>`;console.error(e)}
  $('main').innerHTML=h;bulkBar();afterRender()}
@@ -102,6 +109,8 @@ function filtered(){const k=MODE,f=fil();let L=lib(k);const q=(f.q||'').trim().t
 function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  if(DEV[k].size&&EST.quota&&EST.free<LOW)h+=`<div class="warn" data-go="cand">空きが少ない（${fmtB(EST.free)}）</div>`;
  if(!L.length)return h+`<div class="empty"><button data-tab="send">PCから送る</button></div>`;
+ if(k==='music'){h+=`<div class="ctl">${sortSel()}${layBtn()}${selBtn()}${DD.size?`<button class="sub dng nar" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
+ <div class="chips"><button class="chip${f.unw?' on':''}" data-ff="unw">未再生</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`;return h+`<div id="sres">${searchRes()}</div>`}
  const ar=artists(k),al=albums(k);
  h+=`<div class="srch"><input id="f_q" type="search" placeholder="曲名・アーティスト・アルバム" value="${esc(f.q||'')}" autocomplete="off"></div>
  <div class="ctl"><select id="f_art"><option value="">アーティスト</option>${ar.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.artist)===a?' selected':''}>${esc(a)}</option>`).join('')}</select><select id="f_alb"><option value="">アルバム</option>${al.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.album)===a?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
@@ -119,7 +128,9 @@ function searchRes(){const k=MODE,f=fil();let h='';const L=filtered();
  const af=[f.artist,f.album].filter(Boolean);if(af.length)h+=`<div class="chips">${f.artist?`<button class="chip on" data-clr="artist">${esc(f.artist)} ✕</button>`:''}${f.album?`<button class="chip on" data-clr="album">${esc(f.album)} ✕</button>`:''}</div>`;
  if(L.length)h+=playBar(L.map(e=>e.key),`<span class="cnt">${L.length}件</span>`);return h+items(k,L)}
 function vPls(){const k=MODE;const P=[['fav','お気に入り'],['_often',plName(k,'_often')],['_new','最近追加'],...userPls(k).filter(p=>p.id!=='fav').map(p=>[p.id,p.name])];
- return`<div class="pbar"><button data-newpl="1">＋ 新しいプレイリスト</button></div><div class="rows">${P.map(([id,n])=>`<button class="rowb" data-pl="${esc(id)}">${id==='fav'?'★ ':id[0]==='_'?'⚡ ':'≡ '}${esc(n)}<i>${plKeys(k,id).length}</i></button>`).join('')}</div>`}
+ const row=([id,n])=>`<button class="rowb" data-pl="${esc(id)}">${id==='fav'?'★ ':id[0]==='_'?'⚡ ':'≡ '}${esc(n)}<i>${plKeys(k,id).length}</i></button>`;
+ const TP=k==='music'?TAGSET.map(t=>['_t:'+t,t,plKeys(k,'_t:'+t).length]).filter(x=>x[2]):[];
+ return`<div class="pbar"><button data-newpl="1">＋ 新しいプレイリスト</button></div><div class="rows">${P.map(row).join('')}</div>${TP.length?`<h2 class="tgh">タグ</h2><div class="tgrid">${TP.map(([id,t,n])=>`<button class="tgc" data-pl="${esc(id)}" data-tc="${TAGSET.indexOf(t)}"><b>#${esc(t)}</b><i>${n}曲</i><em>⚡自動</em></button>`).join('')}</div>`:''}`}
 function vPl(id){const k=MODE,keys=plKeys(k,id),m=libMap(k),L=keys.map(x=>m.get(x));const auto=id[0]==='_';
  let h=keys.length?playBar(keys):'';
  if(!auto)h+=`<div class="pbar"><button data-pick="${esc(id)}">＋ 追加</button>${id==='fav'?'':`<button class="sub" data-plren="${esc(id)}">名前</button><button class="sub dng" data-pldel="${esc(id)}">削除</button>`}</div>`;
@@ -206,6 +217,8 @@ function afterRender(){if(!TH.io)TH.io=new IntersectionObserver(es=>{for(const e
  if(TAB==='set'&&$('s_pers'))navigator.storage&&navigator.storage.persisted&&navigator.storage.persisted().then(p=>{if($('s_pers'))$('s_pers').textContent=p?'ON':'OFF'})}
 async function blobOf(k,key){const f=DEV[k].get(key);if(f)return ST.file(f.fn,f.mime||mimeOf(f.path));const p=PCF[k].get(key);if(p){const x=await p.get();return new Blob([x],{type:mimeOf(p.name)})}return null}
 
+// 長さが無い曲を後ろで測る
+let DURF=false;async function fillDur(k){if(DURF||k!=='music')return;DURF=true;let n=0;try{for(const f of[...DEV[k].values()]){if(it(k,f.key).dur!=null)continue;try{const b=await blobOf(k,f.key);if(!b)continue;const u=URL.createObjectURL(b);const a=document.createElement('audio');a.preload='metadata';a.src=u;try{await once(a,'loadedmetadata',10000);if(isFinite(a.duration)&&setF(k,f.key,'dur',a.duration,1))n++}catch(e){}a.removeAttribute('src');URL.revokeObjectURL(u)}catch(e){}}}finally{DURF=false}if(n){syncSoon(k,8000);softRender()}}
 // ===== PCフォルダ =====
 async function scanDir(k,dh){const m=new Map();async function walk(h,pre){for await(const[n,e]of h.entries()){if(n[0]==='.')continue;if(e.kind==='directory')await walk(e,pre+n+'/');else if(kindOf(n)===k){const f=await e.getFile();const path=pre+n,key=fkey(path,f.size);m.set(key,{key,path,name:n,size:f.size,lm:f.lastModified,get:()=>e.getFile()})}}}await walk(dh,'');return m}
 function scanFiles(k,files){const m=new Map();for(const f of files){const rp=(f.webkitRelativePath||f.name).split('/');if(rp.length>1)rp.shift();const path=rp.join('/');if(kindOf(f.name)!==k)continue;const key=fkey(path,f.size);m.set(key,{key,path,name:f.name,size:f.size,lm:f.lastModified,get:async()=>f})}return m}
@@ -348,5 +361,5 @@ RX.onFile=k=>{refreshEst()};
 SY.on=()=>{if(/^最終/.test(SY.msg)&&!SY.busy.music&&!SY.busy.video)for(const k of['music','video'])fixTags(k);if(!MODE)return;$('hd_st').innerHTML=hdStatus();if(TAB==='set'||(/^最終/.test(SY.msg)&&!MS.on&&$('sheet').hidden&&!(document.activeElement&&document.activeElement.matches('input,select'))))render()};
 document.addEventListener('visibilitychange',()=>{if(MODE)syncNow(MODE)});
 addEventListener('online',()=>MODE&&syncNow(MODE));
-(async()=>{buildPlayers();render();await ST.init();await loadDev();for(const k of['music','video'])fixTags(k);await restoreDirs();EST=await storageEst();render();for(const k of['music','video'])syncNow(k);
+(async()=>{buildPlayers();render();await ST.init();await loadDev();for(const k of['music','video'])fixTags(k);await restoreDirs();EST=await storageEst();render();fillDur('music');for(const k of['music','video'])syncNow(k);
  if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v='+APPV).catch(()=>{})})();
