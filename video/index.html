@@ -32,7 +32,7 @@ h2,h3{font-size:14px;margin:0}
 #choose button{display:flex;align-items:center;justify-content:center;gap:14px;height:120px;border-radius:16px;font-size:22px;background:linear-gradient(135deg,#111,#2a2418);color:var(--gd);border:2px solid #5a4a22}
 #choose button span{font-size:40px}
 /* ヘッダー */
-header{position:sticky;top:0;z-index:20;background:rgba(15,15,15,.96);display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
+header{position:sticky;top:0;z-index:20;background:var(--bg);display:flex;align-items:center;gap:6px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
 header b{flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header button{background:none;color:var(--tx);padding:6px 8px}
 #hd_home img{width:28px;height:28px;border-radius:7px;display:block}
@@ -179,6 +179,17 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
  #pv.open{display:flex;align-items:flex-start}#pv .pvl{flex:1;min-width:0;height:calc(100vh - 52px);overflow:auto}#pv #stage{max-height:76vh}#pv .p_q{width:380px;flex:none;height:calc(100vh - 52px);overflow:auto}
  #pm.open{display:grid;grid-template-columns:minmax(0,1fr) 420px}#pm .p_q{max-width:none;overflow:auto;max-height:100vh}
 }
+/* 音楽：再生画面を一覧に埋め込み */
+#pm.inl{position:relative;inset:auto;z-index:auto;display:none;padding:0;overflow:visible;background:none}
+#pm.inl.open{display:block!important;grid-template-columns:none}
+body>#pm.inl{display:none!important}
+#pm.inl .phd{position:absolute;top:0;right:0;left:auto;height:auto;padding:0;background:none;z-index:3}
+#pm.inl .phd [data-pc=close]{display:none}
+#pm.inl .p_q,#pm.inl #pmini{display:none!important}
+#pm.inl .art{touch-action:auto;margin-top:8px!important;box-shadow:0 0 0 2px #5a4a22,0 10px 36px rgba(233,196,106,.18)}
+#pm.inl .pmw{padding:4px 6px 14px;margin-bottom:12px;border-bottom:1px solid var(--ln)}
+.it.now .tx b{color:var(--gd)}.it.now .th{box-shadow:0 0 0 2px var(--gd)}
+@media (orientation:landscape) and (max-height:500px){#pm.inl.open #mstage{z-index:65}}
 </style>
 </head><body>
 <div id="choose" hidden><div class="logo"><img src="icon.png?v=1" alt=""></div><button data-mode="music"><span>🎵</span>音楽</button><button data-mode="video"><span>🎬</span>動画</button></div>
@@ -193,8 +204,8 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=14"></script>
-<script src="conv.js?v=14"></script>
-<script src="player.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="core.js?v=15"></script>
+<script src="conv.js?v=15"></script>
+<script src="player.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body></html>
