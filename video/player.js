@@ -11,14 +11,16 @@ const WL={s:null,r:new Set(),last:Date.now(),iv:null,p:null,
  touch(){const was=this.idle();this.last=Date.now();if(was)this.sync()},
  sync(){return this.p=(this.p||Promise.resolve()).then(()=>this._sync()).catch(()=>{})},
  async _sync(){const w=this.want();if(w&&!this.s&&document.visibilityState==='visible'){if(!('wakeLock'in navigator))return;try{const s=await navigator.wakeLock.request('screen');if(!this.want()){s.release().catch(()=>{});return}this.s=s;s.addEventListener('release',()=>{if(this.s===s)this.s=null})}catch(e){}}else if(!w&&this.s){const s=this.s;this.s=null;try{await s.release()}catch(e){}}}};
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')WL.sync()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){WL.sync();if(AU.ctx&&AU.ctx.state!=='running')AU.ensure()}});
 for(const ev of['pointerdown','touchstart','keydown','wheel'])addEventListener(ev,()=>WL.touch(),{capture:true,passive:true});
 try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
 // ===== 音量（Web Audio） =====
 const AU={ctx:null,n:new Map(),
  ensure(){try{if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext;this.ctx=new C()}if(this.ctx.state!=='running')this.ctx.resume().catch(()=>{})}catch(e){}return this.ctx},
  attach(el){if(this.n.has(el))return this.n.get(el);const c=this.ensure();if(!c)return null;try{const s=c.createMediaElementSource(el),g=c.createGain(),a=c.createAnalyser();a.fftSize=2048;s.connect(a);s.connect(g);g.connect(c.destination);const o={g,a};this.n.set(el,o);return o}catch(e){return null}}};
-const useWA=k=>k==='video'||!isIOS;
+// iOSの音楽は普段は<audio>のまま（裏で再生が止まらないように）。音量スライドを使った時だけWeb Audioに通す（iOSは<audio>の音量を変えられないため）
+const useWA=k=>k==='video'||!isIOS||LS.get('md_wa_music',false);
+function volWA(){if(P.kind!=='music'||!isIOS||LS.get('md_wa_music',false))return;LS.set('md_wa_music',true);AU.ensure();const el=$('au');if(el&&el.src&&el.src!==SILENT)AU.attach(el)}
 // 無音（タップの時に一度鳴らして、以後の再生を許可させる）
 const SILENT=(()=>{const n=800,b=new Uint8Array(44+n*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);let s='';for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return'data:audio/wav;base64,'+btoa(s)})();
 const SVI=d=>`<svg class="si" viewBox="0 0 24 24" fill="currentColor">${d}</svg>`;
@@ -115,7 +117,7 @@ const ctlHTML=(k,ns)=>(ns?'':`<div class="seekw"><span class="p_cur">0:00</span>
 <div class="pbtn main"><button data-pc="shuf">${SV.shuf}</button><button data-pc="prev">${SV.prev}</button><button data-pc="rw">−10</button><button data-pc="pp" class="pp">▶</button><button data-pc="ff">+10</button><button data-pc="next">${SV.next}</button><button data-pc="rep">${SV.rep}</button></div>
 <div class="pbtn"><button data-pc="spd">1x</button>${k==='video'?'<button data-pc="fb">◀|</button><button data-pc="fn">|▶</button><button data-pc="snap">サムネ</button>':''}<button data-pc="fav">☆</button><button data-pc="addpl">＋</button><button data-pc="menu">⋯</button></div>`;
 const isLand=()=>matchMedia('(orientation:landscape) and (max-height:500px)').matches;
-// 画面のジェスチャー：ダブルタップ±10秒・上下スワイプで明るさ/音量・長押し右で2倍速・左で巻き戻し・ピンチ拡大（動画のみ）
+// 画面のジェスチャー：ダブルタップ±10秒・左右スワイプで音量（右で上げる/左で下げる、幅いっぱいで0〜100%）・縦スワイプは何もしない・長押し右で2倍速・左で巻き戻し・ピンチ拡大（動画のみ）
 function bindStage(st,box,zoomable){let T=null,pin=null,lastTap=null,tapT=null,H=null,noClick=false;
  const onCtl=e=>!!e.target.closest('.ctlx button,.ctlx input,.lockx');
  const side=x=>{const r=st.getBoundingClientRect(),f=(x-r.left)/r.width;return f<1/3?-1:f>2/3?1:0};
@@ -126,8 +128,8 @@ function bindStage(st,box,zoomable){let T=null,pin=null,lastTap=null,tapT=null,H
  const armHold=(x)=>{const tt=setTimeout(()=>{if(T&&!T.m&&holdStart(x))T.m='hold'},450);return tt};
  st.addEventListener('touchstart',e=>{if(P.locked||onCtl(e))return;if(e.touches.length===2){if(H)holdEnd();if(T)clearTimeout(T.ht);T=null;if(zoomable){const[a,b]=e.touches;pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:P.zoom}}}else if(e.touches.length===1){const t=e.touches[0];T={x:t.clientX,y:t.clientY,t:Date.now(),m:null,dim:P.dim,vol:P.vol,px:P.px,py:P.py};T.ht=armHold(t.clientX)}},{passive:true});
  st.addEventListener('touchmove',e=>{if(P.locked)return;if(pin&&e.touches.length===2){const[a,b]=e.touches;P.setZoom(pin.z*Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)/pin.d);e.preventDefault();return}if(!T||e.touches.length!==1)return;if(T.m==='hold'){e.preventDefault();return}const t=e.touches[0],dx=t.clientX-T.x,dy=t.clientY-T.y,h=st.clientHeight;
-  if(!T.m){if(Math.hypot(dx,dy)<12)return;clearTimeout(T.ht);if(zoomable&&P.zoom>1)T.m='pan';else if(Math.abs(dy)>Math.abs(dx)){const r=st.getBoundingClientRect();T.m=T.x-r.left<r.width/2?'dim':'vol'}else T.m='x'}
-  if(T.m==='pan'){P.px=T.px+dx;P.py=T.py+dy;P.setZoom(P.zoom)}else if(T.m==='dim')P.setDim(T.dim+dy/(h*.9));else if(T.m==='vol')P.setVol(T.vol-dy/(h*.9));if(T.m!=='x')e.preventDefault()},{passive:false});
+  if(!T.m){if(Math.hypot(dx,dy)<10)return;clearTimeout(T.ht);if(zoomable&&P.zoom>1)T.m='pan';else T.m=Math.abs(dx)>Math.abs(dy)?'vol':'y'}
+  if(T.m==='pan'){P.px=T.px+dx;P.py=T.py+dy;P.setZoom(P.zoom);e.preventDefault()}else if(T.m==='vol'){volWA();P.setVol(T.vol+dx/(st.clientWidth||300));e.preventDefault()}},{passive:false});
  const tend=e=>{if(T)clearTimeout(T.ht);if(holdEnd()){T=null;if(e.cancelable)e.preventDefault();return}if(P.locked||onCtl(e))return;if(pin){if(e.touches.length<2)pin=null;return}if(!T)return;const t0=T;T=null;if(t0.m||Date.now()-t0.t>350)return;if(e.cancelable)e.preventDefault();tap(t0.x)};
  st.addEventListener('touchend',tend);st.addEventListener('touchcancel',e=>{if(T)clearTimeout(T.ht);T=null;holdEnd()});
  st.addEventListener('contextmenu',e=>e.preventDefault());
@@ -165,7 +167,11 @@ function buildPlayers(){
  // --- ジェスチャー（動画と、横向きの音楽） ---
  bindStage($('stage'),$('pv'),true);
  try{const io=new IntersectionObserver(es=>{for(const r of es)P._vout=!r.isIntersecting||r.intersectionRatio<.25;P.vmini()},{root:$('pv'),threshold:[0,.25,.5,1]});io.observe($('stage'));const io2=new IntersectionObserver(es=>{for(const r of es)P._mout=!r.isIntersecting||r.intersectionRatio<.25;P.vmini()},{root:$('pm'),threshold:[0,.25,.5,1]});io2.observe(document.querySelector('#pm .art'))}catch(e){}
- // 音楽：ジャケットを下に引っ張ると閉じる
+ // 音楽：ジャケットを左右にスライドで音量（縦は普通にスクロール）
+ {const art=document.querySelector('#pm .art');let S=null;art.addEventListener('touchstart',e=>{if(e.touches.length!==1||!$('pm').classList.contains('inl')){S=null;return}const t=e.touches[0];S={x:t.clientX,y:t.clientY,m:null,vol:P.vol}},{passive:true});
+  art.addEventListener('touchmove',e=>{if(!S||e.touches.length!==1)return;const t=e.touches[0],dx=t.clientX-S.x,dy=t.clientY-S.y;if(!S.m){if(Math.hypot(dx,dy)<10)return;S.m=Math.abs(dx)>Math.abs(dy)?'vol':'y'}if(S.m!=='vol')return;if(e.cancelable)e.preventDefault();volWA();P.setVol(S.vol+dx/(art.clientWidth||220))},{passive:false});
+  const te=()=>{if(S&&S.m==='vol')AU.ensure();S=null};art.addEventListener('touchend',te);art.addEventListener('touchcancel',te)}
+// 音楽：ジャケットを下に引っ張ると閉じる
  {const art=document.querySelector('#pm .art');let y0=null,dy=0;art.addEventListener('touchstart',e=>{if(e.touches.length!==1||$('pm').classList.contains('inl'))return;y0=e.touches[0].clientY;dy=0;art.style.transition='none'},{passive:true});
   art.addEventListener('touchmove',e=>{if(y0==null)return;dy=Math.max(0,e.touches[0].clientY-y0);art.style.transform=`translateY(${dy}px)`;if(dy>4)e.preventDefault()},{passive:false});
   art.addEventListener('touchend',()=>{if(y0==null)return;y0=null;art.style.transition='transform .2s';art.style.transform='';if(dy>90)P.minimize()});art.addEventListener('touchcancel',()=>{y0=null;art.style.transform=''})}bindStage($('mstage'),$('pm'),false);
