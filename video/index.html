@@ -120,7 +120,7 @@ input[type=range]::-moz-range-track{height:4px;background:rgba(255,255,255,.3)}i
 #pv.fs #stage,#pv.fs{overflow:hidden}#pv.fs #stage{position:fixed;inset:0;aspect-ratio:auto;z-index:2}
 @media (orientation:landscape) and (max-height:500px){#pv #stage{position:fixed;inset:0;aspect-ratio:auto;z-index:2}}
 #pm .pmw{max-width:480px;margin:0 auto;padding:6px 16px}#pm .ct button{background:none;color:var(--tx);font-size:18px}
-#pm .art{position:relative;width:min(56.25vw,360px);aspect-ratio:1;margin-left:auto!important;margin-right:auto!important;touch-action:none;border-radius:14px;overflow:hidden;background:#222;margin:6px 0 12px}#pm .art img{width:100%;height:100%;object-fit:cover}
+#pm .art{position:relative;width:min(56.25vw,360px);aspect-ratio:1;margin-left:auto!important;margin-right:auto!important;touch-action:none;border-radius:14px;overflow:hidden;background:#222;margin:6px 0 12px}#pm .art img{width:100%;height:100%;object-fit:contain}
 #pm .p_q{max-width:480px;margin:0 auto}
 /* r267 */
 .hst{display:flex;flex-direction:column;align-items:flex-end;gap:0;padding:2px 4px!important;font-size:14px;line-height:1.25;max-width:52%}.hst span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -151,7 +151,7 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 /* 音楽の横向き全画面 */
 .stg{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 #mstage{display:none;touch-action:none}
-.mst .mart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:80%;aspect-ratio:1;object-fit:cover;border-radius:14px;box-shadow:0 0 0 2px #5a4a22,0 0 40px rgba(233,196,106,.25)}
+.mst .mart{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:80%;aspect-ratio:1;object-fit:contain;border-radius:14px;box-shadow:0 0 0 2px #5a4a22,0 0 40px rgba(233,196,106,.25)}
 @media (orientation:landscape) and (max-height:500px){#pm.open .pmw,#pm.open .p_q{display:none}#pm.open #mstage{display:block;position:fixed;inset:0;background:radial-gradient(circle at center,#1d1a12,#000 70%);z-index:2}}
 /* PC 横長 */
 @media (min-width:900px) and (hover:hover) and (pointer:fine){
@@ -181,8 +181,8 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=12"></script>
-<script src="conv.js?v=12"></script>
-<script src="player.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="core.js?v=13"></script>
+<script src="conv.js?v=13"></script>
+<script src="player.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body></html>

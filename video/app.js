@@ -60,7 +60,8 @@ async function qhCollisions(k){const cnt=new Map();for(const e of PCF[k].values(
 const PROBE=new Map();
 const badSend=(k,e)=>badIOS(k,e.name)||probeIOS(PROBE.get(k+'|'+e.key));
 async function probePC(k){if(k!=='video')return;let n=0;for(const e of[...PCF[k].values()]){const id=k+'|'+e.key;if(PROBE.has(id)||!MP4X.includes(extOf(e.name)))continue;try{PROBE.set(id,await mp4Probe(await e.get()))}catch(x){PROBE.set(id,null)}if(++n%20===0&&MODE===k&&TAB==='send'&&!SENDING)sendRender()}if(n&&MODE===k&&TAB==='send'&&!SENDING)render()}
-function eligible(k){const D=dupPC(k),dupOK=LS.get('md_dupsend',false),conv=LS.get('md_conv',true);return e=>(dupOK||!D.has(e.key))&&(conv||!badSend(k,e))}
+const goneOf=(k,e)=>isDeleted(k,{key:e.key,name:e.name,size:e.size,qh:QH.get(k+'|'+e.key)||e.qh});
+function eligible(k){const D=dupPC(k),dupOK=LS.get('md_dupsend',false),conv=LS.get('md_conv',true);return e=>(dupOK||!D.has(e.key))&&(conv||!badSend(k,e))&&!goneOf(k,e)}
 function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.peer&&TX.peer.have?TX.peer.have[k]||[]:[];
  const pns=new Set(peer.map(x=>keyPath(x).split('/').pop().toLowerCase()+'|'+x.slice(x.lastIndexOf('|')+1)));const pq=new Set(Object.values((TX.peer&&TX.peer.hq&&TX.peer.hq[k])||{}));
  for(const e of[...PCF[k].values()].sort((a,b)=>a.path.localeCompare(b.path))){const n=e.name.toLowerCase()+'|'+e.size,q=QH.get(k+'|'+e.key);
@@ -81,8 +82,8 @@ const selBtn=()=>`<button class="sub nar${MS.on?' on':''}" data-msel="1">${MS.on
 const layBtn=()=>`<button class="sub ic" data-lay="1">${lay()==='grid'?'☰':'▦'}</button>`;
 const sortSel=()=>{const f=fil();return`<select id="f_sort">${[['last',MODE==='music'?'最近聴いた順':'最近見た順'],['add','追加した順'],['name','名前順']].map(([v,t])=>`<option value="${v}"${f.sort===v?' selected':''}>${t}</option>`).join('')}</select>`};
 const sec=(t,body,right)=>`<section><h2><span>${t}</span>${right||''}</h2>${body}</section>`;
-const stTxt=st=>!st?'':st.s==='wait'?'待機':st.s==='prep'?'準備中':st.s==='conv'?'mp4に変換中 '+Math.round((st.p||0)*100)+'%':st.s==='send'?'送信中 '+Math.round((st.p||0)*100)+'%':st.s==='done'?'完了':st.s==='fail'?'失敗：'+(st.why||''):st.s==='dup'?'重複スキップ：'+(st.why||''):st.s==='recv'?'受信中 '+Math.round((st.p||0)*100)+'%':'';
-const stCls=st=>!st?'':st.s==='done'?'ok':st.s==='fail'?'red':st.s==='dup'?'gd':'bl';
+const stTxt=st=>!st?'':st.s==='wait'?'待機':st.s==='prep'?'準備中':st.s==='conv'?'mp4に変換中 '+Math.round((st.p||0)*100)+'%':st.s==='send'?'送信中 '+Math.round((st.p||0)*100)+'%':st.s==='done'?'完了':st.s==='fail'?'失敗：'+(st.why||''):st.s==='dup'?'重複スキップ：'+(st.why||''):st.s==='gone'?'削除済みスキップ':st.s==='recv'?'受信中 '+Math.round((st.p||0)*100)+'%':'';
+const stCls=st=>!st?'':st.s==='done'?'ok':st.s==='fail'?'red':st.s==='dup'||st.s==='gone'?'gd':'bl';
 
 // ===== 画面 =====
 function hdStatus(){let s=!tok()?'同期：未設定':SY.busy[MODE]?'同期中…':/^エラー/.test(SY.msg)?'同期エラー':SY.msg?SY.msg.replace('最終同期 ','同期 '):'';const c=TX.st==='接続済み'?((TX.peer&&TX.peer.dev?peerName(TX.peer.dev):'iPhone')+'と接続中'):RX.st==='接続済み'?'PC接続中':SENDING?'送信中':'';const cl=/エラー|未設定/.test(s)?'red':'';return`<span class="${cl}">${esc(s)}</span>${c?`<span class="ok">${c}</span>`:''}`}
@@ -104,7 +105,7 @@ function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  const ar=artists(k),al=albums(k);
  h+=`<div class="srch"><input id="f_q" type="search" placeholder="曲名・アーティスト・アルバム" value="${esc(f.q||'')}" autocomplete="off"></div>
  <div class="ctl"><select id="f_art"><option value="">アーティスト</option>${ar.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.artist)===a?' selected':''}>${esc(a)}</option>`).join('')}</select><select id="f_alb"><option value="">アルバム</option>${al.map(([a])=>`<option value="${esc(a)}"${cleanTag(f.album)===a?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
- <div class="ctl">${sortSel()}${layBtn()}${selBtn()}</div>
+ <div class="ctl">${sortSel()}${layBtn()}${selBtn()}${DD.size?`<button class="sub dng nar" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
  <div class="chips"><button class="chip${f.unw?' on':''}" data-ff="unw">${k==='video'?'未視聴':'未再生'}</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>
  <div class="seg">${[['all','すべて'],['folder','フォルダ'],['artist','アーティスト'],['album','アルバム']].map(([v,t])=>`<button class="${f.view===v?'on':''}" data-view="${v}">${t}</button>`).join('')}</div>`;
  return h+`<div id="sres">${searchRes()}</div>`}
@@ -152,21 +153,22 @@ function vTx(k){const F=PCF[k];let h=`<div class="card">`;
  const sent=e=>sentTo(k,e.key),isNew=e=>!sent(e)&&NW.has(e.key),bad=e=>badSend(k,e);
  const sf=LS.get('md_sf_'+k,'all');const S=SEL[k];let selB=0;for(const x of S){const e=F.get(x);if(e)selB+=e.size}const over=TX.peer&&selB>TX.peer.free;
  // 全体の状態
- let sum='';if(SUM&&SUM.k===k){const ks=SUM.keys,c={done:0,fail:0,dup:0};let b=0;for(const x of ks){const st=ST2.get(x),e=F.get(x);if(!st||!e)continue;if(c[st.s]!=null)c[st.s]++;if(st.s==='done')b+=e.size;else if(st.s==='send')b+=(st.p||0)*e.size}
-  sum=`<div class="kv"><span>${SENDING?'送信中':'終了'}：完了 ${c.done} / ${ks.length}${c.fail?'・失敗 '+c.fail:''}${c.dup?'・重複スキップ '+c.dup:''}</span><b>${fmtB(b)} / ${fmtB(SUM.total)}${SENDING&&SUM.sp?'・'+fmtB(SUM.sp)+'/秒':''}</b></div><div class="prog"><div style="width:${SUM.total?(b/SUM.total*100).toFixed(1):0}%"></div></div>`}
+ let sum='';if(SUM&&SUM.k===k){const ks=SUM.keys,c={done:0,fail:0,dup:0,gone:0};let b=0;for(const x of ks){const st=ST2.get(x),e=F.get(x);if(!st||!e)continue;if(c[st.s]!=null)c[st.s]++;if(st.s==='done')b+=e.size;else if(st.s==='send')b+=(st.p||0)*e.size}
+  sum=`<div class="kv"><span>${SENDING?'送信中':'終了'}：完了 ${c.done} / ${ks.length}${c.fail?'・失敗 '+c.fail:''}${c.dup?'・重複スキップ '+c.dup:''}${c.gone?'・削除済み '+c.gone:''}</span><b>${fmtB(b)} / ${fmtB(SUM.total)}${SENDING&&SUM.sp?'・'+fmtB(SUM.sp)+'/秒':''}</b></div><div class="prog"><div style="width:${SUM.total?(b/SUM.total*100).toFixed(1):0}%"></div></div>`}
  h+=`<div class="card sendbox"><div class="kv"><span>選択 ${S.size}件</span><b class="${over?'red':''}">${fmtB(selB)}${TX.peer?' / 空き '+fmtB(TX.peer.free):''}</b></div>${sum}
  <div class="pbar">${SENDING?'<button class="sub dng" data-sstop="1">中止</button>':`<button data-dosend="1" ${S.size&&TX.st==='接続済み'?'':'disabled'}>送る</button>`}</div><div class="pbar"><button class="sub" data-selall="1">全て選択</button><button class="sub" data-selclr="1">全て解除</button><button class="sub" data-selnew="1">未送信だけ選択</button></div></div>`;
  const cnt=f=>L.filter(f).length;
- h+=`<div class="seg wrap">${[['all','すべて '+L.length],['un','未送信 '+cnt(e=>!sent(e))],['new','NEW '+cnt(isNew)],['sent','送信済み '+cnt(sent)],['bad','再生不可 '+cnt(e=>bad(e))],['dup','重複 '+D.size]].map(([v,t])=>`<button class="${sf===v?'on':''}" data-sf="${v}">${t}</button>`).join('')}</div>`;
- const V=L.filter(e=>sf==='un'?!sent(e):sf==='new'?isNew(e):sf==='sent'?sent(e):sf==='bad'?bad(e):sf==='dup'?D.has(e.key):true);
+ const GN=e=>goneOf(k,e);h+=`<div class="seg wrap">${[['all','すべて '+L.length],['un','未送信 '+cnt(e=>!sent(e))],['new','NEW '+cnt(isNew)],['sent','送信済み '+cnt(sent)],['bad','再生不可 '+cnt(e=>bad(e))],['dup','重複 '+D.size],['gone','削除済み '+cnt(GN)]].map(([v,t])=>`<button class="${sf===v?'on':''}" data-sf="${v}">${t}</button>`).join('')}</div>`;
+ const V=L.filter(e=>sf==='un'?!sent(e):sf==='new'?isNew(e):sf==='sent'?sent(e):sf==='bad'?bad(e):sf==='dup'?D.has(e.key):sf==='gone'?GN(e):true);
  const G=new Map();for(const e of V){const d=e.path.includes('/')?e.path.slice(0,e.path.lastIndexOf('/')):'';if(!G.has(d))G.set(d,[]);G.get(d).push(e)}
  const EL=eligible(k);for(const[d,a]of G){const ae=a.filter(EL);const all=ae.length?ae.every(e=>S.has(e.key)):a.every(e=>S.has(e.key));h+=`<div class="fold"><label class="fh"><input type="checkbox" data-selfold="${esc(d)}"${all?' checked':''}><b>📁 ${esc(d||PCDIR[k]&&PCDIR[k].name||'/')}</b><i>${a.length}件・${fmtB(a.reduce((s,e)=>s+e.size,0))}</i></label>
-  ${a.map(e=>{const st=ST2.get(e.key),b=bad(e);return`<label class="fr"><input type="checkbox" data-sel="${esc(e.key)}"${S.has(e.key)?' checked':''}><span>${esc(e.name)}</span>${sent(e)?'<i class="ok">✓</i>':isNew(e)?'<i class="nw">NEW</i>':''}${b?`<i class="bad" title="${esc(b)}">再生不可${conv?'→mp4':''}</i>`:''}${D.has(e.key)?`<i class="dp" title="${esc(D.get(e.key))}">重複</i>`:''}${st?`<b class="${stCls(st)}">${esc(stTxt(st))}</b>`:`<em>${fmtB(e.size)}</em>`}</label>`}).join('')}</div>`}
+  ${a.map(e=>{const st=ST2.get(e.key),b=bad(e);return`<label class="fr"><input type="checkbox" data-sel="${esc(e.key)}"${S.has(e.key)?' checked':''}><span>${esc(e.name)}</span>${sent(e)?'<i class="ok">✓</i>':isNew(e)?'<i class="nw">NEW</i>':''}${b?`<i class="bad" title="${esc(b)}">再生不可${conv?'→mp4':''}</i>`:''}${D.has(e.key)?`<i class="dp" title="${esc(D.get(e.key))}">重複</i>`:''}${GN(e)?'<i class="dp">削除済み</i>':''}${st?`<b class="${stCls(st)}">${esc(stTxt(st))}</b>`:`<em>${fmtB(e.size)}</em>`}</label>`}).join('')}</div>`}
  return h}
 function vSet(){const k=MODE;return`<div class="card"><h3>この端末の名前</h3><div class="pbar"><input id="s_dname" type="text" value="${esc(devName())}" autocomplete="off"><button class="nar" data-savedname="1">保存</button></div></div><div class="card"><h3>GitHubトークン</h3><div class="pbar"><input id="s_tok" type="password" autocomplete="off" placeholder="${tok()?'保存済み':'github_pat_…'}"><button class="nar" data-savetok="1">保存</button></div>
  <div class="kv"><span>同期</span><b class="${/エラー/.test(SY.msg)||!tok()?'red':''}">${esc(tok()?SY.msg||'':'未設定')}</b></div><button class="sub" data-syncnow="1">今すぐ同期</button></div>
  <div class="card"><h3>保存</h3><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div><div class="kv"><span>${NAME[k]}（この端末）</span><b>${DEV[k].size}件</b></div><div class="kv"><span>保存方式</span><b>${ST.mode==='opfs'?'OPFS':'IndexedDB'}</b></div><div class="kv"><span>消えない設定</span><b id="s_pers">…</b></div>
- <button class="sub" data-go="cand">消す候補</button></div>
+ <button class="sub" data-go="cand">消す候補</button>${DD.size?`<button class="sub dng" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
+ <div class="card"><h3>削除済み</h3><label class="tg"><span>削除したデータは取り込まない</span><input type="checkbox" id="s_skipdel"${skipDel()?' checked':''}></label>${delList(k).map(o=>`<div class="it"><div class="tx"><b>${esc(o.title||o.name||o.key)}</b><span>${esc(o.name||'')}${o.size?'・'+fmtB(o.size):''}</span></div><button class="sub nar" data-undel="${esc(o.id)}">戻す</button></div>`).join('')}</div>
  <div class="card"><h3>再生</h3><label class="tg"><span>音量をそろえる</span><input type="checkbox" id="s_norm"${LS.get('md_norm',true)?' checked':''}></label><label class="tg"><span>画面を消さない時間</span><select id="s_wl" class="wsel">${[[30,'30分'],[60,'60分'],[120,'120分'],[0,'ずっと']].map(([v,t])=>`<option value="${v}"${LS.get('md_wl_min',60)===v?' selected':''}>${t}</option>`).join('')}</select></label><label class="tg"><span>自動で次へ</span><input type="checkbox" id="s_auto"${LS.get('md_auto',true)?' checked':''}></label></div>
  <div class="card"><button class="sub" data-thall="1">サムネを作り直す</button><button class="sub" data-home="1">最初の画面に戻る</button></div>`}
 // --- 複数選択のバー ---
@@ -183,7 +185,7 @@ async function bulk(act){const k=MODE,keys=[...MS.keys],m=libMap(k),E=keys.map(x
  if(act==='ar'){sheetIn('アーティスト名（'+keys.length+'件）',common(E,e=>artistOf(k,e)),v=>{for(const e of E)setF(k,e.key,'a',v)});return}
  if(act==='tag'){sheetIn('タグを追加（'+keys.length+'件）','',v=>{const t=v.split(/[,、，\s]+/).map(s=>s.trim()).filter(Boolean);for(const e of E){const o=it(k,e.key).tags||[];setF(k,e.key,'tags',[...new Set([...o,...t])])}},'例：ライブ, 好き');return}
  if(act==='fav'){const all=keys.every(x=>isFav(k,x));setFav(k,keys,!all);render();return}
- if(act==='del'){const dv=keys.filter(x=>DEV[k].has(x));if(!dv.length)return;if(!confirm(`${dv.length}件をこのiPhoneから削除する？\nPCの元ファイルは消えないよ`))return;for(const x of dv)await delDevKey(k,x);MS.keys.clear();EST=await storageEst();syncSoon(k);render();return}}
+ if(act==='del'){const dv=keys.filter(x=>DEV[k].has(x));if(!dv.length)return;if(!confirm(`${dv.length}件をこのiPhoneから削除する？\nPCの元ファイルは消えないよ`))return;for(const x of dv){markDeleted(k,recOf(k,x));await delDevKey(k,x)}MS.keys.clear();EST=await storageEst();syncSoon(k);render();return}}
 function addToPl(k,id,keys){const p=doc(k).pls[id];const a=(p&&p.keys||[]).slice();for(const x of keys)if(!a.includes(x))a.push(x);setPl(k,id,'keys',a);syncSoon(k)}
 // --- プレイリストに曲・動画を追加（検索して複数選択） ---
 function openPicker(id){PICK.clear();PICKPL=id;sheet(`<h3>${esc(plName(MODE,id))}に追加</h3><input id="pk_q" type="search" placeholder="検索" autocomplete="off"><div id="pk_list" class="rows pk"></div><div class="pbar"><button id="pk_add" data-pkadd="1" disabled>追加</button></div><button class="sub" data-close="1">閉じる</button>`);pkList()}
@@ -219,7 +221,7 @@ let rT=0;function sendRender(){const n=Date.now();if(n-rT>300){rT=n;if(TAB==='se
 async function doSend(){const k=MODE;if(SENDING)return;const S=[...SEL[k]].map(x=>PCF[k].get(x)).filter(Boolean).sort((a,b)=>a.path.localeCompare(b.path,'ja'));if(!S.length)return;
  const conv=LS.get('md_conv',true),dupOK=LS.get('md_dupsend',false);SENDING=true;SST[k]=new Map();for(const e of S)SST[k].set(e.key,{s:'wait'});SUM={k,keys:S.map(e=>e.key),total:S.reduce((a,e)=>a+e.size,0),sp:0};render();
  await ensureQH(k,S);const D=dupPC(k);const list=[];
- for(const e of S){if(!dupOK&&D.has(e.key)){SST[k].set(e.key,{s:'dup',why:D.get(e.key)});SEL[k].delete(e.key);continue}const x={kind:k,key:e.key,path:e.path,name:e.name,size:e.size,mime:mimeOf(e.name),get:e.get,conv:!!(badSend(k,e)&&conv)};
+ for(const e of S){if(goneOf(k,e)){SST[k].set(e.key,{s:'gone'});SEL[k].delete(e.key);continue}if(!dupOK&&D.has(e.key)){SST[k].set(e.key,{s:'dup',why:D.get(e.key)});SEL[k].delete(e.key);continue}const x={kind:k,key:e.key,path:e.path,name:e.name,size:e.size,mime:mimeOf(e.name),get:e.get,conv:!!(badSend(k,e)&&conv)};
   x.prep=async()=>{const id=k+'|'+x.key,d=it(k,x.key);let th=await TH.get(id);if(th==null||d.dur==null){try{const o=await metaOf(k,new Blob([await x.get()],{type:x.mime}),x.name);if(o.thumb){th=o.thumb;await TH.set(id,th)}for(const f of['dur','ta','tt','tal'])if(o[f]!=null)setF(k,x.key,f,o[f],1)}catch(er){}}
    if(k==='music'&&d.g==null&&LS.get('md_norm',true)&&!x.conv){const g=await loudOf(await x.get());if(g)setF(k,x.key,'g',g,1)}
    const dd=it(k,x.key);return{thumb:th||null,dur:dd.dur,ta:dd.ta,tt:dd.tt,tal:dd.tal,g:dd.g,qh:QH.get(id)||null}};list.push(x)}
@@ -247,9 +249,12 @@ function saveEdit(key){const k=MODE,e=libMap(k).get(key)||{key,path:keyPath(key)
  syncSoon(k);closeSheet();render();if(P.key===key)P.ui()}
 function addPlMenu(key){const k=MODE,U=userPls(k);sheet(`<h3>プレイリストに追加</h3><div class="rows">${U.map(p=>`<label class="fr"><input type="checkbox" data-plt="${esc(p.id)}" data-key="${esc(key)}"${(p.keys||[]).includes(key)?' checked':''}><span>${esc(p.name)}</span></label>`).join('')}</div><div class="pbar"><button class="sub" data-newpl="1" data-key="${esc(key)}">＋ 新しいプレイリスト</button></div><button class="sub" data-close="1">閉じる</button>`)}
 function newPl(keys,after){sheetIn('新しいプレイリストの名前','',v=>{if(!v)return;const k=MODE,id='p'+Date.now().toString(36);setPl(k,id,'name',v);setPl(k,id,'at',Date.now());setPl(k,id,'keys',keys||[]);if(after)setTimeout(after,0)})}
+function recOf(k,key){const f=DEV[k].get(key)||{},e=libMap(k).get(key)||{key,path:f.path||key,name:f.name,size:f.size,qh:f.qh};return{key,name:f.name||e.name||'',size:f.size||e.size||0,qh:f.qh||e.qh||'',title:titleOf(k,e)}}
 async function delDevKey(k,key){const f=DEV[k].get(key);if(!f)return;if(P.key===key&&P.kind===k)P.stop();await ST.remove(f.fn);await IDB.del('files',k+'|'+key);DEV[k].delete(key);setF(k,key,'s_'+MYDEV,0)}
+async function delDups(){const k=MODE,D=devDup(k),keys=[...D.keys()].filter(x=>DEV[k].has(x));if(!keys.length)return;if(!confirm(keys.length+'件の重複をこのiPhoneから削除する？\n先に入った1件は残るよ'))return;
+ for(const x of keys)await delDevKey(k,x);MS.keys.clear();EST=await storageEst();syncSoon(k);closeSheet();render()}
 async function delDev(key){const k=MODE,f=DEV[k].get(key);if(!f)return;if(!confirm(`「${titleOf(k,libMap(k).get(key)||{key,path:f.path})}」をこの端末から削除する？\nPCの元ファイルは消えないよ`))return;
- await delDevKey(k,key);syncSoon(k);EST=await storageEst();closeSheet();render()}
+ markDeleted(k,recOf(k,key));await delDevKey(k,key);syncSoon(k);EST=await storageEst();closeSheet();render()}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
 // ===== イベント =====
@@ -287,6 +292,8 @@ document.addEventListener('click',async ev=>{const t=ev.target.closest('button,[
  if(ds.addpl){addPlMenu(ds.addpl);return}
  if(ds.esave){saveEdit(ds.esave);return}
  if(ds.delk){ev.stopPropagation();delDev(ds.delk);return}
+ if(ds.deldups){delDups();return}
+ if(ds.undel){unmarkDeleted(MODE,ds.undel);syncSoon(MODE);render();return}
  if(ds.rth){const id=MODE+'|'+ds.rth;await IDB.del('thumbs',id);TH.mem.delete(id);const B=LS.get('md_nometa',{});delete B[id];LS.set('md_nometa',B);TH.want(id);closeSheet();return}
  if(ds.pfre){const k=MODE,key=ds.pfre;closeSheet();P.stop();await delDevKey(k,key);syncSoon(k);EST=await storageEst();render();alert('この端末から消したよ。PCの送る画面で未送信に戻るので、送り直してね');return}
  if(ds.pfdel){closeSheet();P.stop();delDev(ds.pfdel);return}
@@ -323,7 +330,8 @@ document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  else if(t.id==='s_auto'){LS.set('md_auto',t.checked)}
  else if(t.id==='s_wl'){LS.set('md_wl_min',+t.value);WL.touch();WL.sync()}
  else if(t.id==='s_conv'){LS.set('md_conv',t.checked);render()}
- else if(t.id==='s_dups'){LS.set('md_dupsend',t.checked);render()}});
+ else if(t.id==='s_dups'){LS.set('md_dupsend',t.checked);render()}
+ else if(t.id==='s_skipdel'){LS.set('md_skipdel',t.checked);render()}});
 let qT=null;document.addEventListener('input',ev=>{if(ev.target.id==='f_q'){fil().q=ev.target.value;saveFil();clearTimeout(qT);qT=setTimeout(()=>{const r=$('sres');if(r){for(const k in LISTS)delete LISTS[k];r.innerHTML=searchRes();afterRender()}},250)}else if(ev.target.id==='pk_q'){clearTimeout(qT);qT=setTimeout(pkList,200)}});
 $('hd_back').onclick=()=>{(NAV[TAB]||[]).pop();MS.on=false;MS.keys.clear();render()};
 $('hd_home').onclick=()=>goHome();

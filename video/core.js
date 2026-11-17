@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=12;
+const APPV=13;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -64,7 +64,7 @@ async function ghGet(path){const r=await fetch(REPO+path+'?t='+Date.now(),{heade
 async function ghPut(path,data,sha,msg){const body={message:msg||('media '+new Date().toISOString()),content:b64e(JSON.stringify(data))};if(sha)body.sha=sha;return fetch(REPO+path,{method:'PUT',headers:{...ghH(),'Content-Type':'application/json'},body:JSON.stringify(body)})}
 
 const D={music:null,video:null};
-const doc=k=>D[k]||(D[k]=LS.get('md_doc_'+k,null)||{items:{},pls:{}});
+const doc=k=>{const o=D[k]||(D[k]=LS.get('md_doc_'+k,null)||{items:{},pls:{},deleted:{}});if(!o.deleted)o.deleted={};return o};
 const saveDoc=k=>LS.set('md_doc_'+k,D[k]);
 const it=(k,key)=>doc(k).items[key]||{};
 // f:項目, auto:自動で入る値（手入力より弱い）
@@ -73,7 +73,15 @@ function setPl(k,id,f,v){const d=doc(k),o=d.pls[id]||(d.pls[id]={t:{}});o.t=o.t|
 const canon=o=>Array.isArray(o)?o.map(canon):o&&typeof o==='object'?Object.keys(o).sort().reduce((a,k)=>(a[k]=canon(o[k]),a),{}):o;
 function mergeRec(a,b){a=a||{};b=b||{};const ta=a.t||{},tb=b.t||{},o={t:{}};for(const f of new Set([...Object.keys(a),...Object.keys(b)])){if(f==='t')continue;const x=ta[f]||0,y=tb[f]||0;let s=y>x?b:a,t=Math.max(x,y);if(!(f in s)){s=s===a?b:a}if(f in s){o[f]=s[f];o.t[f]=t}}return o}
 function mergeMap(a,b){const o={};for(const k of new Set([...Object.keys(a||{}),...Object.keys(b||{})]))o[k]=mergeRec((a||{})[k],(b||{})[k]);return o}
-const mergeDoc=(a,b)=>canon({items:mergeMap(a.items,b.items),pls:mergeMap(a.pls,b.pls)});
+const mergeDoc=(a,b)=>canon({items:mergeMap(a.items,b.items),pls:mergeMap(a.pls,b.pls),deleted:mergeMap(a.deleted,b.deleted)});
+const skipDel=()=>LS.get('md_skipdel',true)!==false;
+function delList(k){const d=(doc(k).deleted)||{};return Object.entries(d).filter(([,o])=>o&&!o.del).map(([id,o])=>({id,...o})).sort((a,b)=>(b.at||0)-(a.at||0))}
+function isDeleted(k,meta){if(!skipDel())return false;const name=(meta.name||'').toLowerCase(),size=+meta.size||0,qh=meta.qh,key=meta.key;
+ for(const o of delList(k)){if(key&&o.key&&o.key===key)return true;if(o.name&&o.size!=null&&name===(o.name||'').toLowerCase()&&size===+o.size)return true;if(qh&&o.qh&&qh===o.qh)return true}return false}
+function markDeleted(k,rec){if(!rec||!rec.key&&!rec.name)return;const d=doc(k);d.deleted=d.deleted||{};const id=rec.key||((rec.name||'')+'|'+(rec.size||''));const now=Date.now();const o=d.deleted[id]||(d.deleted[id]={t:{}});o.t=o.t||{};
+ for(const[f,v] of [['key',rec.key||''],['name',rec.name||''],['size',rec.size||0],['qh',rec.qh||''],['title',rec.title||rec.name||''],['at',now],['del',false]]){o[f]=v;o.t[f]=now}saveDoc(k)}
+function unmarkDeleted(k,id){const o=(doc(k).deleted||{})[id];if(!o)return;o.del=true;o.t=o.t||{};o.t.del=Date.now();saveDoc(k)}
+
 // この端末のID（iPhoneごとの送信済み管理用）と名前
 const MYDEV=(()=>{let id=LS.get('md_dev_id','');if(!id){id=Math.random().toString(36).slice(2,10);LS.set('md_dev_id',id)}return id})();
 const autoDevName=id=>'iPhone-'+String(id||'').slice(0,4).toUpperCase();
@@ -82,7 +90,7 @@ const SY={busy:{},again:{},tm:{},msg:LS.get('md_sync_msg',''),on:null};
 function syMsg(t){SY.msg=t;LS.set('md_sync_msg',t);if(SY.on)SY.on()}
 function syncSoon(k,ms){clearTimeout(SY.tm[k]);SY.tm[k]=setTimeout(()=>syncNow(k),ms||2000)}
 async function syncNow(k){if(!k||!tok())return;if(navigator.onLine===false){syMsg('オフライン');return}if(SY.busy[k]){SY.again[k]=1;return}SY.busy[k]=1;syMsg('同期中…');
- try{const path='media/'+k+'.json';for(let i=0;i<4;i++){const g=await ghGet(path);const rem=g.data&&g.data.items?{items:g.data.items,pls:g.data.pls||{}}:{items:{},pls:{}};const m=mergeDoc(doc(k),rem);D[k]=m;saveDoc(k);
+ try{const path='media/'+k+'.json';for(let i=0;i<4;i++){const g=await ghGet(path);const rem=g.data&&g.data.items?{items:g.data.items,pls:g.data.pls||{},deleted:g.data.deleted||{}}:{items:{},pls:{},deleted:{}};const m=mergeDoc(doc(k),rem);D[k]=m;saveDoc(k);
   if(JSON.stringify(m)!==JSON.stringify(canon(rem))){const r=await ghPut(path,{version:1,...m,updatedAt:new Date().toISOString()},g.sha,'media '+k+' sync');if(r.status===409||r.status===422){if(i<3){await sleep(400);continue}throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status)}break}
   const d=new Date(),p=n=>String(n).padStart(2,'0');syMsg(`最終同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`)}
  catch(e){syMsg('エラー：'+(e.message||e))}finally{SY.busy[k]=0;if(SY.on)try{SY.on()}catch(e){}if(SY.again[k]){SY.again[k]=0;syncSoon(k,500)}}}
@@ -189,7 +197,7 @@ const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:
  flush(){const c=this.cur;if(!c||!c.bl)return;const n=c.bl,a=new Uint8Array(n);let p=0;for(const u of c.buf){a.set(u,p);p+=u.length}c.buf=[];c.bl=0;const at=c.wpos;c.wpos+=n;
   c.pend=c.pend.then(()=>ST.write(c.fn,at,a.buffer)).then(()=>{c.got=at+n;this.got=c.got;const lg=this.L(c.key);if(lg)lg.got=c.got;this.send({t:'ack',key:c.key,got:c.got});this.upd()});c.pend.catch(e=>{c.err=e})},
  async ctl(m){if(m.t==='file'){const id=m.kind+'|'+m.key,ex=await IDB.get('files',id);if(this.cur&&this.cur.key!==m.key){const pl=this.L(this.cur.key);if(pl&&pl.st==='recv'){pl.st='fail';pl.why='途中で止まった'}}let l=this.L(m.key);if(!l){l={key:m.key,kind:m.kind,name:m.name,size:m.size};this.log.unshift(l)}l.st='recv';l.got=0;l.why='';l.size=m.size;
-   const nm=m.name.toLowerCase(),qh=(m.meta||{}).qh;let dup=ex&&ex.done?'もう入ってる':'';if(!dup)for(const f of DEV[m.kind].values()){if(f.key===m.key)continue;if(((f.name||'').toLowerCase()===nm&&f.size===m.size)||(qh&&f.qh===qh)){dup='同じ内容の「'+f.name+'」がある';break}}
+   const nm=m.name.toLowerCase(),qh=(m.meta||{}).qh;let dup=ex&&ex.done?'もう入ってる':'';if(!dup&&isDeleted(m.kind,{key:m.key,name:m.name,size:m.size,qh}))dup='削除済み';if(!dup)for(const f of DEV[m.kind].values()){if(f.key===m.key)continue;if(((f.name||'').toLowerCase()===nm&&f.size===m.size)||(qh&&f.qh===qh)){dup='同じ内容の「'+f.name+'」がある';break}}
    if(dup){l.st='dup';l.why=dup;this.upd();this.send({t:'ready',key:m.key,skip:1,why:dup});return}
    askPersist();const fn=fnameOf(m.key),resume=!!(ex&&!ex.done&&ex.size===m.size&&!m.conv);const at=await ST.begin(fn,resume);
    await IDB.put('files',id,{kind:m.kind,key:m.key,path:m.path,name:m.name,size:m.size,mime:m.mime,conv:!!m.conv,qh:qh||null,fn,done:false,added:Date.now()});
