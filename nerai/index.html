@@ -147,7 +147,7 @@ document.addEventListener('focusin',ev=>{const e=ev.target;if(!isN(e))return;fe=
 document.addEventListener('click',ev=>{const e=ev.target;if(e!==fe||Date.now()-ft>500)return;fe=null;toEnd(e)},true);
 let se=null;document.addEventListener('focusin',ev=>{if(isN(ev.target))se=ev.target},true);document.addEventListener('selectionchange',()=>{const e=se;if(!e||document.activeElement!==e||Date.now()-ft>500)return;se=null;toEnd(e)})})();
 </script>
-<script src="core.js?v=102"></script><script src="auto.js?v=102"></script>
+<script src="core.js?v=103"></script><script src="auto.js?v=103"></script>
 <script src="layouts.js?v=1"></script>
 <script src="check.js?v=2"></script>
 <script>
@@ -531,7 +531,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   return`<tr class="sum"><td class="fix">${lab1}</td><td class="hl"></td><td></td><td></td><td class="hl">${t.g.toLocaleString()}</td><td>${t.bb}</td><td>${t.rb}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${e4}${e}</tr><tr class="sum"><td class="fix">${lab2}</td><td class="hl"></td><td></td><td></td><td class="hl">${Math.round(a.g).toLocaleString()}</td><td>${a.bb.toFixed(1)}</td><td>${a.rb.toFixed(1)}</td><td class="pw">${P(t.g,t.bb)}</td><td class="pw">${P(t.g,t.rb)}</td><td class="pw">${P(t.g,t.bb+t.rb)}</td>${ixTd}${e}</tr>`};
  const flat=tu.so==='rank';const flatRows=[];const NF=NPV();
  const onlyF=nm=>!tu.only||!!dMk(nm);
- const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順','hl'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='g'?`<th class="s hl ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`:k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${k==='rank'?'hl ':''}${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数'],['it','総合<br>指数']].map(([k,t])=>`<th class="s${k==='ig'?' hl':''} ${tu.so===k||tu.ixF===k?'on':''}" onclick="ixMenu(event,'tu','${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map((c,i)=>`<th class="s hc${i===0?' hl':''} ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
+ const head=`<tr><th class="fix s ${tu.so==='t'?'on':''}" onclick="tuSo('t')">台番</th>${flat?'<th>店舗</th><th>機種</th>':''}${[['rank','狙い<br>順','hl'],['mark','狙い<br>印'],['score','点数'],['g','回転'],['bb','BB'],['rb','RB'],['pbb','BB確率'],['prb','RB確率'],['pgs','合算']].map(([k,t])=>k==='g'?`<th class="s hl ${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`:k==='mark'?`<th class="s ${tu.only?'on':''}" onclick="tuOnly()">${t}${tu.only?'<br>のみ':''}</th>`:`<th class="s ${k==='rank'?'hl ':''}${tu.so===k?'on':''}" onclick="tuSo('${k}')">${t}</th>`).join('')}${[['ig','回転<br>指数'],['irb','RB<br>指数'],['igs','合算<br>指数'],['it','総合<br>指数']].map(([k,t])=>`<th class="s${k==='ig'?' hl':''} ${tu.so===k||ixFon(tu,k)?'on':''}" onclick="ixMenu(event,'tu','${k}')">${t}</th>`).join('')}<th class="s ${tu.ok?'on':''}" onclick="tuOk()">○${tu.ok?'<br>のみ':''}</th>${cols.map((c,i)=>`<th class="s hc${i===0?' hl':''} ${tu.so===c.k?'on':''}" onclick="tuSo('${c.k}')">${c.lab}</th>`).join('')}</tr>`;
  let body='';
  for(const u of units){const NM=u.TM;const pk=nmode?NC.winPicks(W,u.s,u.date):null;
   const wsum=(r,c)=>NC.winSum(W,u.s,pk,NC.groupOf(r.m,set),r.t,c.w);
@@ -545,7 +545,7 @@ function touPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
   const sorter=(a,b)=>{const k=tu.so;const dir=tu.rev?-1:1;if(k&&k!=='t'){const va=tval(a,k),vb=tval(b,k);if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb)return(va<vb?-1:1)*dir}return a.t.localeCompare(b.t,'ja',{numeric:true})*(k==='t'?dir:1)};
   let cst={};const ncell=(r,c,i)=>{const x=wsum(r,c);const y=x?(c.m==='g'?barSty(x.g,cst[c.k]):tintSty(NC.den(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb),cst[c.k])):'';return`<td${i===0?' class="hl"':''}${y?` style="${y}"`:''}>${x?(c.m==='g'?x.g.toLocaleString():P(x.g,c.m==='bb'?x.bb:c.m==='rb'?x.rb:x.bb+x.rb)):''}</td>`};
   const st={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,m:null,s:u.s};const so={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,k:0,m:null,s:u.s};let ng=0;
-  for(const g of groups.slice().sort((a,b)=>gS(u.s,a,b))){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>{if(NC.groupOf(r.m,set)!==g)return false;const V=effV(u.s,u.date,r.t,u.virt?null:r);if(tu.ok&&!okIx(idxOfV(r.m,V)))return false;if(!ixPass(tu,ixOf(V,r.m,tu.ixF)))return false;return true}).sort(sorter);if(!L.length)continue;ng++;
+  for(const g of groups.slice().sort((a,b)=>gS(u.s,a,b))){if(tu.g&&g!==tu.g)continue;const L=u.day.filter(r=>{if(NC.groupOf(r.m,set)!==g)return false;const V=effV(u.s,u.date,r.t,u.virt?null:r);if(tu.ok&&!okIx(idxOfV(r.m,V)))return false;if(!ixPass(tu,k=>ixOf(V,r.m,k)))return false;return true}).sort(sorter);if(!L.length)continue;ng++;
    const acc=rows=>{const t={n:0,g:0,bb:0,rb:0,bbN:0,rbN:0,m:null,s:u.s};for(const r of rows){const V=effV(u.s,u.date,r.t,u.virt?null:r);if(V.g==null)continue;t.n++;t.g+=V.g||0;if(V.bb!=null){t.bb+=V.bb;t.bbN++}if(V.rb!=null){t.rb+=V.rb;t.rbN++}if(!t.m)t.m=r.m}return t};
    const t=acc(L);st.n+=t.n;st.g+=t.g;st.bb+=t.bb;st.rb+=t.rb;st.bbN=(st.bbN||0)+t.bbN;st.rbN=(st.rbN||0)+t.rbN;st.m=st.m||t.m;st.s=u.s;
    const full=(all?sShort(u.s)+'｜':'')+[...new Set(L.map(r=>r.m))].join('／');
@@ -587,19 +587,23 @@ window.tuAll=f=>{if(f){tu.w=NC.WIN.map(w=>w[0]);tu.m=NC.MET.map(m=>m[0]);tu.r=['
 // 指数ヘッダー：高い順／低い順／青色ライン以上だけ残す／解除
 function ixOf(V,m,k){const x=idxOfV(m,V);if(k==='it'||k==='h_it')return touTot(x);const f={ig:'g',irb:'rb',igs:'gs',h_ig:'g',h_irb:'rb',h_igs:'gs'}[k];const n=x&&f?x[f]:null;return n==null?null:n}
 const ixOk=n=>n!=null&&n>=NPV().blue;
-const ixPass=(st,n)=>!st.ixF||ixOk(n);
+function ixFobj(st){const f=st.ixF;if(!f)return{};if(typeof f==='string')return{[f]:1};return f}
+const ixFon=(st,k)=>!!ixFobj(st)[k];
+const ixFany=st=>{for(const k in ixFobj(st))return true;return false};
+function ixFset(st,k,on){const o=Object.assign({},ixFobj(st));if(on)o[k]=1;else delete o[k];st.ixF=o}
+const ixPass=(st,get)=>{const o=ixFobj(st);for(const k in o)if(!ixOk(get(k)))return false;return true};
 const ixSt=ctx=>ctx==='tu'?tu:ctx==='kn'?kn:nr;
 const ixGo=ctx=>ctx==='tu'?touPage():ctx==='kn'?kenRes():nerPage();
 function ixMenu(ev,ctx,k){ev.stopPropagation();ev.preventDefault();let p=$('ixpop');if(p&&p.dataset.ctx===ctx&&p.dataset.k===k){p.remove();return}if(p)p.remove();
  const st=ixSt(ctx);p=document.createElement('div');p.id='ixpop';p.dataset.ctx=ctx;p.dataset.k=k;p.dataset.t=Date.now();
  const so=ctx==='kn'?(st.so===k+'-'?'hi':st.so===k+'+'?'lo':''):(st.so===k?(st.rev?'lo':'hi'):'');
- const items=[['hi','高い順',so==='hi'],['lo','低い順',so==='lo'],['blue','青色ライン以上だけ残す',st.ixF===k],['clr','解除',false]];
+ const items=[['hi','高い順',so==='hi'],['lo','低い順',so==='lo'],['blue','青色ライン以上だけ残す',ixFon(st,k)],['clr','解除',false]];
  p.innerHTML=items.map(([a,l,on])=>`<button class="${on?'on':''}" onclick="ixPick('${ctx}','${k}','${a}')">${l}</button>`).join('');
  document.body.appendChild(p);const r=ev.currentTarget.getBoundingClientRect();const top=r.bottom+4+p.offsetHeight>innerHeight?r.top-4-p.offsetHeight:r.bottom+4;p.style.top=Math.max(4,top)+'px';p.style.left=Math.min(Math.max(4,r.left),innerWidth-p.offsetWidth-4)+'px'}
 window.ixPick=(ctx,k,act)=>{const st=ixSt(ctx);const p=$('ixpop');if(p)p.remove();
  if(act==='hi'||act==='lo'){if(ctx==='kn')st.so=k+(act==='hi'?'-':'+');else{st.so=k;st.rev=act==='lo'?1:0}}
- else if(act==='blue')st.ixF=k;
- else if(act==='clr'){st.ixF='';if(ctx==='kn'){if(st.so===k+'-'||st.so===k+'+')st.so='def'}else if(st.so===k){st.so=ctx==='tu'?'t':'def';st.rev=0}}
+ else if(act==='blue')ixFset(st,k,1);
+ else if(act==='clr'){ixFset(st,k,0);if(ctx==='kn'){if(st.so===k+'-'||st.so===k+'+')st.so='def'}else if(st.so===k){st.so=ctx==='tu'?'t':'def';st.rev=0}}
  ixGo(ctx)};
 document.addEventListener('click',()=>{const p=$('ixpop');if(p)p.remove()});
 window.addEventListener('scroll',()=>{const p=$('ixpop');if(p&&Date.now()-(+p.dataset.t||0)>400)p.remove()},{passive:true});
@@ -883,7 +887,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const HG=new Map();for(const ent of HD.values()){const r=hRow(ent);if(!r)continue;const k=r.s+'|'+NC.groupOf(r.m,set);let a=HG.get(k);if(!a)HG.set(k,a=[]);a.push(r)}const HGS=new Map();for(const[k,a]of HG)HGS.set(k,grpSt(a));
  const sv=SV(nr.so);const dir=nr.rev?-1:1;
  const hOk=x=>{const r=hRow(x.seat==null?null:HD.get(x.s+'|'+x.seat));return!!r&&okIx(NC.rowIdx(r,set,HB))};
- let V=nr.only?T.filter(x=>dMk(x)):T.slice();if(nr.hok)V=V.filter(hOk);if(nr.ixF)V=V.filter(x=>{const r=hRow(x.seat==null?null:HD.get(x.s+'|'+x.seat));return!!r&&ixOk(ixOf(r.V||r,r.m,nr.ixF))});
+ let V=nr.only?T.filter(x=>dMk(x)):T.slice();if(nr.hok)V=V.filter(hOk);if(ixFany(nr))V=V.filter(x=>{const r=hRow(x.seat==null?null:HD.get(x.s+'|'+x.seat));return!!r&&ixPass(nr,k=>ixOf(r.V||r,r.m,k))});
  V=V.map(x=>({x,v:sv(x)}));
  V.sort((a,b)=>{const va=a.v,vb=b.v;if(va==null&&vb!=null)return 1;if(vb==null&&va!=null)return-1;if(va!=null&&va!==vb){const c=typeof va==='string'?nat(va,vb):(va<vb?-1:1);if(c)return c*dir}return a.x.pos-b.x.pos});
  const shown=V.map(o=>o.x);
@@ -906,7 +910,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const head='<tr>'+TH('sm','店舗<br>機種','fix fs','rowspan="2"')+TH('seat','着席<br>台番','','rowspan="2"')+TH('label','狙い','','rowspan="2"')+TH('kbn','狙い<br>区分','','rowspan="2"')
   +`<th class="s ${nr.only?'on':''}" rowspan="2" onclick="nrOnly()">狙い<br>印${nr.only?'<br>のみ':''}</th>`
   +EVS.map(sg=>TH('e_'+sg,SEGN[sg]+'<br>評価','ox3','rowspan="2"')).join('')+TH('prev','前日<br>評価','ox3','rowspan="2"')+TH('score','総合<br>点数','','rowspan="2"')+TH('sdv','総合点数<br>偏差値','','rowspan="2"')+TH('rank','狙い<br>順','','rowspan="2"')+NC.SEGS.map(gh).join('')+(hasH?`<th colspan="15" class="gl hl gr">${date?(+date.slice(5,7))+'/'+(+date.slice(8))+' ':''}当日履歴</th>`:'')+'</tr><tr>'
-  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','合格率','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===5?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','総合<br>指数','○','狙い<br>印','全店舗','店舗内','店舗機種'].map((t,i)=>{const ik={6:'h_ig',7:'h_irb',8:'h_igs',9:'h_it'}[i];if(i===10)return `<th class="s ${nr.hok?'on':''}" onclick="nr.hok=nr.hok?0:1;nerPage()">○${nr.hok?'<br>のみ':''}</th>`;if(ik)return `<th class="s ${nr.so===ik||nr.ixF===ik?'on':''}" onclick="ixMenu(event,'nr','${ik}')">${t}</th>`;return `<th class="${i===0?'gl hl':''}${i===14?' gr':''}">${t}</th>`}).join(''):'')+'</tr>';
+  +NC.SEGS.map(sg=>['件数','回転','RB<br>確率','合算','合格率','指数'].map((t,i)=>TH('c_'+sg+'_'+i,t,(i===0?'gl':'')+(i===5?' gr':''))).join('')).join('')+(hasH?['回転','BB','RB','BB<br>確率','RB<br>確率','合算','回転<br>指数','RB<br>指数','合算<br>指数','総合<br>指数','○','狙い<br>印','全店舗','店舗内','店舗機種'].map((t,i)=>{const ik={6:'h_ig',7:'h_irb',8:'h_igs',9:'h_it'}[i];if(i===10)return `<th class="s ${nr.hok?'on':''}" onclick="nr.hok=nr.hok?0:1;nerPage()">○${nr.hok?'<br>のみ':''}</th>`;if(ik)return `<th class="s ${nr.so===ik||ixFon(nr,ik)?'on':''}" onclick="ixMenu(event,'nr','${ik}')">${t}</th>`;return `<th class="${i===0?'gl hl':''}${i===14?' gr':''}">${t}</th>`}).join(''):'')+'</tr>';
  const mx=NC.addDay(last,NPV().nrMax);
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  
@@ -1201,11 +1205,11 @@ function knPaint(force){const tb=$('kvb');const tbl=$('kvt');if(!KV||!tb||!tbl)r
 let knSc=0;window.addEventListener('scroll',()=>{if(tab!=='ken'||!KV||knSc)return;knSc=requestAnimationFrame(()=>{knSc=0;knPaint(false)})},{passive:true});
 // 上の合計・平均は、台番の行だけで数える（状態の行は入れない）
 function kenRes(){LS.set('nr_kn',kn);const el=$('kres');if(!el)return;const set=setObj();let {out,nT,nS}=(()=>{const run=kn.tou?kenRunTou:kenRun;if(!kn.sa)return run();const s0=kn.st;kn.st=[];try{return run()}finally{kn.st=s0}})();
- if(kn.ok){const b=kenBase();out=out.filter(x=>okRow(x.r,set,b));nT=out.filter(x=>!x.k).length;nS=out.length-nT}if(kn.tou&&kn.ixF){out=out.filter(x=>ixOk(ixRow(x,kn.ixF)));nT=out.filter(x=>!x.k).length;nS=out.length-nT}const P=(g,n)=>NC.fmtP(NC.den(g,n));
+ if(kn.ok){const b=kenBase();out=out.filter(x=>okRow(x.r,set,b));nT=out.filter(x=>!x.k).length;nS=out.length-nT}if(kn.tou&&ixFany(kn)){out=out.filter(x=>ixPass(kn,k=>ixRow(x,k)));nT=out.filter(x=>!x.k).length;nS=out.length-nT}const P=(g,n)=>NC.fmtP(NC.den(g,n));
  const t={n:nT,g:0,bb:0,rb:0,ok:0};{const b=out.length?kenBase():null;for(const x of out)if(!x.k){t.g+=x.r.g;t.bb+=x.r.bb;t.rb+=x.r.rb;if(b&&okRow(x.r,set,b))t.ok++}}
  const KG=new Map();for(const x of out)if(!x.k){const k=x.r.s+'|'+NC.groupOf(x.r.m,set)+'|'+x.r.d;let a=KG.get(k);if(!a)KG.set(k,a=[]);a.push(x.r)}const KGS=new Map();for(const[k,a]of KG)KGS.set(k,grpSt(a));
  if(kn.vw==='s')out=out.filter(x=>x.k);else if(kn.vw==='t')out=out.filter(x=>!x.k);KV={KGS,out,set,base:out.length?kenBase():null,first:-1};
- const ixOn=!!kn.tou;const cw=[knTW(out),50,56,48,48,50].concat(ixOn?[44,44,44,44]:[]).concat([34,66,120]);const KO=k=>kn.so.replace(/[-+]$/,'')===k||kn.ixF===k?'on':'';
+ const ixOn=!!kn.tou;const cw=[knTW(out),50,56,48,48,50].concat(ixOn?[44,44,44,44]:[]).concat([34,66,120]);const KO=k=>kn.so.replace(/[-+]$/,'')===k||ixFon(kn,k)?'on':'';
  el.innerHTML=`<div class="card"><h2>📋 結果 ${nT.toLocaleString()}件${nS?`（状態 ${nS.toLocaleString()}件）`:''}</h2>
 ${out.length?`<div class="tw"><table><tr><th class="l">区分</th><th>件数</th><th>回転</th><th>BB</th><th>RB</th><th>BB確率</th><th>RB確率</th><th>合算</th><th>合格率</th></tr>
 <tr class="sum"><td class="l">合計</td><td>${t.n.toLocaleString()}</td><td>${t.g.toLocaleString()}</td><td>${t.bb.toLocaleString()}</td><td>${t.rb.toLocaleString()}</td><td rowspan="2">${P(t.g,t.bb)}</td><td rowspan="2">${P(t.g,t.rb)}</td><td rowspan="2">${P(t.g,t.bb+t.rb)}</td><td rowspan="2">${t.n?Math.round(t.ok/t.n*100)+'%':''}</td></tr>
