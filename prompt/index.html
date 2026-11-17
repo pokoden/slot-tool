@@ -7,58 +7,78 @@
 <title>プロンプト作成</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="プロンプト作成">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1f5fd6">
-<link rel="apple-touch-icon" href="icon.png?v=1">
-<link rel="icon" href="icon.png?v=1">
-<link rel="manifest" href="manifest.json?v=1">
+<meta name="theme-color" content="#0a080a">
+<link rel="apple-touch-icon" href="icon.png?v=279">
+<link rel="icon" href="icon.png?v=279">
+<link rel="manifest" href="manifest.json?v=279">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:#f3f4f7;color:#111;font-size:16px;-webkit-text-size-adjust:100%;line-height:1.45}
-body{padding:0 0 calc(12px + env(safe-area-inset-bottom))}
-header{background:#1f5fd6;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+html,body{margin:0;padding:0;background:#0a080a;color:#f5f0e8;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body{padding:0;min-height:100dvh}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:linear-gradient(180deg,#161015,#110d10);border-bottom:1px solid #3a2e22}
 header img{width:32px;height:32px;border-radius:8px}
-header h1{font-size:16px;margin:0;flex:1;font-weight:700}
-header a{color:#fff;font-size:16px;text-decoration:none}
-nav{display:flex;gap:4px;padding:8px 8px;overflow-x:auto;background:#fff;border-bottom:1px solid #d0d3db;position:sticky;top:52px;z-index:4}
-nav button{flex:0 0 auto;border:1px solid #c5c8d0;background:#fff;border-radius:16px;padding:6px 12px;font-size:16px;color:#111}
-nav button.on{background:#1f5fd6;border-color:#1f5fd6;color:#fff}
-main{padding:10px;max-width:640px;margin:0 auto}
-.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-h2{font-size:16px;margin:0 0 8px}
-.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}
-input,select,textarea,button{font-size:16px;font-family:inherit;color:#111}
-input[type=text],input[type=password],input[type=search],select,textarea{width:100%;padding:8px;border:1px solid #c5c8d0;border-radius:8px;background:#fff}
-textarea{min-height:140px;resize:vertical}
-button.b{padding:9px 14px;border-radius:8px;border:none;background:#1f5fd6;color:#fff;font-weight:700}
-button.sub{background:#e9ecf2;color:#111;border:none;padding:9px 14px;border-radius:8px;font-weight:700}
-button.lock{background:#fff;border:1px solid #c5c8d0;border-radius:8px;padding:4px 8px}
-button.lock.on{background:#111;color:#fff;border-color:#111}
-.pick{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-.pick button{border:1px solid #c5c8d0;background:#fff;border-radius:8px;padding:6px 10px;font-size:16px;color:#111;text-align:left}
-.pick button.on{background:#1f5fd6;border-color:#1f5fd6;color:#fff}
-.pick button.off{background:#e4e6eb;color:#111;border-style:solid;border-color:#c5c8d0;text-decoration:line-through;pointer-events:none}
-.line{margin:6px 0;padding:8px;background:#f6f7fa;border-radius:8px}
-.pose{border:1px solid #c5c8d0;border-radius:8px;padding:8px;margin:6px 0;background:#fff;width:100%;text-align:left}
-.pose.on{border-color:#1f5fd6;background:#eef3ff}
-.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #e3e5ea}
-.item:last-child{border-bottom:none}
-.ok{color:#137a3a}.ng{color:#c62828}
-#st{margin:0 0 8px;min-height:0}
+header h1{flex:1;margin:0;font-size:16px;font-weight:700;letter-spacing:.06em}
+header a{color:#e2c07a;font-size:16px;text-decoration:none;min-height:44px;display:flex;align-items:center}
+nav{position:sticky;top:calc(52px + env(safe-area-inset-top));z-index:19;display:flex;gap:6px;padding:8px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#110d10;border-bottom:1px solid #2a221c}
+nav button{flex:0 0 auto;min-height:44px;padding:0 14px;border:1px solid #4a3b2a;border-radius:22px;background:#1a1412;color:#f5f0e8;font-size:16px}
+nav button.on{background:#d4a056;border-color:#d4a056;color:#1a1008;font-weight:700}
+main{max-width:640px;margin:0 auto;padding:10px 10px calc(128px + env(safe-area-inset-bottom))}
+.card{background:#161116;border:1px solid #3a2e22;border-radius:14px;padding:14px;margin-bottom:8px}
+.step{background:#161116;border:1px solid #3a2e22;border-radius:14px;margin-bottom:8px;overflow:hidden}
+.step.open{border-color:#d4a056}
+.step-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:52px;padding:10px 14px;width:100%;border:0;background:transparent;color:#f5f0e8;font-size:16px;text-align:left}
+.step.open .step-h{border-bottom:1px solid #3a2e22}
+.step-h b{font-weight:700}
+.step-body{padding:12px 14px 14px}
+input,select,textarea,button{font-size:16px;font-family:inherit;color:#f5f0e8}
+input[type=text],input[type=search],input[type=password],select,textarea{
+  width:100%;min-height:48px;padding:10px 12px;border:1px solid #4a3b2a;border-radius:12px;background:#0f0c0e;color:#f5f0e8;-webkit-appearance:none;appearance:none
+}
+select{background-image:linear-gradient(45deg,transparent 50%,#d4a056 50%),linear-gradient(135deg,#d4a056 50%,transparent 50%);background-position:calc(100% - 18px) calc(50% - 3px),calc(100% - 12px) calc(50% - 3px);background-size:6px 6px,6px 6px;background-repeat:no-repeat;padding-right:32px}
+textarea{min-height:160px;resize:vertical;line-height:1.5}
+.chips{display:flex;flex-wrap:nowrap;gap:6px;margin:8px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;min-height:44px;padding:0 12px;border:1px solid #4a3b2a;border-radius:22px;background:#1a1412;color:#f5f0e8}
+.step.open{scroll-margin-top:calc(112px + env(safe-area-inset-top))}
+.chips button.on{background:#d4a056;border-color:#d4a056;color:#1a1008;font-weight:700}
+.sug{margin-top:6px;border:1px solid #3a2e22;border-radius:12px;overflow:hidden;background:#0f0c0e}
+.sug button{display:block;width:100%;text-align:left;padding:12px;min-height:48px;border:0;border-bottom:1px solid #2a221c;background:transparent;color:#f5f0e8}
+.sug button:last-child{border-bottom:0}
+.prev{margin-top:10px;padding:12px;border-radius:12px;background:#0f0c0e;border:1px solid #2a221c;max-height:160px;overflow:auto;white-space:pre-wrap}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button.b,button.sub,button.next{min-height:48px;padding:0 16px;border-radius:12px;border:0;font-weight:700;font-size:16px}
+button.b{background:#d4a056;color:#1a1008}
+button.sub{background:#2a221c;color:#f5f0e8;border:1px solid #4a3b2a}
+button.next{width:100%;background:#d4a056;color:#1a1008;margin-top:10px}
+.item{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #2a221c;min-height:48px}
+.item:last-child{border-bottom:0}
+.ok{color:#8fd89a}.ng{color:#f0a0a0}
+#st{min-height:0;margin:0 auto 8px;max-width:640px;padding:0 10px}
+#dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(12,8,10,.94);border-top:1px solid #3a2e22;padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+#dock .in{max-width:640px;margin:0 auto}
+#dock .pv{min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid #3a2e22;background:#161116;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
+#dock .btns{display:flex;gap:8px}
+#dock .btns button{flex:1}
+#sheet{display:none;position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.72);padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+#sheet.on{display:flex;flex-direction:column;justify-content:flex-end}
+#sheet .box{background:#161116;border:1px solid #d4a056;border-radius:16px;padding:14px;max-height:86dvh;display:flex;flex-direction:column;max-width:640px;width:100%;margin:0 auto}
+#look .hit{padding:12px 0;border-bottom:1px solid #2a221c}
+#look .hit:last-child{border-bottom:0}
 </style>
 </head>
 <body>
 <header>
-  <img src="icon.png?v=1" alt="">
+  <img src="icon.png?v=279" alt="">
   <h1>プロンプト作成</h1>
   <a href="../">スロ判別へ</a>
 </header>
 <nav id="nav"></nav>
-<main>
-  <div id="st"></div>
-  <div id="app"></div>
-</main>
-<script src="app.js?v=1"></script>
+<div id="st"></div>
+<main id="app"></main>
+<div id="dock" hidden></div>
+<div id="sheet"></div>
+<script src="app.js?v=279"></script>
 </body>
 </html>
