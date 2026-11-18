@@ -93,8 +93,13 @@ function pClickRow(k,key,ev,box){const S=SEL[k],add=ev.ctrlKey||ev.metaKey;
  if(ev.shiftKey&&PANC[k]&&PSHOWN.includes(PANC[k])&&PSHOWN.includes(key)){const a=PSHOWN.indexOf(PANC[k]),b=PSHOWN.indexOf(key),lo=Math.min(a,b),hi=Math.max(a,b);if(!add&&!box)S.clear();for(let i=lo;i<=hi;i++)S.add(PSHOWN[i])}
  else if(add||box){S.has(key)?S.delete(key):S.add(key);PANC[k]=key}else{S.clear();S.add(key);PANC[k]=key}pSelUpd(k)}
 document.addEventListener('click',ev=>{const t=ev.target;if(!t.closest('#pmenu'))pMenuClose();
- const q=t.closest('[data-xcand],[data-xpick],[data-xcs],[data-xmiss],[data-xupstop],[data-xidstop]');
- if(q){const d=q.dataset,k=MODE;if(d.xcand!=null){const m=IDQ.miss.find(z=>z.key===d.xcand);idCand(k,d.xcand,m?m.C:[],m?m.why:'')}else if(d.xpick!=null){const c=CANDS[+d.xpick],key=CKEY;if(!c)return;q.disabled=true;idApply(k,key,c).then(()=>{IDQ.miss=IDQ.miss.filter(z=>z.key!==key);syncSoon(k);if(IDQ.miss.length)idMissSheet(k);else closeSheet();render()})}else if(d.xcs!=null)candSearch();else if(d.xmiss!=null)idMissSheet(k);else if(d.xupstop!=null)UP.stop=true;else if(d.xidstop!=null)IDQ.stop=true;return}
+ const q=t.closest('[data-xcand],[data-xpick],[data-xcs],[data-xmiss],[data-xupstop],[data-xidstop],[data-xidpick],[data-xid]');
+ if(q){const d=q.dataset,k=MODE;
+  if(d.xidpick!=null){if(k==='music')idPickSheet(k,d.xidpick==='bulk'?[...MS.keys]:[d.xidpick]);return}
+  if(d.xid==='seldev'){idRun(k,IDSEL.slice());return}if(d.xid==='restdev'){idRun(k,idRestDev(k));return}
+  if(d.xid==='sel'){idRun(k,[...SEL[k]].filter(x=>PCF[k].has(x)));return}
+  if(d.xid==='rest'){idRun(k,[...PCF[k].values()].filter(e=>{const z=it(k,e.key);return!z.mb&&!z.mbx}).map(e=>e.key));return}
+  if(d.xcand!=null){const m=IDQ.miss.find(z=>z.key===d.xcand);idCand(k,d.xcand,m?m.C:[],m?m.why:'')}else if(d.xpick!=null){const c=CANDS[+d.xpick],key=CKEY;if(!c)return;q.disabled=true;idApply(k,key,c).then(()=>{IDQ.miss=IDQ.miss.filter(z=>z.key!==key);syncSoon(k);if(IDQ.miss.length)idMissSheet(k);else closeSheet();render()})}else if(d.xcs!=null)candSearch();else if(d.xmiss!=null)idMissSheet(k);else if(d.xupstop!=null)UP.stop=true;else if(d.xidstop!=null)IDQ.stop=true;return}
  if(!MODE||TAB!=='send')return;const k=MODE;
  const b=t.closest('[data-xsort],[data-xf],[data-xv],[data-xg],[data-xlib],[data-xtg],[data-xall],[data-xnone],[data-xmv],[data-xid],[data-xcm],[data-xrw],[data-xpall],[data-xck]');
  if(b){const d=b.dataset;
@@ -109,8 +114,6 @@ document.addEventListener('click',ev=>{const t=ev.target;if(!t.closest('#pmenu')
   if(d.xall){for(const x of PSHOWN)SEL[k].add(x);pSelUpd(k);return}
   if(d.xnone){SEL[k].clear();pSelUpd(k);return}
   if(d.xmv==='bad'){pMoveBad(k);return}if(d.xmv==='gone'){pMoveGone(k);return}
-  if(d.xid==='sel'){idRun(k,[...SEL[k]].filter(x=>PCF[k].has(x)));return}
-  if(d.xid==='rest'){idRun(k,[...PCF[k].values()].filter(e=>{const z=it(k,e.key);return!z.mb&&!z.mbx}).map(e=>e.key));return}
   if(d.xrw){rwOK(k).then(()=>pLite());return}
   if(d.xcm){pMenuClose();const E=[...SEL[k]].map(z=>PCF[k].get(z)).filter(Boolean);if(d.xcm==='send')doSend();else if(d.xcm==='bad')pMoveBad(k,E);else if(d.xcm==='gone')pMoveGone(k,E);else if(d.xcm==='id')idRun(k,E.map(e=>e.key));else if(d.xcm==='edit'&&E[0])itemMenu(E[0].key);return}
   return}
@@ -140,7 +143,7 @@ async function mbSearch(t,a){await rl('mb',1100);let q=`recording:"${luc(t)}"`;i
  return(j.recordings||[]).map(x=>{const rl2=pickRel(x.releases||[]);return{src:'mb',t:x.title,a:(x['artist-credit']||[]).map(c=>(c.name||(c.artist&&c.artist.name)||'')+(c.joinphrase||'')).join(''),al:rl2?rl2.title:'',rg:rl2&&rl2['release-group']?rl2['release-group'].id:'',rec:x.id,score:(x.score||0)/100,len:x.length?x.length/1000:0}})}
 const cvUrl=rg=>'https://coverartarchive.org/release-group/'+rg+'/front-250';
 async function cvLoad(id,u){try{const r=await fetch(u);if(!r.ok)return r.status===404?'none':false;const b=await r.blob(),url=URL.createObjectURL(b);try{const th=toThumb(await loadImg(url),300,300);if(!th)return false;await TH.set(id,th);const D=LS.get('md_cvd',{});D[id]=u;LS.set('md_cvd',D);return true}finally{URL.revokeObjectURL(url)}}catch(e){return false}}
-// 元のファイルはさわらず、名前・アーティスト・アルバム・ジャケットを上書き（全部のiPhoneに同期）
+// 元のファイルはさわらず、題名・アーティスト・アルバム・ジャケットだけ上書き（同期する）。タグとタグのプレイリストは変えない
 async function idApply(k,key,c){if(c.t)setF(k,key,'n',c.t);if(c.a)setF(k,key,'a',c.a);if(c.al)setF(k,key,'al',c.al);if(c.rec)setF(k,key,'mb',c.rec);
  if(k==='music'&&c.rg){const u=cvUrl(c.rg);if(await cvLoad(k+'|'+key,u)===true)setF(k,key,'cv',u)}syncSoon(k,4000)}
 async function idOne(k,e){const b=await blobOf(k,e.key);if(!b)return{ok:false,why:'ファイルが読めない',C:[]};if(b.size>300*1048576)return{ok:false,why:'大きすぎる',C:[]};
@@ -149,13 +152,20 @@ async function idOne(k,e){const b=await blobOf(k,e.key);if(!b)return{ok:false,wh
 const idUi=()=>{if($('x_idp'))$('x_idp').innerHTML=idProg()};
 function idProg(){if(IDQ.busy)return`<div class="kv"><span>取得中 ${IDQ.i} / ${IDQ.n}</span><button class="sub nar" data-xidstop="1">止める</button></div><div class="prog"><div style="width:${pct(IDQ.i,IDQ.n)}"></div></div>${IDQ.cur?`<div class="fr"><span>${esc(IDQ.cur)}</span></div>`:''}`;
  if(IDQ.done&&IDQ.n>1)return`<div class="kv"><span>取得 ${IDQ.ok}件${IDQ.miss.length?'・見つからない '+IDQ.miss.length+'件':''}</span>${IDQ.miss.length?'<button class="sub nar" data-xmiss="1">見る</button>':''}</div>`;return''}
+function idRestDev(k){return[...DEV[k].values()].filter(e=>{const z=it(k,e.key);return!z.mb&&!z.mbx}).map(e=>e.key)}
+let IDSEL=[];
+const idOnPc=()=>TAB==='send'&&!!$('pr_send');
+function idProgSheet(){sheet(`<h3>曲の情報を取得</h3><div id="x_idp">${idProg()}</div><button class="sub" data-close="1">閉じる</button>`)}
+function idPickSheet(k,keys){IDSEL=(keys||[]).filter(Boolean);if(IDQ.busy){idProgSheet();return}
+ const n=IDSEL.length,un=idRestDev(k).length;
+ sheet(`<h3>曲の情報を取得</h3><div class="pbar"><button data-xid="seldev" ${n&&!IDQ.busy?'':'disabled'}>選んだ曲だけ${n?' '+n:''}</button></div><div class="pbar"><button data-xid="restdev" ${un&&!IDQ.busy?'':'disabled'}>未取得を全部${un?' '+un:''}</button></div><button class="sub" data-close="1">閉じる</button>`)}
 async function idRun(k,keys){if(IDQ.busy||!keys.length)return;
- if(!akey()){if(keys.length===1){IDQ.miss=[];idCand(k,keys[0],[],'AcoustIDキー未設定のため名前で探す');return}alert('AcoustIDキーを入れてね（右の「曲の情報」の欄）');return}
- Object.assign(IDQ,{busy:true,stop:false,done:false,i:0,n:keys.length,ok:0,miss:[],cur:''});pLite();let fatal='';
+ if(!akey()){if(keys.length===1){IDQ.miss=[];idCand(k,keys[0],[],'AcoustIDキー未設定のため名前で探す');return}alert(idOnPc()?'AcoustIDキーを入れてね（右の「曲の情報」の欄）':'AcoustIDキーを入れてね');return}
+ Object.assign(IDQ,{busy:true,stop:false,done:false,i:0,n:keys.length,ok:0,miss:[],cur:''});if(!idOnPc())idProgSheet();pLite();let fatal='';
  try{for(const key of keys){if(IDQ.stop)break;const e=PCF[k].get(key)||libMap(k).get(key);if(!e){IDQ.i++;continue}IDQ.cur=titleOf(k,e);idUi();
   let r;try{r=await idOne(k,e)}catch(x){r={ok:false,why:x.message||String(x),C:[]};if(x.fatal){fatal=r.why;break}}
   if(r.ok)IDQ.ok++;else{IDQ.miss.push({key,why:r.why,C:r.C||[]});setF(k,key,'mbx',Date.now())}IDQ.i++;idUi()}}
- finally{IDQ.busy=false;IDQ.done=true;IDQ.cur='';syncSoon(k,3000);render()}
+ finally{IDQ.busy=false;IDQ.done=true;IDQ.cur='';syncSoon(k,3000);render();idUi()}
  if(fatal){alert(fatal);return}if(keys.length===1&&IDQ.miss.length){const m=IDQ.miss[0];idCand(k,m.key,m.C,m.why)}else if(IDQ.miss.length&&!IDQ.stop)idMissSheet(k)}
 function idMissSheet(k){const m=libMap(k);sheet(`<h3>見つからなかった ${IDQ.miss.length}件</h3><div class="rows">${IDQ.miss.map(z=>{const e=m.get(z.key)||{key:z.key,path:keyPath(z.key)};return`<div class="fr"><span>${esc(titleOf(k,e))}</span><b class="gd">${esc(z.why)}</b><button class="sub nar" data-xcand="${esc(z.key)}">候補</button></div>`}).join('')}</div><button class="sub" data-close="1">閉じる</button>`)}
 let CANDS=[],CKEY=null;
