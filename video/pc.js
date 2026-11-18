@@ -9,7 +9,7 @@ const FG=[['snd','送信',[['un','未送信'],['new','NEW'],['sent','送信済�
 function pf(k){const f=LS.get('md_pf_'+k,null)||{};for(const[g]of FG)if(!Array.isArray(f[g]))f[g]=[];return f}
 const pv=k=>Object.assign({v:'all',g:null},LS.get('md_pv_'+k,null)||{});
 const ps=k=>Object.assign({c:'path',d:1},LS.get('md_ps_'+k,null)||{});
-const akey=()=>String(LS.get('md_acoustid','')||'').trim();
+const AK_DEF='TvC0PnHJXk';const akey=()=>String(LS.get('md_acoustid','')||AK_DEF).trim();
 const dirOf=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'';
 const pct=(a,b)=>(b>0?Math.min(100,a/b*100):0).toFixed(1)+'%';
 // 削除済みの一覧に入っているか（「取り込まない」の設定に関係なく）
