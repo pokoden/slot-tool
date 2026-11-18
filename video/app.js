@@ -3,7 +3,8 @@
 let MODE=null,TAB='search';const NAV={};const LISTS={};let LSEQ=0;
 const NAME={music:'音楽',video:'動画'};
 const FIL={music:LS.get('md_fil_music',null)||{},video:LS.get('md_fil_video',null)||{}};
-const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];if(MODE==='music'){f.q='';f.artist='';f.album='';f.view='all';f.folder=''}return f};
+let MQ='';
+const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];if(MODE==='music'){f.q=MQ;f.artist='';f.album='';f.view='all';f.folder=''}return f};
 // 曲のタグ（固定の7つ）
 const TAGSET=['パチスロ','アニメ','ゲーム','ロック','POP','ボカロ','その他'];
 const saveFil=()=>LS.set('md_fil_'+MODE,FIL[MODE]);
@@ -58,7 +59,9 @@ const BADC=new Map();
 function badOf(k,e){const r=LS.get('md_bad',{})[k+'|'+e.key];return typeof r==='string'&&r!=='meta'?r:''}
 if(LS.get('md_bad_v',0)<8){LS.set('md_bad',{});LS.set('md_bad_v',8)}
 // 重複（この端末の中）
-function devDup(k){const out=new Map(),ns=new Map(),qs=new Map();for(const f of[...DEV[k].values()].sort((a,b)=>(a.added||0)-(b.added||0))){const n=(f.name||'').toLowerCase()+'|'+f.size;if(ns.has(n)){out.set(f.key,'「'+ns.get(n)+'」と同じ');continue}if(f.qh&&qs.has(f.qh)){out.set(f.key,'「'+qs.get(f.qh)+'」と同じ中身');continue}ns.set(n,f.name);if(f.qh)qs.set(f.qh,f.name)}return out}
+// 曲名とアーティストが同じ（全角半角・大文字小文字・前後の空白はそろえて比べる）
+const taKey=(k,e)=>{if(k!=='music')return'';const n=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim(),t=n(titleOf(k,e)),a=n(artistOf(k,e));return t&&a&&a!=='その他'?t+'\u0001'+a:''};
+function devDup(k){const out=new Map(),ns=new Map(),qs=new Map(),ts=new Map();for(const f of[...DEV[k].values()].sort((a,b)=>(a.added||0)-(b.added||0))){const n=(f.name||'').toLowerCase()+'|'+f.size,t=taKey(k,f);if(ns.has(n)){out.set(f.key,'「'+ns.get(n)+'」と同じ');continue}if(f.qh&&qs.has(f.qh)){out.set(f.key,'「'+qs.get(f.qh)+'」と同じ中身');continue}if(t&&ts.has(t)){out.set(f.key,'「'+ts.get(t)+'」と同じ曲名・アーティスト');continue}ns.set(n,f.name);if(f.qh)qs.set(f.qh,f.name);if(t)ts.set(t,f.name)}return out}
 // 重複（PCのフォルダとiPhone）
 async function quickHash(file){const M=1<<20,a=await file.slice(0,M).arrayBuffer(),b=file.size>M?await file.slice(Math.max(M,file.size-M)).arrayBuffer():new ArrayBuffer(0);const u=new Uint8Array(a.byteLength+b.byteLength+8);u.set(new Uint8Array(a));u.set(new Uint8Array(b),a.byteLength);new DataView(u.buffer).setFloat64(u.length-8,file.size);const h=new Uint8Array(await crypto.subtle.digest('SHA-256',u));return[...h.slice(0,10)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function ensureQH(k,list){for(const e of list){const id=k+'|'+e.key;if(QH.has(id))continue;try{QH.set(id,await quickHash(await e.get()))}catch(x){}}}
@@ -73,7 +76,8 @@ function dupPC(k){const out=new Map(),ns=new Map(),qs=new Map();const peer=TX.pe
  const pns=new Set(peer.map(x=>keyPath(x).split('/').pop().toLowerCase()+'|'+x.slice(x.lastIndexOf('|')+1)));const pq=new Set(Object.values((TX.peer&&TX.peer.hq&&TX.peer.hq[k])||{}));
  for(const e of[...PCF[k].values()].sort((a,b)=>a.path.localeCompare(b.path))){const n=e.name.toLowerCase()+'|'+e.size,q=QH.get(k+'|'+e.key);
   if(ns.has(n)){out.set(e.key,'「'+ns.get(n)+'」と同じ');continue}if(q&&qs.has(q)){out.set(e.key,'「'+qs.get(q)+'」と同じ中身');continue}ns.set(n,e.path);if(q)qs.set(q,e.path);
-  if(!sentTo(k,e.key)&&(pns.has(n)||(q&&pq.has(q))))out.set(e.key,'iPhoneに同じものがある')}return out}
+  if(!sentTo(k,e.key)&&(pns.has(n)||(q&&pq.has(q))))out.set(e.key,'iPhoneに同じものがある')}
+ if(k==='music'){const ts=new Map();for(const e of[...PCF[k].values()].sort((a,b)=>(a.lm||0)-(b.lm||0)||a.path.localeCompare(b.path))){const t=taKey(k,e);if(!t)continue;if(ts.has(t)){if(!out.has(e.key))out.set(e.key,'「'+ts.get(t)+'」と同じ曲名・アーティスト')}else if(!out.has(e.key))ts.set(t,e.path)}}return out}
 
 // ===== 描画部品 =====
 const IC={home:'<path d="M12 3l9 8h-2.6v9h-4.9v-6h-3v6H5.6v-9H3z"/>',search:'<circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15.5 15.5l5.5 5.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',pl:'<path d="M3 5h13v2.4H3zm0 5h13v2.4H3zm0 5h8v2.4H3zm12 0l7 4-7 4z"/>',fav:'<path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/>',send:'<path d="M2 4h20v12H2zm2 2v8h16V6zM8 19h8v2H8z"/><path d="M12 7l3.5 3.5h-2.3v2.8h-2.4v-2.8H8.5z"/>',set:'<path d="M12 8.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7zm9 4.6v-2.2l-2.4-.6-.7-1.6 1.3-2.1-1.6-1.6-2.1 1.3-1.6-.7L13.1 3h-2.2l-.6 2.4-1.6.7-2.1-1.3L5 6.4l1.3 2.1-.7 1.6-2.6.8v2.2l2.4.6.7 1.6-1.3 2.1L6.4 19l2.1-1.3 1.6.7.8 2.6h2.2l.6-2.4 1.6-.7 2.1 1.3 1.6-1.6-1.3-2.1.7-1.6z"/>'};
@@ -110,10 +114,11 @@ function pmRoom(){const t=pmTop(),m=$('main');if(t==null)return;m.style.minHeigh
 function pmGo(go){const y=scrollY,pm=$('pm');pm.classList.add('open');$('mini').hidden=true;if(!$('pmslot')||MODE!=='music'){TAB='search';NAV.search=[];MS.on=false;MS.keys.clear();closeSheet();render();if(!go)scrollTo(0,y)}else pmPlace();requestAnimationFrame(()=>{pmRoom();if(go){const t=pmTop();if(t!=null)scrollTo({top:t,behavior:'smooth'})}else scrollTo(0,y);if(typeof P!=='undefined'&&P.mini)P.mini()})}
 function push(v){(NAV[TAB]=NAV[TAB]||[]).push(v);MS.on=false;MS.keys.clear();render();scrollTo(0,0)}
 function filtered(){const k=MODE,f=fil();let L=lib(k);const q=(f.q||'').trim().toLowerCase();
- if(q)L=L.filter(e=>(titleOf(k,e)+' '+artistOf(k,e)+' '+albumOf(k,e)+' '+e.path+' '+(it(k,e.key).tags||[]).join(' ')).toLowerCase().includes(q));
+ if(q){const nq=q.normalize('NFKC');L=L.filter(e=>k==='music'?(titleOf(k,e)+'\u0001'+artistOf(k,e)).normalize('NFKC').toLowerCase().includes(nq):(titleOf(k,e)+' '+artistOf(k,e)+' '+albumOf(k,e)+' '+e.path+' '+(it(k,e.key).tags||[]).join(' ')).toLowerCase().includes(q))}
  if(f.artist){const a=cleanTag(f.artist);L=L.filter(e=>artistOf(k,e)===a)}if(f.album){const a=cleanTag(f.album);L=L.filter(e=>albumOf(k,e)===a)}if(f.unw)L=L.filter(e=>!it(k,e.key).plays);
  if(f.tags.length)L=L.filter(e=>{const t=it(k,e.key).tags||[];return f.tags.every(x=>t.includes(x))});return sortL(k,L,f.sort)}
 function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
+ if(k==='music'&&L.length)h+=`<div class="srch msr"><input id="f_q" type="search" placeholder="曲名・アーティスト" value="${esc(f.q||'')}" autocomplete="off" enterkeyhint="search"></div>`;
  if(DEV[k].size&&EST.quota&&EST.free<LOW)h+=`<div class="warn" data-go="cand">空きが少ない（${fmtB(EST.free)}）</div>`;
  if(!L.length)return h+`<div class="empty"><button data-tab="send">PCから送る</button></div>`;
  if(k==='music'){h+=`<div class="ctl">${sortSel()}${layBtn()}${selBtn()}${DD.size?`<button class="sub dng nar" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
@@ -323,7 +328,7 @@ document.addEventListener('change',ev=>{const t=ev.target,ds=t.dataset;
  else if(t.id==='s_auto'){LS.set('md_auto',t.checked)}
  else if(t.id==='s_wl'){LS.set('md_wl_min',+t.value);WL.touch();WL.sync()}
  else if(t.id==='s_skipdel'){LS.set('md_skipdel',t.checked);render()}});
-let qT=null;document.addEventListener('input',ev=>{if(ev.target.id==='f_q'){fil().q=ev.target.value;saveFil();clearTimeout(qT);qT=setTimeout(()=>{const r=$('sres');if(r){for(const k in LISTS)delete LISTS[k];r.innerHTML=searchRes();afterRender()}},250)}else if(ev.target.id==='pk_q'){clearTimeout(qT);qT=setTimeout(pkList,200)}});
+let qT=null;document.addEventListener('input',ev=>{if(ev.target.id==='f_q'){if(MODE==='music')MQ=ev.target.value;else{fil().q=ev.target.value;saveFil()}clearTimeout(qT);qT=setTimeout(()=>{const r=$('sres');if(r){for(const k in LISTS)delete LISTS[k];const pm=$('pm');if(pm&&r.contains(pm))document.body.appendChild(pm);r.innerHTML=searchRes();if(MODE==='music')pmPlace();afterRender()}},250)}else if(ev.target.id==='pk_q'){clearTimeout(qT);qT=setTimeout(pkList,200)}});
 $('hd_back').onclick=()=>{(NAV[TAB]||[]).pop();MS.on=false;MS.keys.clear();render()};
 $('hd_home').onclick=()=>goHome();
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});

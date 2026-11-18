@@ -130,25 +130,112 @@ const IDQ={busy:false,stop:false,done:false,i:0,n:0,ok:0,cur:'',miss:[]};
 const RL={};async function rl(h,ms){const n=Date.now(),t=Math.max(n,RL[h]||0);RL[h]=t+ms;if(t>n)await sleep(t-n)}
 let FPM=null;const fpLoad=()=>FPM||(FPM=import('./lib/chromaprint/fp.js?v='+APPV).catch(e=>{FPM=null;throw e}));
 async function fpOf(blob){const m=await fpLoad();return m.fingerprint(await blob.arrayBuffer())}
-async function acoLookup(fp,dur){await rl('ac',350);const b=new URLSearchParams({client:akey(),format:'json',duration:String(Math.round(dur)),meta:'recordings releasegroups compress',fingerprint:fp});
+async function acoLookup(fp,dur){await rl('ac',350);const b=new URLSearchParams({client:akey(),format:'json',duration:String(Math.round(dur)),meta:'recordings releasegroups releases sources compress',fingerprint:fp});
  const r=await fetch('https://api.acoustid.org/v2/lookup',{method:'POST',body:b});let j=null;try{j=await r.json()}catch(e){}
  if(!j||j.status!=='ok'){const c=j&&j.error&&j.error.code;const er=new Error(c===4?'AcoustIDキーが違うみたい':c===14||r.status===429?'AcoustIDが混んでる':'AcoustIDエラー'+(j&&j.error?'：'+j.error.message:' '+r.status));er.fatal=c===4;throw er}return j.results||[]}
 const artJoin=A=>(A||[]).map((x,i)=>x.name+(x.joinphrase!=null?x.joinphrase:i<A.length-1?', ':'')).join('');
-function pickRG(G){return G.find(g=>g.type==='Album'&&!(g.secondarytypes||[]).length)||G.find(g=>!(g.secondarytypes||[]).length)||G[0]||null}
-function acoCands(R){const out=[],seen=new Set();for(const r of[...R].sort((a,b)=>(b.score||0)-(a.score||0)))for(const rec of r.recordings||[]){if(!rec.title||seen.has(rec.id))continue;seen.add(rec.id);const g=pickRG(rec.releasegroups||[]);out.push({src:'ac',t:rec.title,a:artJoin(rec.artists),al:g?g.title:'',rg:g?g.id:'',rec:rec.id,score:r.score||0,len:rec.duration||0})}return out}
-const luc=s=>String(s).replace(/[\\"+\-!(){}\[\]^~*?:\/]|&&|\|\|/g,' ').trim();
-function pickRel(R){return R.find(r=>r.status==='Official'&&r['release-group']&&r['release-group']['primary-type']==='Album'&&!(r['release-group']['secondary-types']||[]).length)||R.find(r=>r.status==='Official')||R[0]||null}
-async function mbSearch(t,a){await rl('mb',1100);let q=`recording:"${luc(t)}"`;if(a)q+=` AND artist:"${luc(a)}"`;
- const r=await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=12&query='+encodeURIComponent(q),{headers:{Accept:'application/json'}});if(r.status===503){await sleep(1500);return mbSearch(t,a)}if(!r.ok)throw new Error('MusicBrainzエラー '+r.status);const j=await r.json();
- return(j.recordings||[]).map(x=>{const rl2=pickRel(x.releases||[]);return{src:'mb',t:x.title,a:(x['artist-credit']||[]).map(c=>(c.name||(c.artist&&c.artist.name)||'')+(c.joinphrase||'')).join(''),al:rl2?rl2.title:'',rg:rl2&&rl2['release-group']?rl2['release-group'].id:'',rec:x.id,score:(x.score||0)/100,len:x.length?x.length/1000:0}})}
+// 比べるための正規化（全角半角・大文字小文字・空白・かっこ書き）
+const NRM=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
+const TNRM=s=>NRM(s).replace(/[(\[（【][^)\]）】]*[)\]）】]/g,'').replace(/[^\p{L}\p{N}]+/gu,'');
+const KATA=/^[\u30A0-\u30FF\s・ー]+$/;
+// ライブ・カバー・別バージョンなど（元の曲じゃない目印）
+const MARK=/\b(live|instrumental|inst\.?|off ?vocal|karaoke|acoustic|unplugged|cover|remix|mix|edit|tv ?(size|ver|version|edit)|short ?ver(sion)?|demo|piano ver(sion)?|orchestra|8 ?bit|music video|mv|pv|remaster(ed)?)\b|ライブ|カラオケ|アコースティック|リミックス|カバー|弾いてみた|歌ってみた|オフボーカル|インスト|tvサイズ|ショート/i;
+const MARK_OK=/\b(live|instrumental|inst\.?|off ?vocal|karaoke|acoustic|unplugged|cover|remix)\b|ライブ|カラオケ|アコースティック|リミックス|カバー|オフボーカル|インスト/i;
+const TVM=/tv ?(size|ver|version|edit)|tvサイズ|short|ショート/i;
+const dmin=(len,ds)=>(len&&ds&&ds.length)?Math.min(...ds.map(d=>Math.abs(len-d))):null;
+function lenPen(len,ds){const d=dmin(len,ds);if(d==null)return .05;return d<=3?0:d<=8?.03:d<=15?.1:.2+Math.min(d/100,.3)}
+function markPen(txt,ds,len,ft){const m=String(txt||'').match(MARK);if(!m)return 0;const w=NRM(m[0]);
+ if(MARK_OK.test(w)&&ft&&ft.includes(w))return 0;
+ if(TVM.test(w)){const d=dmin(len,ds);if(d!=null&&d<=5&&Math.min(...ds)<130)return 0}return .25}
+function nameHit(t,a,x){if(!x)return{nb:0,na:0};const T=TNRM(t),A=TNRM(a);let nb=0,na=0;
+ if(T&&x.keys.includes(T))nb=.15;else if(T.length>=3&&x.keys.some(k=>k.length>=3&&(k.includes(T)||T.includes(k))))nb=.07;
+ if(A&&x.akeys.some(k=>k===A||(k.length>=2&&A.length>=2&&(k.includes(A)||A.includes(k)))))na=.07;return{nb,na}}
+// アルバムの選び方：最初に出た公式のシングル・アルバム、日本盤。サントラは残す。コンピ・ライブ・リミックスは後ろ
+const evDates=r=>(r.releaseevents&&r.releaseevents.length?r.releaseevents:[{date:r.date,country:r.country}]);
+function rgYear(g){let y=9999;for(const r of g.releases||[])for(const ev of evDates(r))if(ev&&ev.date&&ev.date.year)y=Math.min(y,ev.date.year);return y}
+const rgJP=g=>(g.releases||[]).some(r=>r.country==='JP'||evDates(r).some(e=>e&&e.country==='JP'));
+function typeScore(ty,st,gt,t){let s=0;if(ty==='Single')s+=TNRM(gt)===TNRM(t)?3:1;else if(ty==='Album'&&!st.length)s+=2;else if(ty==='EP')s+=1.5;else if(ty==='Album')s+=1;
+ if(st.includes('Soundtrack'))s+=1.2;if(st.includes('Compilation'))s-=2;if(st.includes('Live'))s-=3;if(st.includes('Remix')||st.includes('DJ-mix'))s-=2;return s}
+function pickRGs(G,t){const y0=Math.min(9999,...G.map(rgYear));const sc=g=>{let s=typeScore(g.type||'',g.secondarytypes||[],g.title,t);const y=rgYear(g);if(y<9999&&y0<9999)s-=Math.min(3,(y-y0)*.3);if(rgJP(g))s+=.4;return s};
+ return G.map(g=>[g,sc(g)]).sort((a,b)=>b[1]-a[1]).map(z=>z[0])}
+function pickRG(G,t){return pickRGs(G||[],t||'')[0]||null}
+const cvRel=id=>'https://coverartarchive.org/release/'+id+'/front-250';
+function relsOrd(g){return[...(g.releases||[])].sort((a,b)=>(rgJP({releases:[b]})-rgJP({releases:[a]}))||(rgYear({releases:[a]})-rgYear({releases:[b]})))}
+function cvList(G){const L=[];for(const g of G.slice(0,3)){L.push(cvUrl(g.id));for(const r of relsOrd(g).slice(0,2))L.push(cvRel(r.id))}return[...new Set(L)].slice(0,6)}
+function acoCands(R,x){x=x||idX0();const M=new Map();
+ for(const r of R)for(const rec of r.recordings||[]){if(!rec.title||!rec.id)continue;let o=M.get(rec.id);if(!o){o={rec,fs:0,src:0};M.set(rec.id,o)}o.fs=Math.max(o.fs,r.score||0);o.src+=rec.sources||0}
+ const out=[];for(const{rec,fs,src}of M.values()){const G=pickRGs(rec.releasegroups||[],rec.title),g=G[0]||null,len=rec.duration||0,a=artJoin(rec.artists);
+  const mp=markPen(rec.title,x.durs,len,x.ft),lp=lenPen(len,x.durs),{nb,na}=nameHit(rec.title,a,x);
+  const rank=fs+Math.min(.2,Math.log10(1+src)*.08)-lp-mp+nb+na;
+  const c={src:'ac',t:rec.title,a,al:g?g.title:'',rg:g?g.id:'',cvs:cvList(G),rec:rec.id,score:fs,srcs:src,len,rank,mp,lp,nb,na};out.push(c);
+  const sg=G.find(z=>z!==g&&(z.secondarytypes||[]).includes('Soundtrack'));if(sg)out.push(Object.assign({},c,{al:sg.title,rg:sg.id,cvs:cvList([sg]),rank:rank-.01,alt:1}))}
+ return out.sort((a,b)=>b.rank-a.rank)}
+// 候補が割れていないか（曲名・アーティストが違うものが近い点数で並んでいたら自動では入れない）
+function idSplit(C,c,gap){return C.some(z=>z!==c&&!z.alt&&z.rank>=c.rank-gap&&(TNRM(z.t)!==TNRM(c.t)||TNRM(z.a)!==TNRM(c.a)))}
+function autoAc(C){const c=C.find(z=>!z.alt);if(!c||c.mp>0||c.lp>.03)return null;const need=(c.srcs>=5||c.nb>=.15)?.6:.8;if(c.score<need)return null;return idSplit(C,c,.12)?null:c}
+function autoName(C){const c=C[0];if(!c||c.src!=='mb'||c.mp>0||c.vid||c.lp>.03||c.nb<.15||!c.na||c.score<.7)return null;return idSplit(C,c,.1)?null:c}
+// ファイル名（YouTubeの動画名など）から曲名・アーティストの候補を取り出す
+const FEXT=/\.(mp4|m4a|mp3|webm|mkv|mov|wav|flac|aac|ogg|opus|wma|avi|m4v)(?![a-z0-9])/gi;
+const NZ=/\b(official\s*(music\s*video|video|audio|channel)?|music\s*video|lyrics?\s*video|lyrics?|audio|full\s*(ver(sion)?|size)?|short\s*ver(sion)?|tv\s*(size|ver(sion)?|edit)|mv|pv|amv|mad|hd|hq|4k|\d{3,4}p|op\s*\d*|ed\s*\d*|opening|ending|ncop|nced|topic|video|movie|ver\.?)\b|歌詞付き?|歌詞|フル|公式|高音質|高画質|手書き|ニコ動|ニコニコ動画|ニコニコ|作業用|主題歌|オープニング|エンディング|映像|字幕|完全版|ショート/gi;
+function nameParts(s){s=String(s||'').normalize('NFKC').replace(FEXT,' ').replace(/_/g,' ');const pri=[],br=[];
+ s=s.replace(/[『「]([^』」]*)[』」]/g,(_,m)=>{pri.push(m);return' / '});
+ s=s.replace(/[【\[(〔〈《]([^】\])〕〉》]*)[】\])〕〉》]/g,(_,m)=>{br.push(m);return' / '});
+ const cl=p=>p.replace(NZ,' ').replace(/[#♪☆★◆◇■□●○※!?]+/g,' ').replace(/^\s*\d{1,3}[\s._-]+(?=\S)/,'').replace(/\s+/g,' ').replace(/^[\s\-–—~〜:・.,]+|[\s\-–—~〜:・.,]+$/g,'').trim();
+ const main=s.split(/\s*[\/|\\]\s*|\s+[-–—~〜]+\s+|\s+by\s+|\s+feat\.?\s+|\s+ft\.\s+/i);
+ const out=[],seen=new Set();for(const p of[...pri,...main,...br].map(cl)){const n=TNRM(p);if(!n||/^\d+$/.test(n)||seen.has(n))continue;seen.add(n);out.push(p)}return out}
+function idX0(t,a){return{durs:[],ft:'',parts:t?[t]:[],keys:t?[TNRM(t)]:[],akeys:a?[TNRM(a)]:[]}}
+function idCtx(k,e){const d=it(k,e.key),nm=baseName(e.path||e.name||''),P=nameParts(nm),cz=s=>{s=cleanTag(s);return s&&s!=='その他'?s:''};
+ const tt=cz(d.tt),ta=cz(d.ta),n=cz(d.n),a=cz(d.a),pa=cz(pathArtist(k,e.path||''));
+ const parts=[];for(const p of[tt,n,...P])if(p&&!parts.some(z=>TNRM(z)===TNRM(p)))parts.push(p);
+ const ft=NRM(nm);return{durs:d.dur>0?[d.dur]:[],ft,parts,tt,ta:ta||a,keys:parts.map(TNRM).filter(Boolean),akeys:[ta,a,pa,...P].map(TNRM).filter(Boolean)}}
+const luc=s=>String(s).replace(/[\\"+\-!(){}\[\]^~*?:\/]|&&|\|\|/g,' ').replace(/\s+/g,' ').trim();
+const fq=(f,s)=>`${f}:"${luc(s)}"`;
+// リリースの選び方（名前で探したとき）
+function pickRels(R,t){const yr=r=>{const m=/^(\d{4})/.exec(r.date||'');return m?+m[1]:9999};const y0=Math.min(9999,...R.map(yr));
+ const sc=r=>{const g=r['release-group']||{};let s=r.status==='Official'?1:r.status==='Bootleg'?-3:0;s+=typeScore(g['primary-type']||'',g['secondary-types']||[],g.title||r.title,t);const y=yr(r);if(y<9999&&y0<9999)s-=Math.min(3,(y-y0)*.3);if(r.country==='JP')s+=.4;return s};
+ return R.map(r=>[r,sc(r)]).sort((a,b)=>b[1]-a[1]).map(z=>z[0])}
+function pickRel(R){return pickRels(R||[],'')[0]||null}
+function mbMap(r,x){const rels=r.releases||[],R=pickRels(rels,r.title),r0=R[0]||null,len=r.length?r.length/1000:0,a=(r['artist-credit']||[]).map(c=>(c.name||(c.artist&&c.artist.name)||'')+(c.joinphrase||'')).join('');
+ const allLive=rels.length&&rels.every(z=>((z['release-group']||{})['secondary-types']||[]).includes('Live'));
+ const mp=markPen(r.title+' '+(r.disambiguation||''),x.durs,len,x.ft)+(allLive?.25:0),vid=r.video?.35:0,lp=lenPen(len,x.durs),{nb,na}=nameHit(r.title,a,x);
+ const pop=Math.min(.1,rels.length*.01),off=rels.some(z=>z.status==='Official')?.03:-.05,score=(r.score||0)/100;
+ const cvs=[];const gs=[];for(const z of R){const g=z['release-group'];if(g&&g.id&&!gs.includes(g.id)){gs.push(g.id);cvs.push(cvUrl(g.id))}if(cvs.length<6)cvs.push(cvRel(z.id));if(cvs.length>=6)break}
+ return{src:'mb',t:r.title,a,al:r0?r0.title:'',rg:r0&&r0['release-group']?r0['release-group'].id:'',cvs:[...new Set(cvs)],rec:r.id,score,len,mp,lp,nb,na,vid,rank:score*.6+nb+na+pop+off-lp-mp-vid+(x.wk&&TNRM(r.title)===x.wk?.1:0)}}
+async function mbQ(q,x){await rl('mb',1100);
+ const r=await fetch('https://musicbrainz.org/ws/2/recording?fmt=json&limit=15&query='+encodeURIComponent(q),{headers:{Accept:'application/json'}});if(r.status===503){await sleep(1500);return mbQ(q,x)}if(!r.ok)throw new Error('MusicBrainzエラー '+r.status);const j=await r.json();
+ return(j.recordings||[]).map(z=>mbMap(z,x)).sort((a,b)=>b.rank-a.rank)}
+async function mbSearch(t,a,x){x=x||idX0(t,a);if(t&&!x.keys.includes(TNRM(t)))x.keys.push(TNRM(t));if(a&&!x.akeys.includes(TNRM(a)))x.akeys.push(TNRM(a));
+ let q=`(${fq('recording',t)} OR ${fq('alias',t)})`;if(a)q+=` AND ${fq('artist',a)}`;return mbQ(q,x)}
+// カタカナの曲名（アンラベル→unravel）：日本語版ウィキペディアの転送先と冒頭の文から曲名・歌手
+async function wikiSong(p){await rl('wk',400);try{const r=await fetch('https://ja.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts&exintro=1&explaintext=1&exchars=400&titles='+encodeURIComponent(p));if(!r.ok)return null;const j=await r.json();
+ const pg=Object.values((j.query&&j.query.pages)||{})[0];if(!pg||pg.missing!=null||!pg.extract)return null;const ex=pg.extract;if(!/(シングル|楽曲|曲)/.test(ex.slice(0,220)))return null;
+ const m=ex.match(/^「([^」]+)」/),t=(m?m[1]:pg.title.replace(/\s*\([^)]*\)$/,'')).trim();
+ const m1=ex.match(/が([^、。]{1,40}?)名義/),m2=ex.match(/は、(?:[^、。]*?・)?([^、。・]{1,30}?)の(?:\d+枚目の|配信限定)?(?:シングル|楽曲|曲)/);const a=((m1&&m1[1])||(m2&&m2[1])||'').trim();
+ if(!t||(TNRM(t)===TNRM(p)&&!a))return null;return{t,a}}catch(e){return null}}
+// 名前で探す（指紋で見つからなかったとき）
+async function nameCands(x,max){const out=[],seen=new Set();let n=0;max=max||5;const add=L=>{for(const c of L)if(!seen.has(c.rec)){seen.add(c.rec);out.push(c)}};
+ const good=()=>out.some(c=>c.nb>=.15&&c.na&&!c.mp&&!c.vid);const go=async q=>{if(n>=max)return;n++;try{add(await mbQ(q,x))}catch(e){if(!out.length&&n>=max)throw e}};
+ if(x.tt){await go(`(${fq('recording',x.tt)} OR ${fq('alias',x.tt)})`+(x.ta?` AND ${fq('artist',x.ta)}`:''))}
+ const P=x.parts.slice(0,3);
+ const tq=t=>`(${fq('recording',t)} OR ${fq('alias',t)})`;
+ for(const[i,j]of[[0,1],[1,0],[0,2],[2,0],[1,2],[2,1]]){if(good()||n>=max)break;if(P[i]&&P[j])await go(tq(P[i])+' AND '+fq('artist',P[j]))}
+ for(const p of P){if(good()||n>=max)break;if(!KATA.test(p))continue;const w=await wikiSong(p);if(!w)continue;x.wk=TNRM(w.t);x.keys.push(TNRM(w.t));if(w.a)x.akeys.push(TNRM(w.a));
+  await go(`(${fq('recording',w.t)} OR ${fq('alias',w.t)})`+(w.a?` AND ${fq('artist',w.a)}`:''));if(!good()&&w.a)await go(`(${fq('recording',w.t)} OR ${fq('alias',w.t)})`)}
+ if(!good()&&x.ta&&P[0])await go(`(${fq('recording',P[0])} OR ${fq('alias',P[0])}) AND ${fq('artist',x.ta)}`);
+ for(const p of P.slice(0,2)){if(good()||n>=max)break;await go(`${fq('recording',p)} OR ${fq('alias',p)}`)}
+ return out.sort((a,b)=>b.rank-a.rank)}
 const cvUrl=rg=>'https://coverartarchive.org/release-group/'+rg+'/front-250';
 async function cvLoad(id,u){try{const r=await fetch(u);if(!r.ok)return r.status===404?'none':false;const b=await r.blob(),url=URL.createObjectURL(b);try{const th=toThumb(await loadImg(url),300,300);if(!th)return false;await TH.set(id,th);const D=LS.get('md_cvd',{});D[id]=u;LS.set('md_cvd',D);return true}finally{URL.revokeObjectURL(url)}}catch(e){return false}}
 // 元のファイルはさわらず、題名・アーティスト・アルバム・ジャケットだけ上書き（同期する）。タグとタグのプレイリストは変えない
 async function idApply(k,key,c){if(c.t)setF(k,key,'n',c.t);if(c.a)setF(k,key,'a',c.a);if(c.al)setF(k,key,'al',c.al);if(c.rec)setF(k,key,'mb',c.rec);
- if(k==='music'&&c.rg){const u=cvUrl(c.rg);if(await cvLoad(k+'|'+key,u)===true)setF(k,key,'cv',u)}syncSoon(k,4000)}
-async function idOne(k,e){const b=await blobOf(k,e.key);if(!b)return{ok:false,why:'ファイルが読めない',C:[]};if(b.size>300*1048576)return{ok:false,why:'大きすぎる',C:[]};
- let fp;try{fp=await fpOf(b)}catch(x){return{ok:false,why:'音を読めない',C:[]}}
- const C=acoCands(await acoLookup(fp.fp,fp.dur));if(C.length&&C[0].score>=.8){await idApply(k,e.key,C[0]);return{ok:true}}return{ok:false,why:C.length?'自信がない':'見つからない',C}}
+ if(k==='music'){const L=[...new Set([...(c.cvs||[]),...(c.rg?[cvUrl(c.rg)]:[])])].slice(0,6);for(const u of L){if(await cvLoad(k+'|'+key,u)===true){setF(k,key,'cv',u);break}}}syncSoon(k,4000)}
+async function idOne(k,e){const b=await blobOf(k,e.key);if(!b)return{ok:false,why:'ファイルが読めない',C:[]};const x=idCtx(k,e);let C=[],fpOk=false,fp=null;
+ if(b.size<=300*1048576){try{fp=await fpOf(b);fpOk=true}catch(er){}}
+ if(fp){if(fp.dur>0&&!x.durs.some(d=>Math.abs(d-fp.dur)<1))x.durs.unshift(fp.dur);const ds=[];for(const d of x.durs)if(d>0&&!ds.some(z=>Math.abs(z-d)<=5))ds.push(d);
+  let R=[];for(const d of ds.slice(0,2))R=R.concat(await acoLookup(fp.fp,d));C=acoCands(R,x);const c=autoAc(C);if(c){await idApply(k,e.key,c);return{ok:true}}}
+ if(!C.length||C[0].score<.5){let N=[];try{N=await nameCands(x,5)}catch(er){if(!C.length)return{ok:false,why:er.message||String(er),C:[]}}
+  const c=autoName(N);if(c){await idApply(k,e.key,c);return{ok:true}}const S=new Set(C.map(z=>z.rec+'|'+z.rg));C=C.concat(N.filter(z=>!S.has(z.rec+'|'+z.rg))).sort((p,q)=>q.rank-p.rank)}
+ return{ok:false,why:C.length?'自信がない':fpOk?'見つからない':b.size>300*1048576?'大きすぎる':'音を読めない',C}}
 const idUi=()=>{if($('x_idp'))$('x_idp').innerHTML=idProg()};
 function idProg(){if(IDQ.busy)return`<div class="kv"><span>取得中 ${IDQ.i} / ${IDQ.n}</span><button class="sub nar" data-xidstop="1">止める</button></div><div class="prog"><div style="width:${pct(IDQ.i,IDQ.n)}"></div></div>${IDQ.cur?`<div class="fr"><span>${esc(IDQ.cur)}</span></div>`:''}`;
  if(IDQ.done&&IDQ.n>1)return`<div class="kv"><span>取得 ${IDQ.ok}件${IDQ.miss.length?'・見つからない '+IDQ.miss.length+'件':''}</span>${IDQ.miss.length?'<button class="sub nar" data-xmiss="1">見る</button>':''}</div>`;return''}
@@ -169,11 +256,12 @@ async function idRun(k,keys){if(IDQ.busy||!keys.length)return;
  if(fatal){alert(fatal);return}if(keys.length===1&&IDQ.miss.length){const m=IDQ.miss[0];idCand(k,m.key,m.C,m.why)}else if(IDQ.miss.length&&!IDQ.stop)idMissSheet(k)}
 function idMissSheet(k){const m=libMap(k);sheet(`<h3>見つからなかった ${IDQ.miss.length}件</h3><div class="rows">${IDQ.miss.map(z=>{const e=m.get(z.key)||{key:z.key,path:keyPath(z.key)};return`<div class="fr"><span>${esc(titleOf(k,e))}</span><b class="gd">${esc(z.why)}</b><button class="sub nar" data-xcand="${esc(z.key)}">候補</button></div>`}).join('')}</div><button class="sub" data-close="1">閉じる</button>`)}
 let CANDS=[],CKEY=null;
-function candList(){return CANDS.map((c,i)=>`<button class="pcand" data-xpick="${i}">${c.rg?`<img src="${cvUrl(c.rg)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:'<img alt="" style="visibility:hidden">'}<span><b>${esc(c.t)}</b><i>${esc(c.a)}${c.al?'・'+esc(c.al):''}</i></span><em>${c.len?fmtT(c.len):''}${c.src==='ac'?' 🎧'+Math.round(c.score*100)+'%':''}</em></button>`).join('')}
-function idCand(k,key,pre,note){const e=libMap(k).get(key)||{key,path:keyPath(key)};CKEY=key;CANDS=(pre||[]).slice(0,8);const t=titleOf(k,e).replace(/^\d{1,3}[\s._-]+/,''),a=artistOf(k,e);
+function candList(){return CANDS.map((c,i)=>`<button class="pcand" data-xpick="${i}">${c.rg||(c.cvs&&c.cvs.length)?`<img src="${esc(c.rg?cvUrl(c.rg):c.cvs[0])}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`:'<img alt="" style="visibility:hidden">'}<span><b>${esc(c.t)}</b><i>${esc(c.a)}${c.al?'・'+esc(c.al):''}</i></span><em>${c.len?fmtT(c.len):''}${c.src==='ac'?' 🎧'+Math.round(c.score*100)+'%':''}</em></button>`).join('')}
+function idCand(k,key,pre,note){const e=libMap(k).get(key)||{key,path:keyPath(key)};CKEY=key;CANDS=(pre||[]).slice(0,8);const x0=idCtx(k,e),t=x0.parts[0]||titleOf(k,e).replace(/^\d{1,3}[\s._-]+/,''),a=x0.ta||artistOf(k,e);
  sheet(`<h3>曲の情報を取得</h3><div class="fr"><span>${esc(e.path)}</span></div>${note?`<div class="red">${esc(note)}</div>`:''}<label class="fl"><span>曲名</span><input id="x_ct" type="text" value="${esc(t)}"></label><label class="fl"><span>アーティスト</span><input id="x_ca" type="text" value="${esc(a==='その他'?'':a)}"></label><div class="pbar"><button data-xcs="1">探す</button></div><div id="x_cl" class="pcl">${candList()}</div><button class="sub" data-close="1">閉じる</button>`);candSearch()}
 async function candSearch(){const ti=$('x_ct'),ar=$('x_ca'),box=$('x_cl');if(!ti||!box)return;const t=ti.value.trim(),a=ar.value.trim();if(!t)return;const key=CKEY;box.innerHTML=candList()+'<div class="kv"><span>探してる…</span></div>';
- let C=[],err='';try{C=await mbSearch(t,a);if(!C.length&&a)C=await mbSearch(t,'')}catch(x){err=x.message||String(x)}if(CKEY!==key||!$('x_cl'))return;
+ const e=libMap(MODE).get(key)||{key,path:keyPath(key)},x=idCtx(MODE,e);x.parts=[t,...x.parts.filter(p=>TNRM(p)!==TNRM(t))];x.keys.unshift(TNRM(t));x.tt=t;x.ta=a;if(a)x.akeys.unshift(TNRM(a));
+ let C=[],err='';try{C=await mbSearch(t,a,x);if(!C.some(c=>c.nb>=.15)&&a)C=C.concat(await mbSearch(t,'',x));if(!C.some(c=>c.nb>=.15)&&KATA.test(t)){const w=await wikiSong(t);if(w){x.wk=TNRM(w.t);C=C.concat(await mbSearch(w.t,w.a||'',x))}}const S=new Set();C=C.filter(c=>!S.has(c.rec)&&S.add(c.rec)).sort((p,q)=>q.rank-p.rank).slice(0,12)}catch(z){err=z.message||String(z)}if(CKEY!==key||!$('x_cl'))return;
  const keep=CANDS.filter(c=>c.src==='ac');CANDS=[...keep,...C.filter(c=>!keep.some(z=>z.rec===c.rec))];$('x_cl').innerHTML=CANDS.length?candList():`<div class="kv"><span class="${err?'red':''}">${esc(err||'見つからない')}</span></div>`}
 // ほかの端末：同期されたジャケットURLを取ってきて保存
 const CVQ=new Set(),CVT=new Set();let CVB=false;

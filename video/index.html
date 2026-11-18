@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>メディアプレイヤー</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -78,6 +78,8 @@ section{margin:6px 0 18px}section h2{display:flex;justify-content:space-between;
 .pbar{display:flex;gap:8px;margin:8px 0;align-items:center}.pbar>button{flex:1}.pbar .nar{flex:none}.cnt{flex:none}
 .ctl{display:flex;gap:8px;margin:8px 0}.ctl select{flex:1}.ic{flex:none;width:44px;padding:9px 0}
 .srch{margin:4px 0}
+.msr{position:relative;margin:2px 0 8px}.msr input{border-radius:12px;padding:10px 14px 10px 38px;border-color:#3a3220;background:var(--sf) no-repeat 12px 50%/18px url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2710.5%27 cy=%2710.5%27 r=%276.5%27 fill=%27none%27 stroke=%27%23e9c46a%27 stroke-width=%272.4%27/%3E%3Cpath d=%27M15.5 15.5l5.5 5.5%27 stroke=%27%23e9c46a%27 stroke-width=%272.6%27 stroke-linecap=%27round%27/%3E%3C/svg%3E")}.msr input:focus{outline:none;border-color:var(--gd)}.msr input::placeholder{color:var(--gd);opacity:.7}
+html{touch-action:manipulation}
 .seg{display:flex;background:var(--sf);border-radius:10px;padding:3px;margin:8px 0;gap:3px}.seg button{flex:1;background:none;color:var(--tx);padding:8px 4px}.seg button.on{background:var(--sf2);color:var(--gd)}.seg button{white-space:nowrap;letter-spacing:-1px;padding:8px 2px}
 .rows{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .rowb{display:flex;justify-content:space-between;align-items:center;text-align:left;background:var(--sf);color:var(--tx);padding:12px}.rowb i{font-style:normal;color:var(--gd)}
@@ -252,9 +254,10 @@ body>#pm.inl{display:none!important}
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=20"></script>
-<script src="conv.js?v=20"></script>
-<script src="player.js?v=20"></script>
-<script src="pc.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script>for(const t of['gesturestart','gesturechange','gestureend'])document.addEventListener(t,e=>e.preventDefault(),{passive:false});</script>
+<script src="core.js?v=21"></script>
+<script src="conv.js?v=21"></script>
+<script src="player.js?v=21"></script>
+<script src="pc.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body></html>
