@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=21;
+const APPV=22;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -68,7 +68,7 @@ const doc=k=>{const o=D[k]||(D[k]=LS.get('md_doc_'+k,null)||{items:{},pls:{},del
 const saveDoc=k=>LS.set('md_doc_'+k,D[k]);
 const it=(k,key)=>doc(k).items[key]||{};
 // f:項目, auto:自動で入る値（手入力より弱い）
-function setF(k,key,f,v,auto){const d=doc(k),o=d.items[key]||(d.items[key]={t:{}});o.t=o.t||{};if(auto){if(o.t[f]&&o[f]!=null)return false;o[f]=v;o.t[f]=1}else{o[f]=v;o.t[f]=Date.now()}saveDoc(k);return true}
+function setF(k,key,f,v,auto){const d=doc(k),o=d.items[key]||(d.items[key]={t:{}});o.t=o.t||{};if(auto){if(o.t[f]&&o[f]!=null)return false;o[f]=v;o.t[f]=1}else{o[f]=v;o.t[f]=Date.now()}saveDoc(k);if(f==='dur'&&k==='music'&&typeof drvTag==='function'&&drvTag(k,key))syncSoon(k,5000);return true}
 function setPl(k,id,f,v){const d=doc(k),o=d.pls[id]||(d.pls[id]={t:{}});o.t=o.t||{};o[f]=v;o.t[f]=Date.now();saveDoc(k)}
 const canon=o=>Array.isArray(o)?o.map(canon):o&&typeof o==='object'?Object.keys(o).sort().reduce((a,k)=>(a[k]=canon(o[k]),a),{}):o;
 function mergeRec(a,b){a=a||{};b=b||{};const ta=a.t||{},tb=b.t||{},o={t:{}};for(const f of new Set([...Object.keys(a),...Object.keys(b)])){if(f==='t')continue;const x=ta[f]||0,y=tb[f]||0;let s=y>x?b:a,t=Math.max(x,y);if(!(f in s)){s=s===a?b:a}if(f in s){o[f]=s[f];o.t[f]=t}}return o}
@@ -90,7 +90,7 @@ const SY={busy:{},again:{},tm:{},msg:LS.get('md_sync_msg',''),on:null};
 function syMsg(t){SY.msg=t;LS.set('md_sync_msg',t);if(SY.on)SY.on()}
 function syncSoon(k,ms){clearTimeout(SY.tm[k]);SY.tm[k]=setTimeout(()=>syncNow(k),ms||2000)}
 async function syncNow(k){if(!k||!tok())return;if(navigator.onLine===false){syMsg('オフライン');return}if(SY.busy[k]){SY.again[k]=1;return}SY.busy[k]=1;syMsg('同期中…');
- try{const path='media/'+k+'.json';for(let i=0;i<4;i++){const g=await ghGet(path);const rem=g.data&&g.data.items?{items:g.data.items,pls:g.data.pls||{},deleted:g.data.deleted||{}}:{items:{},pls:{},deleted:{}};const m=mergeDoc(doc(k),rem);D[k]=m;saveDoc(k);
+ try{const path='media/'+k+'.json';for(let i=0;i<4;i++){const g=await ghGet(path);const rem=g.data&&g.data.items?{items:g.data.items,pls:g.data.pls||{},deleted:g.data.deleted||{}}:{items:{},pls:{},deleted:{}};const m=mergeDoc(doc(k),rem);D[k]=m;saveDoc(k);if(k==='music'&&typeof drvAll==='function')drvAll(k);
   if(JSON.stringify(m)!==JSON.stringify(canon(rem))){const r=await ghPut(path,{version:1,...m,updatedAt:new Date().toISOString()},g.sha,'media '+k+' sync');if(r.status===409||r.status===422){if(i<3){await sleep(400);continue}throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status)}break}
   const d=new Date(),p=n=>String(n).padStart(2,'0');syMsg(`最終同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`)}
  catch(e){syMsg('エラー：'+(e.message||e))}finally{SY.busy[k]=0;if(SY.on)try{SY.on()}catch(e){}if(SY.again[k]){SY.again[k]=0;syncSoon(k,500)}}}
@@ -239,7 +239,7 @@ async function flacTags(blob){const u=new Uint8Array(await blob.slice(0,Math.min
 const LETTER=new Map();
 function letterArt(title){const ch=(String(title||'').trim()[0]||'♪').toUpperCase();if(LETTER.has(ch))return LETTER.get(ch);const c=document.createElement('canvas');c.width=c.height=300;const x=c.getContext('2d');const g=x.createLinearGradient(0,0,300,300);g.addColorStop(0,'#141414');g.addColorStop(1,'#2a2418');x.fillStyle=g;x.fillRect(0,0,300,300);x.strokeStyle='#e9c46a';x.lineWidth=10;x.strokeRect(22,22,256,256);x.fillStyle='#e9c46a';x.font='bold 150px -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(ch,150,160);x.fillStyle='#2b6fe8';x.fillRect(22,250,256,28);const u=c.toDataURL('image/jpeg',.85);LETTER.set(ch,u);return u}
 function toThumb(src,w,h){const c=document.createElement('canvas');const r=Math.min(1,Math.max(w/(src.videoWidth||src.naturalWidth||w),h/(src.videoHeight||src.naturalHeight||h)));const sw=src.videoWidth||src.naturalWidth,sh=src.videoHeight||src.naturalHeight;if(!sw||!sh)return null;
- if(w===h){const s=Math.min(sw,sh);c.width=c.height=w;c.getContext('2d').drawImage(src,(sw-s)/2,(sh-s)/2,s,s,0,0,w,w)}else{c.width=Math.round(sw*Math.min(1,w/sw));c.height=Math.round(sh*Math.min(1,w/sw));c.getContext('2d').drawImage(src,0,0,c.width,c.height)}return c.toDataURL('image/jpeg',.72)}
+ if(w===h){c.width=c.height=w;const x=c.getContext('2d');const q=sw/sh;if(q>.97&&q<1.03){const s=Math.min(sw,sh);x.drawImage(src,(sw-s)/2,(sh-s)/2,s,s,0,0,w,w)}else{const f=w/Math.max(sw,sh),dw=Math.round(sw*f),dh=Math.round(sh*f);x.fillStyle='#000';x.fillRect(0,0,w,w);x.drawImage(src,0,0,sw,sh,Math.round((w-dw)/2),Math.round((w-dh)/2),dw,dh)}}else{c.width=Math.round(sw*Math.min(1,w/sw));c.height=Math.round(sh*Math.min(1,w/sw));c.getContext('2d').drawImage(src,0,0,c.width,c.height)}return c.toDataURL('image/jpeg',.72)}
 function once(el,ev,ms){return new Promise((res,rej)=>{const t=setTimeout(()=>{cl();rej(new Error('timeout'))},ms||10000);const ok=()=>{cl();res()},ng=()=>{cl();rej(new Error('error'))};const cl=()=>{clearTimeout(t);el.removeEventListener(ev,ok);el.removeEventListener('error',ng)};el.addEventListener(ev,ok);el.addEventListener('error',ng)})}
 // タグ文字列の後ろのNUL・空白を取る（m4a/mp3のタグに付いてくる）
 const cleanTag=s=>String(s==null?'':s).replace(/[\u0000\uFFFD]/g,'').trim();

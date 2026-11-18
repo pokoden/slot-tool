@@ -6,7 +6,10 @@ const FIL={music:LS.get('md_fil_music',null)||{},video:LS.get('md_fil_video',nul
 let MQ='';
 const fil=()=>{const f=FIL[MODE];delete f.fav;f.sort=f.sort||'last';f.view=f.view||'all';f.tags=f.tags||[];if(MODE==='music'){f.q=MQ;f.artist='';f.album='';f.view='all';f.folder=''}return f};
 // 曲のタグ（固定の7つ）
-const TAGSET=['パチスロ','アニメ','ゲーム','ロック','POP','ボカロ','その他'];
+const TAGSET=['パチスロ','アニメ','ゲーム','ロック','POP','ボカロ','その他','ドライブ'];
+// 15分以上の曲はドライブ（一度付けたら dv で記録、外しても付け直さない）
+const DRV_S=900;function drvTag(k,key){if(k!=='music')return false;const o=doc(k).items[key];if(!o||!(o.dur>=DRV_S)||o.dv)return false;const t=o.tags||[];if(!t.includes('ドライブ'))setF(k,key,'tags',[...t,'ドライブ']);setF(k,key,'dv',1);return true}
+function drvAll(k){let n=0;for(const key of Object.keys(doc(k).items))if(drvTag(k,key))n++;return n}
 const saveFil=()=>LS.set('md_fil_'+MODE,FIL[MODE]);
 const lay=()=>LS.get('md_lay_'+MODE,'grid');
 const PCF={music:new Map(),video:new Map()},PCDIR={music:null,video:null},PCNEED={music:false,video:false};
@@ -201,9 +204,11 @@ const TH={mem:new Map(),q:[],busy:false,io:null,
  want(id){if(!this.q.includes(id))this.q.push(id);this.run()},
  async run(){if(this.busy)return;this.busy=true;try{while(this.q.length){const id=this.q.shift();const[k,...r]=id.split('|');const key=r.join('|');if(await this.get(id))continue;if(LS.get('md_nometa',{})[id])continue;try{const b=await blobOf(k,key);if(!b)continue;const name=keyPath(key);const o=await metaOf(k,b,name);if(o.bad&&k==='video'){const B=LS.get('md_nometa',{});if(!B[id]){B[id]=1;LS.set('md_nometa',B)}}
    let ch=false;for(const f of['dur','ta','tt','tal'])if(o[f]!=null)if(setF(k,key,f,o[f],1)){ch=true;syncSoon(k,8000)}if(ch&&(o.ta||o.tt||o.tal))softRender();if(o.thumb&&!it(k,key).cv)await this.set(id,o.thumb);else if(!o.thumb)this.mem.set(id,'');}catch(e){}}}finally{this.busy=false}}};
+// ジャケットを切り取らずに全体が入る形で作り直す（前の版は正方形に切り取っていた）
+let ARTF=false;async function artFix(){if(ARTF||MODE!=='music')return;ARTF=true;try{const D=LS.get('md_artfix',{});let n=0;for(const e of lib('music')){const id='music|'+e.key;if(D[id])continue;const C=LS.get('md_cvd',{}),cv=it('music',e.key).cv;if(cv&&C[id]===cv){D[id]=1;continue}let b=null;try{b=await blobOf('music',e.key)}catch(x){}if(!b)continue;D[id]=1;try{const ex=extOf(keyPath(e.key));let t=null;if(ex==='mp3'||/mpeg/.test(b.type))t=id3(await b.slice(0,Math.min(b.size,8<<20)).arrayBuffer());else if(['m4a','mp4','m4v','aac','alac','m4b'].includes(ex)||/mp4/.test(b.type))t=await mp4Tags(b);else if(ex==='flac')t=await flacTags(b);if(t&&t.pic){const pu=URL.createObjectURL(t.pic);try{const th=toThumb(await loadImg(pu),300,300);if(th&&!(cv&&LS.get('md_cvd',{})[id]===cv))await TH.set(id,th)}finally{URL.revokeObjectURL(pu)}}}catch(x){}if(++n%10===0)LS.set('md_artfix',D);await sleep(40)}LS.set('md_artfix',D)}finally{ARTF=false}}
 let srT=null;function softRender(){clearTimeout(srT);srT=setTimeout(()=>{if(!MODE||!$('sheet').hidden||(document.activeElement&&document.activeElement.matches('input,select')))return;const y=scrollY;render();scrollTo(0,y)},1200)}
 function afterRender(){if(!TH.io)TH.io=new IntersectionObserver(es=>{for(const en of es)if(en.isIntersecting){const img=en.target;TH.io.unobserve(img);const id=img.dataset.tk;TH.get(id).then(v=>{if(v)img.src=v;else if(v!==''){TH.want(id)}})}},{rootMargin:'300px'});
- for(const img of document.querySelectorAll('#main img[data-tk]'))TH.io.observe(img);if(typeof cvSync==='function')cvSync();if(typeof pLay==='function')pLay();
+ for(const img of document.querySelectorAll('#main img[data-tk]'))TH.io.observe(img);if(typeof cvSync==='function')cvSync();setTimeout(artFix,4000);if(typeof pLay==='function')pLay();
  if(TAB==='set'&&$('s_pers'))navigator.storage&&navigator.storage.persisted&&navigator.storage.persisted().then(p=>{if($('s_pers'))$('s_pers').textContent=p?'ON':'OFF'})}
 async function blobOf(k,key){const f=DEV[k].get(key);if(f)return ST.file(f.fn,f.mime||mimeOf(f.path));const p=PCF[k].get(key);if(p){const x=await p.get();return new Blob([x],{type:mimeOf(p.name)})}return null}
 
