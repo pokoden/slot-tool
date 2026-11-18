@@ -179,6 +179,54 @@ body.hasbulk main{padding-bottom:130px}body.hasbulk #mini{display:none!important
  #pv.open{display:flex;align-items:flex-start}#pv .pvl{flex:1;min-width:0;height:calc(100vh - 52px);overflow:auto}#pv #stage{max-height:76vh}#pv .p_q{width:380px;flex:none;height:calc(100vh - 52px);overflow:auto}
  #pm.open{display:grid;grid-template-columns:minmax(0,1fr) 420px}#pm .p_q{max-width:none;overflow:auto;max-height:100vh}
 }
+/* PCの送る画面 */
+.pcw{display:flex;flex-direction:column;gap:12px}
+.pside{background:var(--sf);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:2px}
+.pside h4{margin:8px 8px 4px;font-size:14px;color:var(--gd);letter-spacing:.08em}
+.pnav,.pg{display:flex;justify-content:space-between;align-items:center;gap:6px;background:none;color:var(--tx);text-align:left;padding:8px 10px;border-radius:8px;font-weight:700}
+.pnav i,.pg i{font-style:normal;color:var(--gd);flex:none}.pnav span,.pg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pnav.on{background:linear-gradient(90deg,#3a2f12,#221c0c);color:var(--gd);box-shadow:inset 3px 0 0 var(--gd)}
+.pg{font-weight:400}.pg.on{background:var(--sf2);color:var(--gd)}
+.pgl{max-height:46vh;overflow:auto;margin:2px 0 4px;border-top:1px solid var(--ln);padding-top:4px}
+.pcen{min-width:0}
+.ptop{position:sticky;top:44px;z-index:5;background:var(--bg);padding:4px 0 8px}
+.ptop input[type=search]{border-radius:12px;padding:10px 14px;background:var(--sf)}
+.pfl{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0}
+.pfg{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.pfg b{color:var(--gd);margin-right:2px}
+.pfg .chip{padding:5px 10px}
+.pact{display:flex;gap:6px;align-items:center}.pact .pcnt{margin-left:auto;color:var(--gd)}
+.ptbl{width:100%;border-collapse:collapse;table-layout:fixed;user-select:none;-webkit-user-select:none}
+.ptbl th{position:sticky;top:var(--pth,190px);z-index:4;background:#151515;text-align:left;padding:8px 6px;border-bottom:1px solid var(--ln);cursor:pointer;white-space:nowrap;font-weight:700}
+.ptbl th.on{color:var(--gd)}
+.ptbl td{padding:5px 6px;border-bottom:1px solid #222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.ptbl tbody tr{cursor:default}.ptbl tbody tr:hover{background:#1a1a1a}
+.ptbl tbody tr.sel{background:#2a2310;box-shadow:inset 3px 0 0 var(--gd)}.ptbl tbody tr.sel .pt b{color:var(--gd)}
+.ptbl .pc{width:34px}.ptbl .pj{width:52px}.ptbl .pj.video{width:76px}.ptbl .pn{width:72px;text-align:right}.ptbl th.pn{text-align:right}
+.ptbl .pj img{display:block;width:40px;height:40px;border-radius:6px;object-fit:cover;background:#222}.ptbl .pj.video img{width:64px;height:36px}
+.ptbl .pt b{font-weight:700}.ptbl th:last-child{width:190px}
+.pst{white-space:normal!important}.b{display:inline-block;font-style:normal;font-weight:700;border-radius:5px;padding:0 6px;margin:1px 3px 1px 0}
+.b.ok{background:#173a20;color:#5bd16b}.b.nw{background:var(--rd);color:#fff}.b.un{background:#1c2a44;color:#7aa7ff}.b.bad{background:#5a1f1a;color:#ffb4ab}.b.dp{background:#3a3014;color:var(--gd)}.b.dl{background:#3a1d2c;color:#ff9fd0}.b.bl{background:#16264a;color:#9dbfff}.b.red{background:#5a1f1a;color:#ffb4ab}.b.gd{background:#3a3014;color:var(--gd)}
+.pright{display:flex;flex-direction:column;gap:10px}
+.pcard{background:var(--sf);border-radius:12px;padding:12px;border:1px solid #262626}.pcard h4{margin:0 0 8px;font-size:14px;color:var(--gd)}
+.pcard .wide{width:100%;margin-top:6px}
+.pdev{background:linear-gradient(160deg,#1f1a0d,#151515 60%);border-color:#3a3014}
+.pdh{display:flex;align-items:center;gap:10px;margin-bottom:6px}.pdi{width:42px;height:42px;border-radius:12px;background:#2a2310;color:var(--gd);display:flex;align-items:center;justify-content:center}.pdi svg{width:26px;height:26px}
+.pdn{display:flex;flex-direction:column;min-width:0}.pdn span{font-weight:700}
+.pfb{display:flex;height:10px;border-radius:5px;background:#2a2a2a;overflow:hidden;margin:10px 0 2px}.pfb .u{background:#5b6b8c}.pfb .s{background:var(--gd)}.pfb .s.over{background:var(--rd)}
+button.big{width:100%;padding:13px;font-size:14px;border-radius:12px}
+.pbar button.big{flex:1}
+.ptg{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.seg2{display:flex;background:#111;border-radius:9px;padding:2px;gap:2px}.seg2 button{background:none;color:var(--tx);padding:6px 12px;border-radius:7px}.seg2 button.on{background:var(--gd);color:#000}
+.psum{margin:6px 0}
+.pempty{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;background:var(--sf);border-radius:16px}.pei{font-size:56px}.pempty .big{max-width:320px}
+#pmenu{position:fixed;z-index:90;min-width:200px;background:#202020;border:1px solid #3a3014;border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.6);display:flex;flex-direction:column}
+#pmenu b{padding:6px 10px;color:var(--gd)}#pmenu button{background:none;color:var(--tx);text-align:left;padding:9px 10px;border-radius:8px}#pmenu button:hover:not(:disabled){background:#2a2310;color:var(--gd)}
+.pcl{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.pcand{display:flex;align-items:center;gap:10px;background:var(--sf2);color:var(--tx);text-align:left;padding:8px;border-radius:10px}
+.pcand img{width:48px;height:48px;border-radius:6px;object-fit:cover;flex:none;background:#111}.pcand span{flex:1;min-width:0;display:flex;flex-direction:column}.pcand span b,.pcand span i{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pcand i{font-style:normal;color:var(--gd);font-weight:400}.pcand em{font-style:normal;flex:none}
+@media (max-width:1099px){.pside{flex-direction:row;flex-wrap:wrap;gap:4px}.pside h4{display:none}.pnav,.pg{padding:7px 10px}.pnav i{margin-left:6px}.pgl{width:100%;max-height:30vh;display:flex;flex-wrap:wrap;gap:4px}}
+@media (max-width:700px){.ptbl .pal,.ptbl .par,.ptbl .pn{display:none}.ptbl th:last-child{width:110px}.ptop{top:44px}}
+@media (min-width:1100px){.pcw{display:grid;grid-template-columns:200px minmax(0,1fr) 300px;align-items:start}.pside,.pright{position:sticky;top:52px;max-height:calc(100vh - 60px);overflow:auto}}
 /* 音楽：再生画面を一覧に埋め込み */
 #pm.inl{position:relative;inset:auto;z-index:auto;display:none;padding:0;overflow:visible;background:none}
 #pm.inl.open{display:block!important;grid-template-columns:none}
@@ -204,8 +252,9 @@ body>#pm.inl{display:none!important}
 <div id="pm" class="pl"></div>
 <audio id="au" preload="auto" playsinline></audio>
 <div id="sheet" hidden><div id="sheet_in"></div></div>
-<script src="core.js?v=17"></script>
-<script src="conv.js?v=17"></script>
-<script src="player.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="core.js?v=18"></script>
+<script src="conv.js?v=18"></script>
+<script src="player.js?v=18"></script>
+<script src="pc.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body></html>

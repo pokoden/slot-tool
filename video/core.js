@@ -1,6 +1,6 @@
 'use strict';
 // ===== 共通 =====
-const APPV=17;
+const APPV=18;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -141,14 +141,14 @@ const TX={pc:null,dc:null,st:'',peer:null,cur:null,waits:{},acked:0,stop:false,o
   this.why='';this.st='準備中';this.ui();await NET.start();if(this.sessId!==id)return;
   const pc=this.pc=new RTCPeerConnection({iceServers:ICE});const dc=this.dc=pc.createDataChannel('m',{ordered:true});dc.binaryType='arraybuffer';dc.bufferedAmountLowThreshold=1<<20;
   dc.onopen=()=>{this.st='接続済み';this.ui()};dc.onclose=()=>{if(this.pc===pc){if(this.st!=='接続失敗')this.st='切断';this.peer=null;this.stop=true;for(const w of Object.values(this.waits))w.rej&&w.rej(new Error('切断'));this.ui()}};
-  dc.onmessage=e=>this.msg(JSON.parse(e.data));
+  dc.onmessage=e=>{if(typeof e.data!=='string'){if(typeof upData==='function')upData(e.data);return}this.msg(JSON.parse(e.data))};
   watchPc(pc,()=>this.pc===pc,w=>{this.st='接続失敗';this.why=w;NET.stop();this.ui()},()=>NET.stop());
   await pc.setLocalDescription(await pc.createOffer());await waitIce(pc,10000);
   if(this.sessId!==id){try{pc.close()}catch(e){}return}// 古い接続が新しい合図を上書きしないように
   await SIG.put('sig_offer',{id,sdp:pc.localDescription.sdp,at:Date.now()});if(this.sessId!==id)return;this.st='iPhone待ち';this.ui();
   const t0=Date.now();while(this.sessId===id&&Date.now()-t0<300000){await sleep(2000);if(this.sessId!==id||pc.remoteDescription)break;try{const a=await SIG.get('sig_answer');if(a&&a.id===id&&this.sessId===id){await pc.setRemoteDescription({type:'answer',sdp:a.sdp});this.st='接続中';this.ui();break}}catch(e){}}
   if(this.sessId===id&&!pc.remoteDescription){this.st='時間切れ';NET.stop();this.ui()}},
- msg(m){if(m.t==='hello'||m.t==='est'){this.peer={...(this.peer||{}),...m};if(m.have&&m.dev){const f='s_'+m.dev,now=Date.now();this.peer.hv={};for(const k of['music','video']){const hv=new Set(m.have[k]||[]);this.peer.hv[k]=hv;for(const key of hv)if(!(it(k,key)[f]>0))setF(k,key,f,now);for(const[key,o]of Object.entries(doc(k).items))if(o[f]>0&&!hv.has(key))setF(k,key,f,0)}const pe=LS.get('md_peers',{});pe[m.dev]=m.dname||pe[m.dev]||'';LS.set('md_peers',pe);LS.set('md_last_peer',m.dev)}else if(m.have)for(const k of['music','video'])for(const key of m.have[k]||[])if(!(it(k,key).sent>0)){setF(k,key,'sent',Date.now())}if(m.have){syncSoon('music');syncSoon('video')}this.ui();return}
+ msg(m){if(/^up/.test(m.t||'')){if(typeof upCtl==='function')upCtl(m);return}if(m.t==='hello'||m.t==='est'){this.peer={...(this.peer||{}),...m};if(m.have&&m.dev){const f='s_'+m.dev,now=Date.now();this.peer.hv={};for(const k of['music','video']){const hv=new Set(m.have[k]||[]);this.peer.hv[k]=hv;for(const key of hv)if(!(it(k,key)[f]>0))setF(k,key,f,now);for(const[key,o]of Object.entries(doc(k).items))if(o[f]>0&&!hv.has(key))setF(k,key,f,0)}const pe=LS.get('md_peers',{});pe[m.dev]=m.dname||pe[m.dev]||'';LS.set('md_peers',pe);LS.set('md_last_peer',m.dev)}else if(m.have)for(const k of['music','video'])for(const key of m.have[k]||[])if(!(it(k,key).sent>0)){setF(k,key,'sent',Date.now())}if(m.have){syncSoon('music');syncSoon('video')}this.ui();return}
   const w=this.waits[m.t+'|'+m.key];if(m.t==='ack'){if(this.cur&&this.cur.key===m.key){this.acked=m.got;if(this.ackW){const f=this.ackW;this.ackW=null;f()}}return}
   if(m.t==='done'&&this.peer){this.peer.free=m.free}
   if(w){delete this.waits[m.t+'|'+m.key];w.res(m)}},
@@ -193,7 +193,7 @@ const RX={gen:0,on:false,pc:null,dc:null,st:'',lastId:null,cur:null,ui:null,got:
  log:[],L(key){return this.log.find(x=>x.key===key)},
  q:Promise.resolve(),
  msg(d){if(typeof d!=='string'){const c=this.cur;if(!c)return;const u=new Uint8Array(d);c.buf.push(u);c.bl+=u.length;c.recv+=u.length;if(c.bl>=BATCH)this.flush();return}
-  const m=JSON.parse(d);this.q=this.q.then(()=>this.ctl(m)).catch(e=>{const w=String(e.message||e);const l=this.L(m.key);if(l){l.st='fail';l.why=w}this.cur=null;this.upd();this.send({t:'done',key:m.key,err:w})})},
+  const m=JSON.parse(d);if(/^up/.test(m.t||'')){if(typeof upMsg==='function')upMsg(m);return}this.q=this.q.then(()=>this.ctl(m)).catch(e=>{const w=String(e.message||e);const l=this.L(m.key);if(l){l.st='fail';l.why=w}this.cur=null;this.upd();this.send({t:'done',key:m.key,err:w})})},
  flush(){const c=this.cur;if(!c||!c.bl)return;const n=c.bl,a=new Uint8Array(n);let p=0;for(const u of c.buf){a.set(u,p);p+=u.length}c.buf=[];c.bl=0;const at=c.wpos;c.wpos+=n;
   c.pend=c.pend.then(()=>ST.write(c.fn,at,a.buffer)).then(()=>{c.got=at+n;this.got=c.got;const lg=this.L(c.key);if(lg)lg.got=c.got;this.send({t:'ack',key:c.key,got:c.got});this.upd()});c.pend.catch(e=>{c.err=e})},
  async ctl(m){if(m.t==='file'){const id=m.kind+'|'+m.key,ex=await IDB.get('files',id);if(this.cur&&this.cur.key!==m.key){const pl=this.L(this.cur.key);if(pl&&pl.st==='recv'){pl.st='fail';pl.why='途中で止まった'}}let l=this.L(m.key);if(!l){l={key:m.key,kind:m.kind,name:m.name,size:m.size};this.log.unshift(l)}l.st='recv';l.got=0;l.why='';l.size=m.size;
