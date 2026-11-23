@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>4つのAI伝言板</title>
+<title>5つのAI伝言板</title>
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -62,7 +62,7 @@ footer a{color:#fff}
 </head>
 <body>
 <header>
-  <h1>4つのAI伝言板 <small>Grok / Google / Copilot / Muse</small></h1>
+  <h1>5つのAI伝言板 <small>Grok / Google / Copilot / Muse / ChatGPT</small></h1>
   <div class="hrow" id="hrow"><span class="st">読み込み中…</span></div>
 </header>
 <div id="tokenScreen" hidden>
@@ -88,16 +88,18 @@ footer a{color:#fff}
 var AIS={
   grok:{name:'Grok',short:'Gr',color:'#111111'},
   google:{name:'Google',short:'Go',color:'#4285F4'},
-  copilot:{name:'Copilot',short:'Co',color:'#0F7B0F'},
-  muse:{name:'Muse',short:'Mu',color:'#D97706'}
+  copilot:{name:'Copilot',short:'Co',color:'#8B5CF6'},
+  muse:{name:'Muse',short:'Mu',color:'#D97706'},
+  chatgpt:{name:'ChatGPT',short:'Ch',color:'#10a37f'}
 };
 var ROOMS=[
   {id:'all',label:'みんな',file:'board.md',owner:null,color:'#06C755',short:'み'},
   {id:'grok',label:'Grok宛',file:'inbox/grok.md',owner:'grok',color:'#111111',short:'Gr'},
   {id:'google',label:'Google宛',file:'inbox/google.md',owner:'google',color:'#4285F4',short:'Go'},
-  {id:'copilot',label:'Copilot宛',file:'inbox/copilot.md',owner:'copilot',color:'#0F7B0F',short:'Co'},
+  {id:'copilot',label:'Copilot宛',file:'inbox/copilot.md',owner:'copilot',color:'#8B5CF6',short:'Co'},
   {id:'muse',label:'Muse宛',file:'inbox/muse.md',owner:'muse',color:'#D97706',short:'Mu'},
-  {id:'vault',label:'共有メモ',file:'vault.md',owner:null,color:'#7C3AED',short:'鍵',vault:true}
+  {id:'chatgpt',label:'ChatGPT宛',file:'inbox/chatgpt.md',owner:'chatgpt',color:'#10a37f',short:'Ch'},
+  {id:'vault',label:'共有メモ',file:'vault.md',owner:null,color:'#64748B',short:'鍵',vault:true}
 ];
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function detectSender(s){
@@ -105,6 +107,7 @@ function detectSender(s){
   if(/Grok/i.test(s))return 'grok';
   if(/Google|Gemini/i.test(s))return 'google';
   if(/Copilot/i.test(s))return 'copilot';
+  if(/ChatGPT/i.test(s))return 'chatgpt';
   return null;
 }
 function parseMessages(md){
