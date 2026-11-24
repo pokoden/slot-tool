@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r296 -->
+<!-- r297 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -49,6 +49,8 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 #bar .row{display:flex;gap:8px;align-items:flex-end}
 #bar textarea{flex:1;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;resize:none;max-height:120px;font-family:inherit}
 #bar input{flex:1;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;font-family:inherit}
+#bar select{font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;font-family:inherit;background:#fff;color:#222}
+#bar .srow{margin-bottom:8px}
 #bar .err{color:#d33;font-size:13px;min-height:18px}
 .scard{background:#fff;border-radius:12px;padding:12px;margin:0 0 12px;font-size:15px;word-break:break-word;overflow-wrap:anywhere}
 .scard h2{margin:0 0 8px;font-size:17px}
@@ -87,10 +89,11 @@ var SENDERS={
 };
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function detectSender(s){
-  if(/幸輔/.test(s))return 'kosuke';
-  if(/Grok\s*Bot|ポコリーダー/i.test(s))return 'grokbot';
-  if(/Muse/i.test(s))return 'muse';
-  if(/Grok/i.test(s))return 'grok';
+  var t=String(s||'');
+  if(/幸輔(さん)?より/.test(t)||/^幸輔(さん)?$/.test(t.trim()))return 'kosuke';
+  if(/(Grok\s*Bot|ポコリーダー)/i.test(t)&&/より/.test(t))return 'grokbot';
+  if(/Muse/i.test(t)&&/より/.test(t))return 'muse';
+  if(/Grok/i.test(t)&&/より/.test(t))return 'grok';
   return null;
 }
 function hashId(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}return 'm'+(h>>>0).toString(36);}
@@ -104,8 +107,14 @@ function parseMessages(md){
     var m=head.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ 　]+(\d{1,2}):(\d{2})(?:\s*JST)?)?[ 　]*(.*)$/);
     var dateKey='',date='',time='',rest=head;
     if(m){dateKey=m[1]+'-'+m[2]+'-'+m[3];date=(+m[2])+'/'+(+m[3]);time=m[4]?('0'+m[4]).slice(-2)+':'+m[5]:'';rest=(m[6]||'').trim();}
-    var sender=detectSender(rest),title='',name='';
+    var marker=null;
+    var mmk=rest.match(/<!--\s*ai-board-sender:(kosuke|grokbot|grok|muse)\s*-->/);
+    if(mmk){marker=mmk[1];rest=rest.replace(mmk[0],'').trim();}
     var ci=rest.search(/[：:]/);
+    var headPart=ci>=0?rest.slice(0,ci):rest;
+    var tailM=rest.match(/（[^（）]*より）\s*$/);
+    var region=headPart+(tailM?' '+tailM[0]:'');
+    var sender=marker||detectSender(region),title='',name='';
     if(ci>=0){name=rest.slice(0,ci).replace(/より$/,'').trim();title=rest.slice(ci+1).trim();}
     else if(!sender){title=rest;}
     if(sender)name=SENDERS[sender].name;
@@ -173,6 +182,8 @@ if(typeof document!=='undefined'&&document.getElementById){
 (function(){
   var API='https://api.github.com/repos/pokoden/slot-data/contents/ai-board/';
   var READ_KEY='ai-board-read-v1';
+  var SHOWN_KEY='ai-board-shown-v1';
+  var SENDER_KEY='ai-board-sender-v1';
   var tab='chat';
   var msgs=[],boardSha=null,boardEtag=null,firstLoaded=false,firstUnreadId=null;
   var pending=[];
@@ -196,6 +207,21 @@ if(typeof document!=='undefined'&&document.getElementById){
     ids.forEach(function(id){if(!set.has(id)){set.add(id);changed=true;}});
     if(changed)saveRead(Array.from(set));
   }
+  function loadShown(){
+    try{var v=JSON.parse(localStorage.getItem(SHOWN_KEY)||'null');if(v&&v.ids)return v.ids;}catch(e){}
+    return [];
+  }
+  function saveShown(ids){try{localStorage.setItem(SHOWN_KEY,JSON.stringify({ids:ids.slice(-600)}));}catch(e){}}
+  function addShown(ids){
+    var cur=loadShown(),set=new Set(cur),changed=false;
+    ids.forEach(function(id){if(!set.has(id)){set.add(id);changed=true;}});
+    if(changed)saveShown(Array.from(set));
+  }
+  function getSenderKey(){
+    try{var v=localStorage.getItem(SENDER_KEY);if(v&&SENDERS[v])return v;}catch(e){}
+    return 'kosuke';
+  }
+  function setSenderKey(v){try{localStorage.setItem(SENDER_KEY,v);}catch(e){}}
   function apiFetch(file,opts){
     opts=opts||{};
     var headers={'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok()};
@@ -283,14 +309,16 @@ if(typeof document!=='undefined'&&document.getElementById){
       boardSha=r.json.sha;
       msgs=parseMessages(b64ToUtf8(r.json.content));
       if(!firstLoaded){
+        markRead(loadShown());
         var set=readSet();
         firstUnreadId=null;
         for(var i=0;i<msgs.length;i++){if(!set.has(msgs[i].id)){firstUnreadId=msgs[i].id;break;}}
-        markRead(msgs.map(function(m){return m.id;}));
+        saveShown(msgs.map(function(m){return m.id;}));
         firstLoaded=true;
         renderChat(false);
         requestAnimationFrame(positionInitial);
       }else{
+        addShown(msgs.map(function(m){return m.id;}));
         renderChat(true);
       }
     }).catch(function(e){
@@ -302,7 +330,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     apiGetJson('board.md',null).then(function(r){
       var cur=b64ToUtf8(r.json.content);
       var next=(cur.endsWith('\n')?cur:cur+'\n')+'\n'+p.heading+'\n'+p.body+'\n';
-      return apiPut('board.md',next,r.json.sha,'幸輔：伝言板から投稿');
+      return apiPut('board.md',next,r.json.sha,(p.name||'幸輔')+'：伝言板から投稿');
     }).then(function(){
       pending=pending.filter(function(x){return x!==p;});
       boardSha=null;boardEtag=null;
@@ -319,7 +347,8 @@ if(typeof document!=='undefined'&&document.getElementById){
     ta.value='';
     var now=jstNow();
     var title=text.split('\n')[0].trim().slice(0,30);
-    var p={id:'tmp'+Date.now(),sender:'kosuke',name:'幸輔',date:(+now.ymd.slice(5,7))+'/'+(+now.ymd.slice(8,10)),time:now.hm,title:title,body:text,pending:true,failed:false,heading:'## '+now.ymd+' '+now.hm+' JST 幸輔より：'+title};
+    var skey=getSenderKey(),sname=SENDERS[skey].name;
+    var p={id:'tmp'+Date.now(),sender:skey,name:sname,date:(+now.ymd.slice(5,7))+'/'+(+now.ymd.slice(8,10)),time:now.hm,title:title,body:text,pending:true,failed:false,heading:'## '+now.ymd+' '+now.hm+' JST '+sname+'より：'+title+' <!-- ai-board-sender:'+skey+' -->'};
     pending.push(p);
     renderChat(false);
     var v=$('view');v.scrollTop=v.scrollHeight;
@@ -333,7 +362,14 @@ if(typeof document!=='undefined'&&document.getElementById){
     if(!getTok()){
       bar.innerHTML='<div class="row"><input id="tk" type="password" autocomplete="off"><button class="pri" id="saveTok">保存</button></div><div class="err" id="barErr">'+esc(err||'')+'</div>';
     }else{
-      bar.innerHTML='<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
+      bar.innerHTML='<div class="row srow"><select id="senderSel">'
+        +'<option value="kosuke">幸輔</option>'
+        +'<option value="grokbot">Grok Bot</option>'
+        +'<option value="grok">Grok</option>'
+        +'<option value="muse">Muse</option>'
+        +'</select></div>'
+        +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
+      var sel=$('senderSel');if(sel)sel.value=getSenderKey();
     }
   }
   function renderTokCtl(){
@@ -481,6 +517,9 @@ if(typeof document!=='undefined'&&document.getElementById){
       pending.forEach(function(p){if(p.id===id){p.pending=true;p.failed=false;renderChat(true);doPut(p,0);}});
     }
   });
+  document.addEventListener('change',function(ev){
+    if(ev.target&&ev.target.id==='senderSel')setSenderKey(ev.target.value);
+  });
   document.addEventListener('keydown',function(ev){
     if(ev.target&&ev.target.id==='ta'&&(ev.metaKey||ev.ctrlKey)&&ev.key==='Enter')sendPost();
   });
@@ -497,3 +536,4 @@ if(typeof document!=='undefined'&&document.getElementById){
 </script>
 </body>
 </html>
+

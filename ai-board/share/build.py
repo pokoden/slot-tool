@@ -2,9 +2,11 @@
 """共有タブの生成スクリプト。
 
 使い方:
-    python3 build.py <知識フォルダ> [出力フォルダ]
+    python3 build.py <知識フォルダ> [出力フォルダ] [幸輔ルール集.mdのパス]
 
 出力フォルダの既定値は、このスクリプトがあるフォルダ（ai-board/share/）。
+幸輔ルール集.md は、3番目の引数で実体のパスを指定できる。指定が無ければ
+知識フォルダの中を探し、無ければ対象外としてほかの生成を続ける。
 許可したファイルだけをコピーし、秘密になりそうな行を除いて書き出す。
 生成物: index.md（目次）、分類ごとの .md、all.txt（全部を連結したプレーンテキスト）。
 """
@@ -75,7 +77,7 @@ def clean_lines(text: str) -> str:
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("使い方: python3 build.py <知識フォルダ> [出力フォルダ]")
+        print("使い方: python3 build.py <知識フォルダ> [出力フォルダ] [幸輔ルール集.mdのパス]")
         return 1
     src = Path(sys.argv[1])
     out = Path(sys.argv[2]) if len(sys.argv) > 2 else Path(__file__).parent
@@ -84,15 +86,28 @@ def main() -> int:
         return 1
     out.mkdir(parents=True, exist_ok=True)
 
+    rules_rel = "幸輔ルール集.md"
+    rules_path = Path(sys.argv[3]) if len(sys.argv) > 3 else src / rules_rel
+
     by_cat: dict[str, list[tuple[str, str]]] = {c: [] for c in CATEGORIES}
     skipped = []
     for rel, cat in ALLOW.items():
+        if rel == rules_rel:
+            continue
         name_hit = any(d in rel for d in DENY_NAME)
         path = src / rel
         if name_hit or not path.is_file():
             skipped.append(rel)
             continue
         by_cat[cat].append((rel, clean_lines(path.read_text(encoding="utf-8"))))
+
+    if rules_path.is_file():
+        by_cat["共通ルール"].insert(
+            0, (rules_rel, clean_lines(rules_path.read_text(encoding="utf-8")))
+        )
+    else:
+        skipped.append(rules_rel)
+        print(f"幸輔ルール集.md が見つからないため対象外にした: {rules_path}")
 
     written = []
     all_parts = ["共有\n"]
@@ -124,3 +139,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
