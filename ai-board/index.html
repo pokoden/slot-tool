@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r297 -->
+<!-- r298 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -22,7 +22,8 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 #view{width:100%;max-width:430px;margin:0 auto;flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 10px 24px}
 .msg{display:flex;gap:8px;margin:0 0 14px;align-items:flex-start}
 .msg.mine{flex-direction:row-reverse}
-.av{flex:0 0 40px;width:40px;height:40px;border-radius:50%;color:#fff;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center}
+.av{flex:0 0 40px;width:40px;height:40px;border-radius:50%;color:#fff;font-weight:bold;font-size:13px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .msg.mine .av{display:none}
 .mbody{max-width:78%;min-width:0}
 .msg.mine .mbody{max-width:82%}
@@ -83,15 +84,16 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 /* ===== 純粋関数（テスト可能） ===== */
 var SENDERS={
   kosuke:{name:'幸輔',short:'幸',color:'#06C755'},
-  grokbot:{name:'GrokBOT（ポコリーダー）',short:'ポ',color:'#7C3AED'},
+  grokbot:{name:'秘書担当',short:'秘',color:'#7C3AED',icon:'icons/hisho.jpg?r298'},
   grok:{name:'Grok',short:'Gr',color:'#111111'},
-  muse:{name:'Muse',short:'Mu',color:'#D97706'}
+  muse:{name:'Muse',short:'Mu',color:'#D97706',icon:'icons/muse.jpg?r298'}
 };
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function detectSender(s){
   var t=String(s||'');
   if(/幸輔(さん)?より/.test(t)||/^幸輔(さん)?$/.test(t.trim()))return 'kosuke';
-  if(/(Grok\s*Bot|ポコリーダー)/i.test(t)&&/より/.test(t))return 'grokbot';
+  if(/soukatsu/i.test(t))return 'grokbot';
+  if(/(Grok\s*Bot|ポコリーダー|秘書担当)/i.test(t)&&/より/.test(t))return 'grokbot';
   if(/Muse/i.test(t)&&/より/.test(t))return 'muse';
   if(/Grok/i.test(t)&&/より/.test(t))return 'grok';
   return null;
@@ -107,10 +109,21 @@ function parseMessages(md){
     var m=head.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ 　]+(\d{1,2}):(\d{2})(?:\s*JST)?)?[ 　]*(.*)$/);
     var dateKey='',date='',time='',rest=head;
     if(m){dateKey=m[1]+'-'+m[2]+'-'+m[3];date=(+m[2])+'/'+(+m[3]);time=m[4]?('0'+m[4]).slice(-2)+':'+m[5]:'';rest=(m[6]||'').trim();}
+    var m2=rest.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ 　]+(\d{1,2}):(\d{2})(?:\s*JST)?)?[ 　]*(.*)$/);
+    if(m2){dateKey=m2[1]+'-'+m2[2]+'-'+m2[3];date=(+m2[2])+'/'+(+m2[3]);if(m2[4])time=('0'+m2[4]).slice(-2)+':'+m2[5];rest=(m2[6]||'').trim();}
     var marker=null;
     var mmk=rest.match(/<!--\s*ai-board-sender:(kosuke|grokbot|grok|muse)\s*-->/);
     if(mmk){marker=mmk[1];rest=rest.replace(mmk[0],'').trim();}
-    var ci=rest.search(/[：:]/);
+    var ci=rest.search(/：/);
+    if(ci<0){
+      ci=-1;
+      for(var k=0;k<rest.length;k++){
+        if(rest.charAt(k)!==':')continue;
+        var prev=k>0?rest.charAt(k-1):'',next=rest.charAt(k+1);
+        if(/\d/.test(prev)&&/\d/.test(next))continue;
+        ci=k;break;
+      }
+    }
     var headPart=ci>=0?rest.slice(0,ci):rest;
     var tailM=rest.match(/（[^（）]*より）\s*$/);
     var region=headPart+(tailM?' '+tailM[0]:'');
@@ -256,7 +269,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     var firstLine=m.body.split('\n')[0].trim();
     var showTitle=m.title&&m.title!==firstLine;
     return '<div class="msg'+(mine?' mine':'')+(m.pending?' pending':'')+'" data-id="'+m.id+'">'
-      +'<div class="av" style="background:'+color+'">'+(ai?ai.short:'？')+'</div>'
+      +'<div class="av" style="background:'+color+'">'+(ai&&ai.icon?'<img src="'+esc(ai.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+(ai?esc(ai.short):'？')+'</div>'
       +'<div class="mbody"><div class="meta"><span class="nm">'+esc(m.name)+'</span>'
       +(m.time?'<span class="dt">'+esc(m.time)+'</span>':'')+'</div>'
       +(showTitle?'<div class="ttl">'+esc(m.title)+'</div>':'')
@@ -364,7 +377,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }else{
       bar.innerHTML='<div class="row srow"><select id="senderSel">'
         +'<option value="kosuke">幸輔</option>'
-        +'<option value="grokbot">Grok Bot</option>'
+        +'<option value="grokbot">秘書担当</option>'
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
         +'</select></div>'
