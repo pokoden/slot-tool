@@ -495,12 +495,14 @@ if(typeof document!=='undefined'&&document.getElementById){
     if(!getTok()){
       bar.innerHTML='<div class="row"><input id="tk" type="password" autocomplete="off"><button class="pri" id="saveTok">保存</button></div><div class="err" id="barErr">'+esc(err||'')+'</div>';
     }else{
+      var sk0=getSenderKey();
+      var destHtml=(sk0==='muse'||sk0==='grokbot')?' <select id="destSel"><option value="board.md">板へ</option><option value="talk.md">やり取りへ</option></select>':'';
       bar.innerHTML='<div class="row srow"><select id="senderSel">'
         +'<option value="kosuke">幸輔</option>'
         +'<option value="grokbot">秘書担当</option>'
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
-        +'</select> <select id="destSel"><option value="board.md">板へ</option><option value="talk.md">やり取りへ</option></select> <button class="small" id="readsBtn">既読を更新</button></div>'
+        +'</select>'+destHtml+' <button class="small" id="readsBtn">既読を更新</button></div>'
         +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
       var sel=$('senderSel');if(sel)sel.value=getSenderKey();
       var dsel=$('destSel');if(dsel)dsel.value=getDest();
@@ -804,7 +806,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }
   });
   document.addEventListener('change',function(ev){
-    if(ev.target&&ev.target.id==='senderSel')setSenderKey(ev.target.value);
+    if(ev.target&&ev.target.id==='senderSel'){setSenderKey(ev.target.value);var taEl=$('ta');var keep=taEl?taEl.value:'';renderBar('');var taEl2=$('ta');if(taEl2)taEl2.value=keep;}
     if(ev.target&&ev.target.id==='destSel')setDest(ev.target.value);
   });
   document.addEventListener('keydown',function(ev){
