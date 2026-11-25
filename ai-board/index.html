@@ -34,6 +34,7 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 .ric{flex:0 0 18px;width:18px;height:18px;border-radius:50%;color:#fff;font-weight:bold;font-size:9px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .ric img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .sec{background:#fff;border-radius:12px;margin:0 0 12px;overflow:hidden}
+.newbadge{color:#d43a2f;font-weight:700;font-size:12px;margin-left:6px;}
 .sec-h{display:block;width:100%;text-align:left;border:none;border-radius:0;background:#fff;color:#222;font-size:16px;font-weight:bold;padding:12px;border-bottom:1px solid #eee;cursor:pointer}
 .sec-b{padding:4px 12px 12px;font-size:15px;word-break:break-word;overflow-wrap:anywhere}
 .sec-b h3{margin:12px 0 6px;font-size:15px}
@@ -224,6 +225,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   var pending=[];
   var readsData={grokbot:'',muse:''},readsSha=null;
   var shareText=null,shareSha=null,shareEditing=false;
+  var secTimes={},secTimesSha=null;
   var knowText=null,knowSha=null,knowEditing=false;
   var secOpen={};
   function $(id){return document.getElementById(id);}
@@ -383,6 +385,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         readsData={grokbot:o.grokbot||'',muse:o.muse||''};
         readsSha=r.json.sha;
         if(tab==='chat')renderChat(true);
+        if(tab==='share')renderShare();
       }catch(e){}
     }).catch(function(){});
   }
@@ -496,7 +499,10 @@ if(typeof document!=='undefined'&&document.getElementById){
   function shareSectionsHtml(){
     if(!shareText)return '';
     var secs=parseSections(shareText);
+    var rk=getSenderKey();
+    var readAt=(rk==='grokbot'||rk==='muse')?(readsData[rk]||''):'';
     return secs.map(function(s){
+      var badge=(readAt&&secTimes[s.title]&&secTimes[s.title]>readAt)?'<span class="newbadge">NEW</span>':'';
       var open=!!secOpen['sec:'+s.title];
       var inner='';
       if(s.title==='幸輔への相談'){
@@ -507,7 +513,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       }else{
         inner=secBodyHtml(s.body);
       }
-      return '<div class="sec"><button class="sec-h" data-sec="sec:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+'</button>'
+      return '<div class="sec"><button class="sec-h" data-sec="sec:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+badge+'</button>'
         +'<div class="sec-b" data-secbody="sec:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
     }).join('');
   }
@@ -556,6 +562,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       var cur=b64ToUtf8(r.json.content);
       if(cur.indexOf(it.raw)<0)throw new Error('line not found');
       shareText=cur.replace(it.raw,it.raw.replace(/｜未回答\s*$/,'｜回答済み'));
+      var n2=jstNow();secTimes['幸輔への相談']=n2.ymd+' '+n2.hm;putSecTimes();
       return apiPut('share.md',shareText,r.json.sha,'幸輔：相談を回答済みに');
     }).then(function(){
       boardSha=null;boardEtag=null;
@@ -583,8 +590,31 @@ if(typeof document!=='undefined'&&document.getElementById){
     view.innerHTML=(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml())
       +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
   }
+  function loadSecTimes(){
+    if(!getTok())return;
+    apiGetJson('share-sections.json',null).then(function(r){
+      try{secTimes=JSON.parse(b64ToUtf8(r.json.content))||{};secTimesSha=r.json.sha;}catch(e){secTimes={};}
+      if(tab==='share')renderShare();
+    }).catch(function(){secTimes={};});
+  }
+  function putSecTimes(){
+    return apiPut('share-sections.json',JSON.stringify(secTimes,null,2),secTimesSha,'見出しの更新時刻を更新').then(function(){
+      return apiGetJson('share-sections.json',null).then(function(r){if(r&&r.json)secTimesSha=r.json.sha;}).catch(function(){});
+    }).catch(function(){});
+  }
+  function touchSecTimes(oldText,newText){
+    var n=jstNow();var now=n.ymd+' '+n.hm;
+    var oldMap={};parseSections(oldText||'').forEach(function(x){oldMap[x.title]=x.body;});
+    var changed=false;
+    parseSections(newText||'').forEach(function(x){
+      if(oldMap[x.title]!==x.body){secTimes[x.title]=now;changed=true;}
+    });
+    if(changed)return putSecTimes();
+    return Promise.resolve();
+  }
   function loadShareFrame(){
     if(!getTok())return;
+    loadSecTimes();
     apiGetJson('share.md',null).then(function(r){
       shareText=b64ToUtf8(r.json.content);
       shareSha=r.json.sha;
@@ -597,8 +627,10 @@ if(typeof document!=='undefined'&&document.getElementById){
   function saveShare(){
     var text=$('shareText').value;
     function fail(){var er=$('shareErr');if(er)er.textContent='保存できなかった。もう一度試してね。';}
+    var prevShare=shareText;
     apiPut('share.md',text,shareSha,'共有を更新').then(function(){
       shareText=text;shareEditing=false;
+      touchSecTimes(prevShare,text);
       return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
     }).then(function(){renderShare();}).catch(function(e){
       if(e.code===409||e.code===422){
@@ -607,6 +639,7 @@ if(typeof document!=='undefined'&&document.getElementById){
           return apiPut('share.md',text,shareSha,'共有を更新');
         }).then(function(){
           shareText=text;shareEditing=false;
+          touchSecTimes(prevShare,text);
           return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
         }).then(function(){renderShare();}).catch(fail);
         return;
