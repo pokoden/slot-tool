@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r299 -->
+<!-- r301 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -30,7 +30,18 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 .meta{font-size:13px;margin:0 0 2px 2px;color:#fff}
 .meta .nm{font-weight:bold}
 .meta .dt{margin-left:6px;opacity:.85}
-.ttl{font-size:13px;font-weight:bold;color:#fff;margin:0 0 2px 2px}
+.reads{display:flex;gap:4px;margin:0 0 2px 2px;align-items:center}
+.ric{flex:0 0 18px;width:18px;height:18px;border-radius:50%;color:#fff;font-weight:bold;font-size:9px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.ric img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.sec{background:#fff;border-radius:12px;margin:0 0 12px;overflow:hidden}
+.sec-h{display:block;width:100%;text-align:left;border:none;border-radius:0;background:#fff;color:#222;font-size:16px;font-weight:bold;padding:12px;border-bottom:1px solid #eee;cursor:pointer}
+.sec-b{padding:4px 12px 12px;font-size:15px;word-break:break-word;overflow-wrap:anywhere}
+.sec-b h3{margin:12px 0 6px;font-size:15px}
+.sub-h{display:block;width:100%;text-align:left;border:none;border-top:1px solid #eee;border-radius:0;background:#fff;color:#222;font-size:15px;font-weight:bold;padding:10px 4px;cursor:pointer}
+.kvrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #eee;font-size:15px}
+.kvrow .k{flex:0 0 88px;font-weight:bold}
+.kvrow .v{flex:1;word-break:break-all;font-family:ui-monospace,Menlo,monospace}
+.cpbtn{flex:0 0 auto;font-size:13px;padding:5px 10px}
 .bubble{background:#fff;border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:15px;word-break:break-word;overflow-wrap:anywhere}
 .msg.mine .bubble{background:#06C755;color:#fff;border-radius:14px 14px 4px 14px}
 .bubble a{color:#0066cc;word-break:break-all}
@@ -84,9 +95,9 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 /* ===== 純粋関数（テスト可能） ===== */
 var SENDERS={
   kosuke:{name:'幸輔',short:'幸',color:'#06C755'},
-  grokbot:{name:'秘書担当',short:'秘',color:'#7C3AED',icon:'icons/hisho.jpg?r299'},
+  grokbot:{name:'秘書担当',short:'秘',color:'#7C3AED',icon:'icons/hisho.jpg?r301'},
   grok:{name:'Grok',short:'Gr',color:'#111111'},
-  muse:{name:'Muse',short:'Mu',color:'#D97706',icon:'icons/muse.jpg?r299'}
+  muse:{name:'Muse',short:'Mu',color:'#D97706',icon:'icons/muse.jpg?r301'}
 };
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function detectSender(s){
@@ -132,25 +143,29 @@ function parseMessages(md){
     else if(!sender){title=rest;}
     if(sender)name=SENDERS[sender].name;
     if(!name)name='？';
-    msgs.push({id:hashId(dateKey+'|'+time+'|'+rest+'|'+body.slice(0,60)),dateKey:dateKey,date:date,time:time,title:title,sender:sender,name:name,body:body});
+    msgs.push({id:hashId(dateKey+'|'+time+'|'+rest+'|'+body.slice(0,60)),dateKey:dateKey,date:date,time:time,dt:dateKey?dateKey+' '+(time||'00:00'):'',title:title,sender:sender,name:name,body:body});
   }
   return msgs;
 }
-function parseVault(md){
-  var parts=String(md||'').split(/^## /m),cards=[];
+function parseSections(md){
+  var parts=String(md||'').split(/^## /m),secs=[];
   for(var i=1;i<parts.length;i++){
     var chunk=parts[i],nl=chunk.indexOf('\n');
     var head=(nl<0?chunk:chunk.slice(0,nl)).trim();
     var body=(nl<0?'':chunk.slice(nl+1)).trim();
-    if(!body)continue;
-    var rows=[];
-    body.split('\n').forEach(function(line){
-      var mm=line.replace(/^[-*]\s*/,'').match(/^([^：:]+)[：:]\s*(.*)$/);
-      if(mm)rows.push({k:mm[1].trim(),v:mm[2].trim()});
-    });
-    cards.push({title:head,rows:rows,body:body});
+    if(head)secs.push({title:head,body:body});
   }
-  return cards;
+  return secs;
+}
+function parseKvRows(body){
+  var rows=[];
+  String(body||'').split('\n').forEach(function(line){
+    var t=line.replace(/^[-*]\s*/,'').trim();
+    if(!t)return;
+    var mm=t.match(/^(.+?)[｜|:：]\s*(.+)$/);
+    if(mm)rows.push({k:mm[1].trim(),v:mm[2].trim()});
+  });
+  return rows;
 }
 function renderBody(text){
   var t=esc(text),stash=[];
@@ -200,8 +215,9 @@ if(typeof document!=='undefined'&&document.getElementById){
   var tab='chat';
   var msgs=[],boardSha=null,boardEtag=null,firstLoaded=false,firstUnreadId=null;
   var pending=[];
-  var shareCache={},sharePath=null;
-  var vaultEnc=null,vaultPlain=null;
+  var readsData={grokbot:'',muse:''},readsSha=null;
+  var shareText=null,shareSha=null,shareEditing=false;
+  var secOpen={};
   function $(id){return document.getElementById(id);}
   function getTok(){
     try{var v=localStorage.getItem('v2_token');if(!v)return '';
@@ -262,17 +278,29 @@ if(typeof document!=='undefined'&&document.getElementById){
     });
   }
   /* ----- 会話 ----- */
+  function readIconsHtml(m){
+    var h='';
+    if(m.dt){
+      if(m.sender!=='grokbot'&&readsData.grokbot&&readsData.grokbot>=m.dt){
+        var g=SENDERS.grokbot;
+        h+='<span class="ric" style="background:'+g.color+'">'+(g.icon?'<img src="'+esc(g.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+esc(g.short)+'</span>';
+      }
+      if(m.sender!=='muse'&&readsData.muse&&readsData.muse>=m.dt){
+        var u=SENDERS.muse;
+        h+='<span class="ric" style="background:'+u.color+'">'+(u.icon?'<img src="'+esc(u.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+esc(u.short)+'</span>';
+      }
+    }
+    return h?'<div class="reads">'+h+'</div>':'';
+  }
   function msgHtml(m){
     var ai=m.sender?SENDERS[m.sender]:null;
     var color=ai?ai.color:'#0891B2';
     var mine=m.sender==='kosuke';
-    var firstLine=m.body.split('\n')[0].trim();
-    var showTitle=m.title&&m.title!==firstLine;
     return '<div class="msg'+(mine?' mine':'')+(m.pending?' pending':'')+'" data-id="'+m.id+'">'
       +'<div class="av" style="background:'+color+'">'+(ai&&ai.icon?'<img src="'+esc(ai.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+(ai?esc(ai.short):'？')+'</div>'
       +'<div class="mbody"><div class="meta"><span class="nm">'+esc(m.name)+'</span>'
       +(m.time?'<span class="dt">'+esc(m.time)+'</span>':'')+'</div>'
-      +(showTitle?'<div class="ttl">'+esc(m.title)+'</div>':'')
+      +readIconsHtml(m)
       +'<div class="bubble">'+renderBody(m.body)+'</div>'
       +(m.failed?'<div class="retry"><button class="small" data-retry="'+m.id+'">再送</button></div>':'')
       +'</div></div>';
@@ -338,6 +366,41 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(e.code===401){clearTok();boardSha=null;firstLoaded=false;renderBar('トークンが違うみたい。もう一度入れてね。');renderTokCtl();$('view').innerHTML='';}
     });
   }
+  /* ----- 既読 ----- */
+  function loadReads(){
+    if(!getTok())return;
+    apiGetJson('reads.json',null).then(function(r){
+      try{
+        var o=JSON.parse(b64ToUtf8(r.json.content));
+        readsData={grokbot:o.grokbot||'',muse:o.muse||''};
+        readsSha=r.json.sha;
+        if(tab==='chat')renderChat(true);
+      }catch(e){}
+    }).catch(function(){});
+  }
+  function updateReads(){
+    var key=getSenderKey();
+    if(key!=='grokbot'&&key!=='muse')return;
+    var latest='';
+    msgs.forEach(function(m){if(m.dt&&m.dt>latest)latest=m.dt;});
+    if(!latest){var n=jstNow();latest=n.ymd+' '+n.hm;}
+    if(readsData[key]&&readsData[key]>=latest)return;
+    apiGetJson('reads.json',null).then(function(r){
+      var o={};
+      try{o=JSON.parse(b64ToUtf8(r.json.content));}catch(e){}
+      o[key]=latest;
+      return apiPut('reads.json',JSON.stringify(o,null,2)+'\n',r.json.sha,'既読を更新');
+    }).catch(function(e){
+      if(e.code===404){
+        var o={};o[key]=latest;
+        return apiPut('reads.json',JSON.stringify(o,null,2)+'\n',null,'既読を登録');
+      }
+      throw e;
+    }).then(function(){
+      readsData[key]=latest;
+      if(tab==='chat')renderChat(true);
+    }).catch(function(){});
+  }
   /* ----- 送信 ----- */
   function doPut(p,retry){
     apiGetJson('board.md',null).then(function(r){
@@ -347,6 +410,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }).then(function(){
       pending=pending.filter(function(x){return x!==p;});
       boardSha=null;boardEtag=null;
+      updateReads();
       loadBoard();
     }).catch(function(e){
       if((e.code===409||e.code===422)&&retry<2){doPut(p,retry+1);return;}
@@ -380,7 +444,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<option value="grokbot">秘書担当</option>'
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
-        +'</select></div>'
+        +'</select> <button class="small" id="readsBtn">既読を更新</button></div>'
         +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
       var sel=$('senderSel');if(sel)sel.value=getSenderKey();
     }
@@ -394,8 +458,6 @@ if(typeof document!=='undefined'&&document.getElementById){
     lines.forEach(function(line){
       var t=line.trim();
       if(!t)return;
-      var lm=t.match(/^- \[(.+?)\]\((.+?)\)$/);
-      if(lm){html+='<button class="slink" data-share="'+esc(lm[2])+'">'+esc(lm[1])+'</button>';return;}
       if(/^# /.test(t)){html+='<h2>'+esc(t.slice(2))+'</h2>';return;}
       if(/^## /.test(t)){html+='<h3>'+esc(t.slice(3))+'</h3>';return;}
       if(/^- /.test(t)){html+='<div>・'+renderBody(t.slice(2))+'</div>';return;}
@@ -403,97 +465,90 @@ if(typeof document!=='undefined'&&document.getElementById){
     });
     return html;
   }
-  function vaultHtml(){
-    var h='<div class="vcard"><h3>鍵</h3><div class="kform">'
-      +'<input id="pass" type="password" autocomplete="off">'
-      +'<button class="pri" id="openVault">開く</button>'
-      +'<div class="err" id="vaultErr"></div></div></div>';
-    if(vaultPlain!==null){
-      var cards=parseVault(vaultPlain);
-      h+=cards.map(function(c){
-        var inner='';
-        if(c.rows.length){
-          inner=c.rows.map(function(r){return '<div class="vrow"><span class="k">'+esc(r.k)+'</span><span class="v">'+esc(r.v)+'</span></div>';}).join('');
-        }else{
-          inner='<div style="font-size:15px">'+renderBody(c.body)+'</div>';
-        }
-        return '<div class="vcard"><h3>'+esc(c.title)+'</h3>'+inner+'</div>';
-      }).join('');
-      h+='<div class="vcard"><div class="kform"><textarea id="vaultText" rows="8">'+esc(vaultPlain)+'</textarea><button class="pri" id="saveVault">保存</button><div class="err" id="vaultErr2"></div></div></div>';
-    }else if(vaultEnc===null){
-      h+='<div class="vcard"><div class="kform"><textarea id="vaultText" rows="8"></textarea><button class="pri" id="saveVault">登録</button><div class="err" id="vaultErr2"></div></div></div>';
+  function kvRowsHtml(rows){
+    return rows.map(function(r){
+      return '<div class="kvrow"><span class="k">'+esc(r.k)+'</span><span class="v">'+esc(r.v)+'</span><button class="cpbtn" data-copy="'+esc(r.v)+'">コピー</button></div>';
+    }).join('');
+  }
+  function secBodyHtml(body){
+    var parts=String(body||'').split(/^### /m),html='';
+    var intro=parts[0].trim();
+    if(intro)html+='<div>'+renderShareMd(intro)+'</div>';
+    for(var i=1;i<parts.length;i++){
+      var chunk=parts[i],nl=chunk.indexOf('\n');
+      var head=(nl<0?chunk:chunk.slice(0,nl)).trim();
+      var sub=(nl<0?'':chunk.slice(nl+1)).trim();
+      var key='sub:'+head;
+      var open=!!secOpen[key];
+      html+='<button class="sub-h" data-sec="'+esc(key)+'">'+(open?'▼ ':'▶ ')+esc(head)+'</button>'
+        +'<div class="sec-b" data-secbody="'+esc(key)+'" style="display:'+(open?'block':'none')+'">'+renderShareMd(sub)+'</div>';
     }
-    return h;
+    return html;
+  }
+  function shareSectionsHtml(){
+    if(!shareText)return '';
+    var secs=parseSections(shareText);
+    return secs.map(function(s){
+      var open=!!secOpen['sec:'+s.title];
+      var inner='';
+      if(s.title==='パスワード'||s.title==='キー'){
+        var rows=parseKvRows(s.body);
+        inner=rows.length?kvRowsHtml(rows):secBodyHtml(s.body);
+      }else{
+        inner=secBodyHtml(s.body);
+      }
+      return '<div class="sec"><button class="sec-h" data-sec="sec:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+'</button>'
+        +'<div class="sec-b" data-secbody="sec:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
+    }).join('');
   }
   function renderShare(){
     var view=$('view');
-    if(sharePath){
-      var c=shareCache[sharePath];
-      if(c===undefined){view.innerHTML='';return;}
-      view.innerHTML='<div class="scard"><button class="small" id="shareBack">戻る</button></div>'
-        +(sharePath.slice(-4)==='.txt'?'<div class="scard"><pre class="stxt">'+esc(c)+'</pre></div>':'<div class="scard">'+renderShareMd(c)+'</div>');
+    if(!getTok()){
+      view.innerHTML='<div class="vcard"><h3>共有（鍵つき）</h3><div class="kform">'
+        +'<input id="tk" type="password" autocomplete="off">'
+        +'<button class="pri" id="saveTok">保存</button>'
+        +'<div class="err" id="shareErr"></div></div></div>';
       return;
     }
-    var idx=shareCache['index.md'];
-    if(idx===undefined){view.innerHTML='';return;}
-    view.innerHTML='<div class="scard">'+renderShareMd(idx)+'</div>'+vaultHtml();
+    if(shareEditing){
+      view.innerHTML='<div class="vcard"><div class="kform"><textarea id="shareText" rows="16">'+esc(shareText||'')+'</textarea>'
+        +'<button class="pri" id="saveShare">保存</button> <button id="cancelEdit">やめる</button>'
+        +'<div class="err" id="shareErr"></div></div></div>';
+      return;
+    }
+    if(shareText===null){view.innerHTML='';return;}
+    view.innerHTML=(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml())
+      +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
   }
-  function loadShareFile(path){
-    if(shareCache[path]!==undefined)return Promise.resolve();
-    return fetch('share/'+path,{cache:'no-store'}).then(function(res){
-      if(!res.ok)throw new Error('http '+res.status);
-      return res.text();
-    }).then(function(t){shareCache[path]=t;}).catch(function(){shareCache[path]='';});
-  }
-  function loadVaultFrame(){
+  function loadShareFrame(){
     if(!getTok())return;
-    apiGetJson('vault.enc.json',null).then(function(r){
-      var o=null;
-      try{o=JSON.parse(b64ToUtf8(r.json.content));}catch(e){}
-      vaultEnc=(o&&o.salt&&o.iv&&o.ct)?o:null;
+    apiGetJson('share.md',null).then(function(r){
+      shareText=b64ToUtf8(r.json.content);
+      shareSha=r.json.sha;
       if(tab==='share')renderShare();
     }).catch(function(e){
-      vaultEnc=null;
+      if(e.code===404){shareText='';shareSha=null;}
       if(tab==='share')renderShare();
     });
   }
-  function deriveKey(pass,salt,iter){
-    return crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']).then(function(base){
-      return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
-    });
-  }
-  function openVault(){
-    var pass=$('pass').value;
-    if(!pass||!vaultEnc)return;
-    deriveKey(pass,b64ToBytes(vaultEnc.salt),vaultEnc.iter||300000).then(function(key){
-      return crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToBytes(vaultEnc.iv)},key,b64ToBytes(vaultEnc.ct));
-    }).then(function(buf){
-      vaultPlain=new TextDecoder('utf-8').decode(buf);
-      renderShare();
-    }).catch(function(){
-      var e=$('vaultErr');if(e)e.textContent='合言葉が違うみたい。';
-    });
-  }
-  function saveVault(){
-    var pass=$('pass')?$('pass').value:'';
-    var text=$('vaultText').value;
-    if(!pass){var e0=$('vaultErr2');if(e0)e0.textContent='合言葉を入れてね。';return;}
-    var salt=crypto.getRandomValues(new Uint8Array(16));
-    var iv=crypto.getRandomValues(new Uint8Array(12));
-    var iter=300000;
-    deriveKey(pass,salt,iter).then(function(key){
-      return crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,new TextEncoder().encode(text));
-    }).then(function(buf){
-      var obj={v:1,kdf:'PBKDF2',hash:'SHA-256',iter:iter,salt:bytesToB64(salt),iv:bytesToB64(iv),alg:'AES-GCM',ct:bytesToB64(new Uint8Array(buf))};
-      vaultEnc=obj;vaultPlain=text;
-      return apiGetJson('vault.enc.json',null).then(function(r){
-        return apiPut('vault.enc.json',JSON.stringify(obj,null,2)+'\n',r.json.sha,'鍵を更新');
-      }).catch(function(e){
-        if(e.code===404)return apiPut('vault.enc.json',JSON.stringify(obj,null,2)+'\n',null,'鍵を登録');
-        throw e;
-      });
-    }).then(function(){renderShare();}).catch(function(){
-      var e=$('vaultErr2');if(e)e.textContent='保存できなかった。もう一度試してね。';
+  function saveShare(){
+    var text=$('shareText').value;
+    function fail(){var er=$('shareErr');if(er)er.textContent='保存できなかった。もう一度試してね。';}
+    apiPut('share.md',text,shareSha,'共有を更新').then(function(){
+      shareText=text;shareEditing=false;
+      return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
+    }).then(function(){renderShare();}).catch(function(e){
+      if(e.code===409||e.code===422){
+        apiGetJson('share.md',null).then(function(r){
+          shareSha=(r&&r.json)?r.json.sha:null;
+          return apiPut('share.md',text,shareSha,'共有を更新');
+        }).then(function(){
+          shareText=text;shareEditing=false;
+          return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
+        }).then(function(){renderShare();}).catch(fail);
+        return;
+      }
+      fail();
     });
   }
   /* ----- タブ ----- */
@@ -502,8 +557,8 @@ if(typeof document!=='undefined'&&document.getElementById){
     $('tabChat').className=t==='chat'?'on':'';
     $('tabShare').className=t==='share'?'on':'';
     renderBar('');
-    if(t==='chat'){renderChat(false);if(firstLoaded)positionInitial();else loadBoard();}
-    else{sharePath=null;renderShare();loadShareFile('index.md').then(renderShare);loadVaultFrame();}
+    if(t==='chat'){renderChat(false);if(firstLoaded)positionInitial();else{loadBoard();loadReads();}}
+    else{renderShare();loadShareFrame();}
   }
   /* ----- イベント ----- */
   document.addEventListener('click',function(ev){
@@ -512,18 +567,31 @@ if(typeof document!=='undefined'&&document.getElementById){
     else if(el.id==='tabShare')setTab('share');
     else if(el.id==='saveTok'){
       var v=($('tk').value||'').trim();
-      if(!v){$('barErr').textContent='トークンを入れてね';return;}
-      setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();
+      if(!v){var er=$('barErr')||$('shareErr');if(er)er.textContent='トークンを入れてね';return;}
+      setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();loadReads();if(tab==='share'){renderShare();loadShareFrame();}
     }
-    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;firstLoaded=false;msgs=[];vaultPlain=null;$('view').innerHTML='';renderTokCtl();renderBar('');}
+    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;firstLoaded=false;msgs=[];shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
     else if(el.id==='sendBtn')sendPost();
-    else if(el.id==='openVault')openVault();
-    else if(el.id==='saveVault')saveVault();
-    else if(el.id==='shareBack'){sharePath=null;renderShare();}
-    else if(el.getAttribute&&el.getAttribute('data-share')){
-      sharePath=el.getAttribute('data-share');
-      renderShare();
-      loadShareFile(sharePath).then(renderShare);
+    else if(el.id==='readsBtn')updateReads();
+    else if(el.id==='editShare'){shareEditing=true;renderShare();}
+    else if(el.id==='cancelEdit'){shareEditing=false;renderShare();}
+    else if(el.id==='saveShare')saveShare();
+    else if(el.getAttribute&&el.getAttribute('data-sec')){
+      var skey2=el.getAttribute('data-sec');
+      secOpen[skey2]=!secOpen[skey2];
+      var bodyEl=document.querySelector('[data-secbody="'+skey2+'"]');
+      if(bodyEl)bodyEl.style.display=secOpen[skey2]?'block':'none';
+      el.textContent=(secOpen[skey2]?'▼ ':'▶ ')+el.textContent.replace(/^[▼▶] /,'');
+    }
+    else if(el.getAttribute&&el.getAttribute('data-copy')){
+      var val=el.getAttribute('data-copy');
+      var done=function(){el.textContent='コピーした';setTimeout(function(){el.textContent='コピー';},1200);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(val).then(done,done);}
+      else{
+        var ta2=document.createElement('textarea');ta2.value=val;document.body.appendChild(ta2);ta2.select();
+        try{document.execCommand('copy');}catch(e){}
+        document.body.removeChild(ta2);done();
+      }
     }
     else if(el.getAttribute&&el.getAttribute('data-retry')){
       var id=el.getAttribute('data-retry');
@@ -537,16 +605,15 @@ if(typeof document!=='undefined'&&document.getElementById){
     if(ev.target&&ev.target.id==='ta'&&(ev.metaKey||ev.ctrlKey)&&ev.key==='Enter')sendPost();
   });
   document.addEventListener('visibilitychange',function(){
-    if(!document.hidden&&tab==='chat')loadBoard();
+    if(!document.hidden&&tab==='chat'){loadBoard();loadReads();}
   });
-  setInterval(function(){if(tab==='chat')loadBoard();},15000);
+  setInterval(function(){if(tab==='chat'){loadBoard();loadReads();}},15000);
   /* ----- 起動 ----- */
   renderTokCtl();
   renderBar('');
-  if(getTok())loadBoard();
+  if(getTok()){loadBoard();loadReads();}
 })();
 }
 </script>
 </body>
 </html>
-
