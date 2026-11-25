@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r301 -->
+<!-- r303 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -44,7 +44,12 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 .cpbtn{flex:0 0 auto;font-size:13px;padding:5px 10px}
 .bubble{background:#fff;border-radius:14px 14px 14px 4px;padding:10px 12px;font-size:15px;word-break:break-word;overflow-wrap:anywhere}
 .msg.mine .bubble{background:#06C755;color:#fff;border-radius:14px 14px 4px 14px}
-.bubble a{color:#0066cc;word-break:break-all}
+.bubble a{color:#0066cc;word-break:break-all;text-decoration:underline}
+.msg.mine .bubble a{color:#e8f6ff}
+.sec-b a{color:#0066cc;text-decoration:underline}
+.csitem{border-top:1px solid #eee;padding:10px 4px}
+.csmeta{font-size:13px;font-weight:bold;margin-bottom:4px}
+.csitem textarea{width:100%;box-sizing:border-box;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:8px;margin:6px 0;font-family:inherit;resize:vertical}
 .msg.mine .bubble a{color:#fff;text-decoration:underline}
 .bubble img{max-width:100%;border-radius:8px;display:block;margin:6px 0}
 .bubble video{max-width:100%;border-radius:8px;display:block;margin:6px 0}
@@ -87,6 +92,7 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
   <nav>
     <button id="tabChat" class="on">会話</button>
     <button id="tabShare">共有</button>
+    <button id="tabKnow">知識共有</button>
   </nav>
 </header>
 <main id="view"></main>
@@ -95,9 +101,9 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 /* ===== 純粋関数（テスト可能） ===== */
 var SENDERS={
   kosuke:{name:'幸輔',short:'幸',color:'#06C755'},
-  grokbot:{name:'秘書担当',short:'秘',color:'#7C3AED',icon:'icons/hisho.jpg?r301'},
+  grokbot:{name:'秘書担当',short:'秘',color:'#7C3AED',icon:'icons/hisho.jpg?r303'},
   grok:{name:'Grok',short:'Gr',color:'#111111'},
-  muse:{name:'Muse',short:'Mu',color:'#D97706',icon:'icons/muse.jpg?r301'}
+  muse:{name:'Muse',short:'Mu',color:'#D97706',icon:'icons/muse.jpg?r303'}
 };
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function detectSender(s){
@@ -171,6 +177,7 @@ function renderBody(text){
   var t=esc(text),stash=[];
   function put(html){stash.push(html);return '§'+(stash.length-1)+'§';}
   t=t.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,function(m,alt,url){return put('<img src="'+url+'" alt="'+esc(alt)+'" loading="lazy">');});
+  t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,function(m,txt,url){return put('<a href="'+url+'" target="_blank" rel="noopener">'+txt+'</a>');});
   t=t.replace(/https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|shorts\/)([A-Za-z0-9_-]{11})|https?:\/\/youtu\.be\/([A-Za-z0-9_-]{11})/g,function(m,a,b){var id=a||b;return put('<span class="yt"><iframe src="https://www.youtube.com/embed/'+id+'" frameborder="0" allowfullscreen loading="lazy"></iframe></span>');});
   t=t.replace(/https?:\/\/[^\s<>"']+\.(?:mp4|webm|mov)(\?[^\s<>"']*)?/gi,function(m){return put('<video src="'+m+'" controls preload="metadata" playsinline></video>');});
   t=t.replace(/https?:\/\/[^\s<>"']+\.(?:jpg|jpeg|png|gif|webp)(\?[^\s<>"']*)?/gi,function(m){return put('<img src="'+m+'" alt="" loading="lazy">');});
@@ -217,6 +224,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   var pending=[];
   var readsData={grokbot:'',muse:''},readsSha=null;
   var shareText=null,shareSha=null,shareEditing=false;
+  var knowText=null,knowSha=null,knowEditing=false;
   var secOpen={};
   function $(id){return document.getElementById(id);}
   function getTok(){
@@ -491,7 +499,9 @@ if(typeof document!=='undefined'&&document.getElementById){
     return secs.map(function(s){
       var open=!!secOpen['sec:'+s.title];
       var inner='';
-      if(s.title==='パスワード'||s.title==='キー'){
+      if(s.title==='幸輔への相談'){
+        inner=consultHtml(s.body);
+      }else if(s.title==='パスワード'||s.title==='キー'){
         var rows=parseKvRows(s.body);
         inner=rows.length?kvRowsHtml(rows):secBodyHtml(s.body);
       }else{
@@ -500,6 +510,59 @@ if(typeof document!=='undefined'&&document.getElementById){
       return '<div class="sec"><button class="sec-h" data-sec="sec:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+'</button>'
         +'<div class="sec-b" data-secbody="sec:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
     }).join('');
+  }
+  /* ----- 幸輔への相談（質問ごとに回答欄） ----- */
+  var consultItems=[];
+  function parseConsult(body){
+    var items=[],notes=[];
+    String(body||'').split('\n').forEach(function(line){
+      var t=line.trim();
+      var m=t.match(/^-\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})｜([^｜]+)｜([^｜]+)｜(.+)｜(未回答|回答済み)\s*$/);
+      if(m)items.push({raw:t,dt:m[1],from:m[2],kind:m[3],content:m[4],status:m[5]});
+      else if(t)notes.push(t.replace(/^-\s*/,''));
+    });
+    return {items:items,notes:notes};
+  }
+  function consultHtml(body){
+    var p=parseConsult(body);consultItems=p.items;
+    var html=p.notes.map(function(n){return '<div>'+renderBody(n)+'</div>';}).join('');
+    html+=p.items.map(function(it,i){
+      var h='<div class="csitem"><div class="csmeta">'+esc(it.dt)+' ・ '+esc(it.from)+' ・ '+esc(it.kind)+' ・ '+(it.status==='未回答'?'<strong>未回答</strong>':'回答済み')+'</div>'
+        +'<div>'+renderBody(it.content)+'</div>';
+      if(it.status==='未回答'){
+        h+='<textarea id="ansText'+i+'" rows="2" placeholder="回答を書いてね"></textarea>'
+          +'<button class="pri" data-answer="'+i+'">回答する</button>'
+          +'<div class="err" id="ansErr'+i+'"></div>';
+      }
+      return h+'</div>';
+    }).join('');
+    return html||'<div>いま相談はないよ。</div>';
+  }
+  function answerConsult(i){
+    var it=consultItems[i];if(!it)return;
+    var ta=$('ansText'+i),er=$('ansErr'+i);
+    var text=ta?ta.value.trim():'';
+    if(!text){if(er)er.textContent='回答を書いてね';return;}
+    var now=jstNow();
+    var heading='## '+now.ymd+' '+now.hm+' JST 幸輔より：'+it.from+'への回答 <!-- ai-board-sender:kosuke -->';
+    var body=it.from+'への回答\n質問：'+it.content+'\n回答：'+text;
+    apiGetJson('board.md',null).then(function(r){
+      var cur=b64ToUtf8(r.json.content);
+      var next=(cur.endsWith('\n')?cur:cur+'\n')+'\n'+heading+'\n'+body+'\n';
+      return apiPut('board.md',next,r.json.sha,'幸輔：相談への回答');
+    }).then(function(){
+      return apiGetJson('share.md',null);
+    }).then(function(r){
+      var cur=b64ToUtf8(r.json.content);
+      if(cur.indexOf(it.raw)<0)throw new Error('line not found');
+      shareText=cur.replace(it.raw,it.raw.replace(/｜未回答\s*$/,'｜回答済み'));
+      return apiPut('share.md',shareText,r.json.sha,'幸輔：相談を回答済みに');
+    }).then(function(){
+      boardSha=null;boardEtag=null;
+      setTab('chat');loadBoard();loadReads();
+    }).catch(function(){
+      if(er)er.textContent='送れなかった。もう一度試してね';
+    });
   }
   function renderShare(){
     var view=$('view');
@@ -551,20 +614,75 @@ if(typeof document!=='undefined'&&document.getElementById){
       fail();
     });
   }
+  /* ----- 知識共有（公開・鍵なし） ----- */
+  var KNOW_API='https://api.github.com/repos/pokoden/slot-tool/contents/ai-board/';
+  function knowSectionsHtml(){
+    if(!knowText)return '';
+    return parseSections(knowText).map(function(s){
+      var open=!!secOpen['know:'+s.title];
+      return '<div class="sec"><button class="sec-h" data-sec="know:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+'</button>'
+        +'<div class="sec-b" data-secbody="know:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+secBodyHtml(s.body)+'</div></div>';
+    }).join('');
+  }
+  function renderKnow(){
+    var view=$('view');
+    if(knowEditing){
+      view.innerHTML='<div class="vcard"><div class="kform"><textarea id="knowText" rows="16">'+esc(knowText||'')+'</textarea>'
+        +'<button class="pri" id="saveKnow">保存</button> <button id="cancelKnow">やめる</button>'
+        +'<div class="err" id="knowErr"></div></div></div>';
+      return;
+    }
+    if(knowText===null){view.innerHTML='';return;}
+    view.innerHTML=(knowText==='' ? '<div class="scard">まだ中身がないよ。</div>' : knowSectionsHtml())
+      +(getTok()?'<div class="scard"><button class="small" id="editKnow">編集（見出しを足す・直す）</button></div>':'');
+  }
+  function loadKnow(){
+    fetch('knowledge.md',{cache:'no-store'}).then(function(res){
+      if(!res.ok)throw new Error('http '+res.status);
+      return res.text();
+    }).then(function(t){knowText=t;if(tab==='know')renderKnow();})
+    .catch(function(){knowText='';if(tab==='know')renderKnow();});
+  }
+  function knowGetSha(){
+    return fetch(KNOW_API+'knowledge.md',{cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok()}}).then(function(res){
+      if(res.status===404)return null;
+      if(!res.ok)throw new Error('http '+res.status);
+      return res.json().then(function(j){return j.sha;});
+    });
+  }
+  function saveKnow(){
+    var text=$('knowText').value;
+    function fail(){var er=$('knowErr');if(er)er.textContent='保存できなかった。もう一度試してね。';}
+    knowGetSha().then(function(sha){
+      var body={message:'知識共有を更新',content:utf8ToB64(text)};
+      if(sha)body.sha=sha;
+      return fetch(KNOW_API+'knowledge.md',{method:'PUT',cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }).then(function(res){
+      if(!res.ok)throw new Error('http '+res.status);
+      knowText=text;knowEditing=false;renderKnow();
+    }).catch(fail);
+  }
   /* ----- タブ ----- */
   function setTab(t){
     tab=t;
     $('tabChat').className=t==='chat'?'on':'';
     $('tabShare').className=t==='share'?'on':'';
+    $('tabKnow').className=t==='know'?'on':'';
     renderBar('');
     if(t==='chat'){renderChat(false);if(firstLoaded)positionInitial();else{loadBoard();loadReads();}}
-    else{renderShare();loadShareFrame();}
+    else if(t==='share'){renderShare();loadShareFrame();}
+    else{renderKnow();loadKnow();}
   }
   /* ----- イベント ----- */
   document.addEventListener('click',function(ev){
     var el=ev.target;
     if(el.id==='tabChat')setTab('chat');
     else if(el.id==='tabShare')setTab('share');
+    else if(el.id==='tabKnow')setTab('know');
+    else if(el.id==='editKnow'){knowEditing=true;renderKnow();}
+    else if(el.id==='cancelKnow'){knowEditing=false;renderKnow();}
+    else if(el.id==='saveKnow')saveKnow();
+    else if(el.getAttribute&&el.getAttribute('data-answer')!==null)answerConsult(+el.getAttribute('data-answer'));
     else if(el.id==='saveTok'){
       var v=($('tk').value||'').trim();
       if(!v){var er=$('barErr')||$('shareErr');if(er)er.textContent='トークンを入れてね';return;}
