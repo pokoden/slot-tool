@@ -410,7 +410,12 @@ if(typeof document!=='undefined'&&document.getElementById){
     var view=$('view');
     if(holdText===null){view.innerHTML='<div style="padding:16px">読み込み中…</div>';return;}
     var secs=parseSections(holdText);
-    if(!secs.length){view.innerHTML='<div style="padding:16px">いま保留・未返答はないよ。</div>';return;}
+    if(!secs.length){
+      var flat=holdText.replace(/^#[^\n]*\n?/,'').trim();
+      if(!flat){view.innerHTML='<div style="padding:16px">いま保留・未返答はないよ。</div>';return;}
+      view.innerHTML='<div class="sec"><div class="sec-h" style="cursor:default">未返答・保留</div><div class="sec-b" style="display:block">'+renderBody(flat)+'</div></div>';
+      return;
+    }
     view.innerHTML=secs.map(function(s){
       return '<div class="sec"><div class="sec-h" style="cursor:default">'+esc(s.title)+'</div><div class="sec-b" style="display:block">'+renderBody(s.body)+'</div></div>';
     }).join('');
