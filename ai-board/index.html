@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r310 -->
+<!-- r311 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -579,9 +579,9 @@ if(typeof document!=='undefined'&&document.getElementById){
       }catch(e){}
     }).catch(function(){});
   }
-  function updateReads(upTo){
+  function updateReads(upTo,manual){
     var key=getSenderKey();
-    if(key!=='grokbot'&&key!=='muse'&&key!=='kosuke')return;
+    if(manual){if(key!=='grokbot'&&key!=='muse'&&key!=='kosuke')return;}else if(key!=='kosuke')return;
     var latest=upTo||'';
     if(!latest)msgs.concat(talkMsgs).forEach(function(m){if(m.dt&&m.dt>latest)latest=m.dt;});
     if(!latest){var n=jstNow();latest=n.ymd+' '+n.hm;}
