@@ -268,6 +268,21 @@ function storeAnalysis(rows,set,ranks,axis,from,to,B,base){if(B&&(B.allL||B.axL)
    if(inP.has(u)){u.sp={};u.dp={};for(const m in val){u.sp[m]=sp[m](val[m](u));u.dp[m]=dp[m].get(u.v)(val[m](u))}}else{u.sp=null;u.dp=null}
    u.auto=judge(u,B,u.k)}}
  return out}
+// ===== 期間一致の評価（台分析・店舗分析の行ごと） =====
+// 窓は「最新データ日 last まで」の3つ：長期6ヶ月・中期4ヶ月・短期2ヶ月。
+// 開始日は last の翌日から n ヶ月前（＝last を含む ちょうど n ヶ月ぶん。暦月のプリセットではない）
+function addMon(d,n){const t=new Date(d+'T00:00:00Z');const day=t.getUTCDate();t.setUTCDate(1);t.setUTCMonth(t.getUTCMonth()+n);const dim=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate();t.setUTCDate(Math.min(day,dim));return t.toISOString().slice(0,10)}
+const winFrom=(last,n)=>addMon(addDay(last,1),-n);
+// 3期間ぶんの行（{auto,okR,cnt}、その期間にデータがない行は null）を [長期,中期,短期] の順で渡す。
+// 一致度：○の数で ◎(3)・○(2)・△(1)・×(0)。データがない期間は ○ でないものとして数える。
+// 傾向：○×の並び（長→中→短）から読む。例 110=落ち、001=上がり、111=安定
+const MW_TREND={'111':'安定','110':'落ち','101':'戻し','100':'落ち','011':'上がり','010':'一過','001':'上がり','000':'低迷'};
+function mwEval(list){const pat=list.map(u=>u&&u.auto?'1':'0').join('');const n=pat.split('1').length-1;return{n,pat,sym:['×','△','○','◎'][n],trend:MW_TREND[pat],list}}
+// 総合判断：対象日の3軸（日末尾・日・曜日）ぶんの mwEval を [日末尾,日,曜日] の順で渡して集約する。
+// 総合記号：3軸のうち「2期間以上○（n>=2）」の軸の数で ◎(3軸)・○(2軸)・△(1軸)・×(0)
+// 総合傾向：期間ごとに「3軸のうち○の軸が2つ以上」なら1として長→中→短に並べ、MW_TREND で読む
+function mwOverall(axList){const good=axList.filter(e=>e&&e.n>=2).length;let pat='';for(let w=0;w<3;w++){let c=0;for(const e of axList)if(e&&e.list[w]&&e.list[w].auto)c++;pat+=c>=2?'1':'0'}
+ const tot=axList.reduce((s,e)=>s+(e?e.n:0),0);return{sym:['×','△','○','◎'][good],trend:MW_TREND[pat],pat,good,tot,ax:axList}}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
 function judge(u,B,grp){let any=false;const chk=(v,f)=>{if(!has(v))return true;any=true;return f(+v)};
@@ -349,6 +364,6 @@ function neraiList(rows,set,base,ranks,o){const cfg=o.cfg,B=o.border||{},M=o.mar
    tg.push(Object.assign({},b,{seg,code,sub,prev:pv,mark:mk,pts:PT(mk,code),score:PT(mk,code)+sub/P.subDiv,mlabel:a.map(x=>x.kind==='t'?'台番':x.label).join('、'),parts:a,mlist:a.map(x=>({l:x.kind==='t'?'台番':x.label,sc:x.score,k:x.kind})).sort((p,q)=>q.sc-p.sc),merged:a.length}))}}
  out.sort((a,b)=>b.score-a.score||String(a.t).localeCompare(String(b.t),'ja',{numeric:true}));out.forEach((x,i)=>x.rank=i+1);out.targets=tg;return out}
 function storeHas(rows,store,d){return storeRows(rows,store).some(r=>r.d===d)}
-const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,storeAnalysis,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,storeMembers,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
+const api={setOk,okOf,idx,zeroOf,skOrd,clr:()=>{KC=new WeakMap();ZC=new WeakMap();SM=new WeakMap();PBC=new WeakMap();AFM=new WeakMap();OKC=new WeakMap();HOK=new WeakMap();calC.clear()},setP,PDEF,getP:()=>P,mKey,FIX_ALIAS,prevStd,rowIdx,stdBaseAt,PREV_BORDER,MARKS,baseOf,storeHas,stName,round4,calDays,SEGS,AXES,AXWIN,stKeys,DEF_CFG,comboMark,neraiList,stat,dev,segOf,stdBase,analyzeStore,storeAnalysis,mwEval,mwOverall,winFrom,finalize,analysisFor,judge,has,winIdx,winPicks,winSum,dow,addDay,storeMembers,nextDay,WIN,MET,RANK_KEYS,RANK_LABEL,DEF_GROUPS,DEF_ALIAS,normDate,normStore,normMachine,parseText,grokHead,matchStore,matchMachine,merge,typeOf,groupOf,den,build,monthFiles,rowsFromFile,fmtP,nz};
 if(typeof module!=='undefined')module.exports=api;else root.NC=api;
 })(this);
