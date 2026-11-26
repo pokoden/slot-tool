@@ -184,15 +184,16 @@ async function loadAll(){NRC={};S.loaded=false;S.loadErr='';S.files={};S.rows=[]
  const r=await gh('contents/nerai'); if(!r.ok){if(r.status===401||r.status===404)S.needTok=true;throw new Error('一覧の読み込みに失敗：'+why(r.status))}
  const all=(await r.json()).filter(f=>f.type==='file');const list=all.filter(f=>/\.json$/.test(f.name));
  for(const f of all)if(!/\.json$/.test(f.name))S.files['nerai/'+f.name]={sha:f.sha,txt:null};
- // iPhoneで重くならないよう3つずつ読む。失敗したら1回だけやり直す
- let done=0;const q=[...list];const one=async f=>{const c=await IDB.get(f.sha);if(typeof c==='string'){S.files['nerai/'+f.name]={sha:f.sha,txt:c};done++;return}let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
+ // iPhoneで重くならないよう6つずつ読む。失敗したら1回だけやり直す
+ let done=0;const prog=t=>{const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">${t}</div>`};const q=[...list];const one=async f=>{const c=await IDB.get(f.sha);if(typeof c==='string'){S.files['nerai/'+f.name]={sha:f.sha,txt:c};done++;prog(`読み込み中… ${done}/${list.length}`);return}let b;for(let t=0;t<2;t++){try{b=await gh('git/blobs/'+f.sha);if(b.ok)break}catch(e){b=null}}
   if(!b||!b.ok)throw new Error(f.name+' の読み込みに失敗：'+(b?why(b.status):'通信が切れた'));
-  const txt=b64dec((await b.json()).content);JSON.parse(txt);S.files['nerai/'+f.name]={sha:f.sha,txt};IDB.put(f.sha,txt);done++;const m=$('main');if(m&&!S.loaded)m.innerHTML=`<div class="card">読み込み中… ${done}/${list.length}</div>`};
- await Promise.all([0,1,2].map(async()=>{while(q.length)await one(q.shift())}));
+  const txt=b64dec((await b.json()).content);S.files['nerai/'+f.name]={sha:f.sha,txt};IDB.put(f.sha,txt);done++;prog(`読み込み中… ${done}/${list.length}`)};
+ await Promise.all([0,1,2,3,4,5].map(async()=>{while(q.length)await one(q.shift())}));
  const an=S.files['nerai/analysis.json'];S.an=an?JSON.parse(an.txt):{v:1,border:{},marks:{}};S.anSaved=JSON.stringify(S.an);const zf=S.files['nerai/zumen.json'];S.zu=zf?JSON.parse(zf.txt):{v:1,stores:{}};if(!S.zu.stores)S.zu.stores={};S.zuSaved=JSON.stringify(S.zu);S.zimg={};S.zimgNew={};
  const st=S.files['nerai/settings.json'];if(st)S.set=Object.assign({groups:{},types:{},alias:null},JSON.parse(st.txt));
- for(const k of Object.keys(S.files).sort()){if(/nerai\/\d{4}-\d{2}\.json$/.test(k))S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));
-  else if(/agg-/.test(k))S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt)}
+ const bkeys=Object.keys(S.files).sort();let bi=0;const btot=bkeys.filter(k=>/nerai\/\d{4}-\d{2}\.json$/.test(k)||/agg-/.test(k)).length;prog(`読み込み中… 仕上げ 0/${btot}`);await new Promise(r=>setTimeout(r,0));
+ for(const k of bkeys){if(/nerai\/\d{4}-\d{2}\.json$/.test(k)){S.rows.push(...NC.rowsFromFile(JSON.parse(S.files[k].txt)));bi++;prog(`読み込み中… 仕上げ ${bi}/${btot}`);await new Promise(r=>setTimeout(r,0))}
+  else if(/agg-/.test(k)){S.agg[k.slice(10,17)]=JSON.parse(S.files[k].txt);bi++}}
  try{if(typeof manMerge==='function')manMerge()}catch(e){}
  S.loaded=true;IDB.keep(list.map(f=>f.sha));setTimeout(dropTxt,3000);if(anDirty)autoSave()}
 // 変わったファイルだけ保存。読み込みに失敗していたら絶対に保存しない
