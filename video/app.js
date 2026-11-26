@@ -1,6 +1,6 @@
 'use strict';
 // ===== 状態 =====
-let MODE=null,TAB='search';const NAV={};const LISTS={};let LSEQ=0;
+let MODE=null,TAB='search';let LIBOK=false;const NAV={};const LISTS={};let LSEQ=0;
 const NAME={music:'音楽',video:'動画'};
 const FIL={music:LS.get('md_fil_music',null)||{},video:LS.get('md_fil_video',null)||{}};
 let MQ='';
@@ -123,7 +123,7 @@ function filtered(){const k=MODE,f=fil();let L=lib(k);const q=(f.q||'').trim().t
 function vSearch(){const k=MODE,f=fil(),L=lib(k),tg=allTags(k);let h='';
  if(k==='music'&&L.length)h+=`<div class="srch msr"><input id="f_q" type="search" placeholder="曲名・アーティスト" value="${esc(f.q||'')}" autocomplete="off" enterkeyhint="search"></div>`;
  if(DEV[k].size&&EST.quota&&EST.free<LOW)h+=`<div class="warn" data-go="cand">空きが少ない（${fmtB(EST.free)}）</div>`;
- if(!L.length)return h+`<div class="empty"><button data-tab="send">PCから送る</button></div>`;
+ if(!L.length)return h+(LIBOK?`<div class="empty"><button data-tab="send">PCから送る</button></div>`:`<div class="empty">読み込み中…</div>`);
  if(k==='music'){h+=`<div class="ctl">${sortSel()}${layBtn()}${selBtn()}${DD.size?`<button class="sub dng nar" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
  <div class="chips"><button class="chip${f.unw?' on':''}" data-ff="unw">未再生</button>${tg.map(t=>`<button class="chip${f.tags.includes(t)?' on':''}" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div>`;return h+`<div id="sres">${searchRes()}</div>`}
  const ar=artists(k),al=albums(k);
@@ -169,7 +169,7 @@ function vRx(k){const L=RX.log.filter(x=>x.kind===k);const n=L.length,dn=L.filte
  return h+upCard(k)}
 function vSet(){const k=MODE;return`<div class="card"><h3>この端末の名前</h3><div class="pbar"><input id="s_dname" type="text" value="${esc(devName())}" autocomplete="off"><button class="nar" data-savedname="1">保存</button></div></div><div class="card"><h3>GitHubトークン</h3><div class="pbar"><input id="s_tok" type="password" autocomplete="off" placeholder="${tok()?'保存済み':'github_pat_…'}"><button class="nar" data-savetok="1">保存</button></div>
  <div class="kv"><span>同期</span><b class="${/エラー/.test(SY.msg)||!tok()?'red':''}">${esc(tok()?SY.msg||'':'未設定')}</b></div><button class="sub" data-syncnow="1">今すぐ同期</button></div>
- <div class="card"><h3>保存</h3><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div><div class="kv"><span>${NAME[k]}（この端末）</span><b>${DEV[k].size}件</b></div><div class="kv"><span>保存方式</span><b>${ST.mode==='opfs'?'OPFS':'IndexedDB'}</b></div><div class="kv"><span>消えない設定</span><b id="s_pers">…</b></div>
+ <div class="card"><h3>保存</h3><div class="kv"><span>使用</span><b>${fmtB(EST.usage)}</b></div><div class="kv"><span>空き</span><b class="${EST.free<LOW?'red':''}">${fmtB(EST.free)}</b></div><div class="kv"><span>${NAME[k]}（この端末）</span><b>${LIBOK?DEV[k].size+'件':'読み込み中…'}</b></div><div class="kv"><span>保存方式</span><b>${ST.mode==='opfs'?'OPFS':'IndexedDB'}</b></div><div class="kv"><span>消えない設定</span><b id="s_pers">…</b></div>
  <button class="sub" data-go="cand">消す候補</button>${DD.size?`<button class="sub dng" data-deldups="1">重複を削除 ${DD.size}</button>`:''}</div>
  <div class="card"><h3>削除済み</h3><label class="tg"><span>削除したデータは取り込まない</span><input type="checkbox" id="s_skipdel"${skipDel()?' checked':''}></label>${delList(k).map(o=>`<div class="it"><div class="tx"><b>${esc(o.title||o.name||o.key)}</b><span>${esc(o.name||'')}${o.size?'・'+fmtB(o.size):''}</span></div><button class="sub nar" data-undel="${esc(o.id)}">戻す</button></div>`).join('')}</div>
  <div class="card"><h3>再生</h3><label class="tg"><span>音量をそろえる</span><input type="checkbox" id="s_norm"${LS.get('md_norm',true)?' checked':''}></label><label class="tg"><span>画面を消さない時間</span><select id="s_wl" class="wsel">${[[30,'30分'],[60,'60分'],[120,'120分'],[0,'ずっと']].map(([v,t])=>`<option value="${v}"${LS.get('md_wl_min',60)===v?' selected':''}>${t}</option>`).join('')}</select></label><label class="tg"><span>自動で次へ</span><input type="checkbox" id="s_auto"${LS.get('md_auto',true)?' checked':''}></label></div>
@@ -349,5 +349,5 @@ RX.onFile=k=>{refreshEst()};
 SY.on=()=>{if(/^最終/.test(SY.msg)&&!SY.busy.music&&!SY.busy.video)for(const k of['music','video'])fixTags(k);if(!MODE)return;$('hd_st').innerHTML=hdStatus();if(TAB==='set'||(/^最終/.test(SY.msg)&&!MS.on&&$('sheet').hidden&&!(document.activeElement&&document.activeElement.matches('input,select'))))render()};
 document.addEventListener('visibilitychange',()=>{if(MODE)syncNow(MODE)});
 addEventListener('online',()=>MODE&&syncNow(MODE));
-(async()=>{buildPlayers();render();await ST.init();await loadDev();for(const k of['music','video'])fixTags(k);await restoreDirs();EST=await storageEst();render();fillDur('music');for(const k of['music','video'])syncNow(k);
+(async()=>{buildPlayers();render();await ST.init();await loadDev();LIBOK=true;for(const k of['music','video'])fixTags(k);await restoreDirs();EST=await storageEst();render();fillDur('music');for(const k of['music','video'])syncNow(k);
  if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v='+APPV).catch(()=>{})})();

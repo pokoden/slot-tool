@@ -171,7 +171,7 @@ function sibOrd(p){if(p.bo==='only')return'一人っ子';if(p.sex!=='m'&&p.sex!=
  return(ORDN[i+1]||(i+1)+'番目の')+(p.sex==='m'?'男':'女')}
 function draw(){const L=layout(),svgs=[];
  if(!hasTok()){$('vp').innerHTML='';$('empty').style.display='flex';$('empty').innerHTML='<div><p style="font-size:1.1em">🔒 同期の設定が必要です</p><p style="font-size:.9em">右上の ⚙ からトークンを入れると、家系図を読み込みます。</p></div>';return}
- if(!P().length){$('empty').style.display='flex';$('empty').innerHTML='<div><p>まだ誰もいません</p><button class="btn p" onclick="addFirst()">最初の人を追加</button></div>'}else $('empty').style.display='none';
+ if(!P().length){$('empty').style.display='flex';$('empty').innerHTML=(synced||LOCAL)?'<div><p>まだ誰もいません</p><button class="btn p" onclick="addFirst()">最初の人を追加</button></div>':'<div><p>読み込み中…</p></div>'}else $('empty').style.display='none';
  svgs.push(LN.join(''));for(const g of GH){const p=byId.get(g.id);svgs.push(card(p,g.x,g.y,' gh',` data-go="${g.id}"`))}for(const [id,o] of POS)svgs.push(card(byId.get(id),o.x,o.y,''));
  for(const t of TG)svgs.push(`<g class="tg" data-tg="${t.h}" transform="translate(${t.x},${t.y})"><circle r="10"/><text y="4">${t.c?'+'+t.n:'−'}</text></g>`);
  $('vp').innerHTML=svgs.join('')+'<g id="ab"></g>';drawAdd();apply()}
@@ -286,13 +286,13 @@ async function ghGet(t){const r=await fetch(REPO+'?t='+Date.now(),{headers:H_(t)
  if(!txt&&j.size){const r2=await fetch(REPO+'?t='+Date.now(),{headers:{...H_(t),Accept:'application/vnd.github.raw'},cache:'no-store'});txt=await r2.text()}return{sha:j.sha,data:txt?JSON.parse(txt):null}}
 const mrg=(a,b)=>{const m=new Map();for(const x of[...(a||[]),...(b||[])]){if(!x||!x.id)continue;const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}return[...m.values()]};
 const sig=d=>JSON.stringify([[...d.people].sort((a,b)=>a.id<b.id?-1:1),[...d.unions].sort((a,b)=>a.id<b.id?-1:1),d.meta.self||'']);
-let syT=null,busy=false,again=false;function syncSoon(){clearTimeout(syT);syT=setTimeout(syncNow,800)}
+let syT=null,busy=false,again=false,synced=false;function syncSoon(){clearTimeout(syT);syT=setTimeout(syncNow,800)}
 const msg=t=>{LS.set('kz_msg',t);$('sy').textContent=t;if($('s_m'))$('s_m').textContent=t};
 async function syncNow(){const t=LS.get(TOK,'');if(!t||LOCAL)return;if(busy){again=true;return}busy=true;msg('同期中…');
  try{for(let i=0;i<4;i++){const g=await ghGet(t),R=g.data||{version:1,people:[],unions:[],meta:{}};R.meta=R.meta||{};const M={version:1,people:mrg(D.people,R.people),unions:mrg(D.unions,R.unions),meta:String(D.meta.selfAt||'')>=String(R.meta.selfAt||'')?{...R.meta,...D.meta}:{...D.meta,...R.meta}};
   D=M;LS.set(DK,D);if(g.sha&&sig(M)===sig(R))break;const body={message:'kakeizu sync',content:b64e(JSON.stringify({...M,updatedAt:now()}))};if(g.sha)body.sha=g.sha;
   const r=await fetch(REPO,{method:'PUT',headers:{...H_(t),'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合')}if(!r.ok)throw new Error('保存失敗 '+r.status);break}
-  const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);R166.ok();R166.bkDaily('kakeizu');draw();if(cur){const ae=document.activeElement;if(ae&&$('sheet').contains(ae)&&ae.tagName!=='BUTTON')refreshHead();else openP(cur)}}catch(e){msg('同期エラー：'+(e.message||e));R166.fail(e.message||e)}finally{busy=false;if(again){again=false;syncSoon()}}}
+  synced=true;const d=new Date(),p=n=>String(n).padStart(2,'0');msg(`同期 ${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`);R166.ok();R166.bkDaily('kakeizu');draw();if(cur){const ae=document.activeElement;if(ae&&$('sheet').contains(ae)&&ae.tagName!=='BUTTON')refreshHead();else openP(cur)}}catch(e){msg('同期エラー：'+(e.message||e));R166.fail(e.message||e)}finally{busy=false;if(again){again=false;syncSoon()}}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow()});addEventListener('online',()=>syncNow());addEventListener('focus',()=>syncNow());
 R166.bkReg('kakeizu',{get:()=>D,restore:d=>{const t=now();D={...D,people:R166.bump(D.people,d.people,null,1),unions:R166.bump(D.unions,d.unions,null,1),meta:{...(d.meta||D.meta),selfAt:t}};LS.set(DK,D);$('modal').style.display='none';draw();syncNow()}});
 // トークンが無い端末ではデータを出さない（この端末の保存分も表示しない）

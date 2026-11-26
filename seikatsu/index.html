@@ -193,15 +193,16 @@ function b64(s){return btoa(unescape(encodeURIComponent(s)))}
 function ub64(s){return decodeURIComponent(escape(atob(s.replace(/\n/g,''))))}
 async function gh(path){const r=await fetch(API+path+'?t='+Date.now(),{headers:{Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json'},cache:'no-store'});if(r.status===404)return{nf:1};if(!r.ok)throw new Error(r.status);const j=await r.json();let txt=j.content?ub64(j.content):null;if(txt==null&&j.git_url){const g=await fetch(j.git_url,{headers:{Authorization:'Bearer '+tok()}});txt=ub64((await g.json()).content)}return{sha:j.sha,data:JSON.parse(txt)}}
 let loaded=false;
+let bootDone=false;const HADCACHE=!!LS.get('sk2_data',null);
 async function push(){if(!tok()||!loaded||saving)return;saving=true;st('保存中');try{for(let i=0;i<3;i++){const r=await fetch(API+PATH,{method:'PUT',headers:{Authorization:'Bearer '+tok(),Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'seikatsu',content:b64(JSON.stringify(D)),...(sha?{sha}:{})})});if(r.status===409||r.status===422){const g=await gh(PATH);sha=g.sha||null;continue}if(!r.ok)throw new Error(r.status);sha=(await r.json()).content.sha;LS.set('sk2_dirty',0);st('保存済み');break}}catch(e){st('保存失敗')}saving=false}
 function st(t){$('st').textContent=t;if(/失敗/.test(t))R166.fail(t==='保存失敗'?'':t);else if(/保存済み|同期済み/.test(t))R166.ok()}
-async function boot(){applyFixed();render();if(!tok()){st('トークン未設定');loaded=false;return}
+async function boot(){applyFixed();render();if(!tok()){st('トークン未設定');loaded=false;bootDone=true;render();return}
  try{const g=await gh(PATH);if(g.nf){const o=await gh('seikatsu.json').catch(()=>({nf:1}));if(!o.nf&&!LS.get('sk2_data',null)){D=migrate(o.data);fill()}}else{sha=g.sha;if(!LS.get('sk2_dirty',0)||String(g.data.updatedAt||'')>String(D.updatedAt||'')||(+g.data.importRev||0)>(+D.importRev||0)){D=g.data;fill();LS.set('sk2_data',D);LS.set('sk2_dirty',0)}}loaded=true;if(applyFixed()||LS.get('sk2_dirty',0)||window.migW){window.migW=0;save()}st('同期済み');R166.bkDaily('seikatsu');anLoad()}catch(e){st('読み込み失敗');}
  try{const[a,p,c,sd]=await Promise.all(['data.json','pachinko.json','chodama.json','data.json'].map(f=>gh(f).catch(()=>({nf:1}))));
   const recs=es=>{const m=new Map();for(const x of es||[]){if(!x||!x.id)continue;const o=m.get(x.id);if(!o||String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}const best=new Map();for(const e of m.values()){if(e.deleted)continue;const key=(e.st&&e.st.recId)||e.id,o=best.get(key);if(!o||String(e.saved||'')>String(o.saved||''))best.set(key,e)}return[...best.values()]};const by={};for(const s of[a,p]){for(const e of recs((s.data&&s.data.entries)||[])){const d=e.date||String(e.saved||'').slice(0,10);if(!d||e.yen==null||!isFinite(+e.yen))continue;const o=by[d]=by[d]||{yen:0,h:0};o.yen+=+e.yen;o.h+=+e.hours>0?+e.hours:0}}slot.byDate=by;
   if(c.data&&c.data.ev){const stores=(a.data&&a.data.stores)||[],sm={};for(const s of stores)sm[s.name]=s;let y=0;for(const e of c.data.ev){if(e.deleted||e.t!=='set'||!e.n)continue;const s=sm[e.store]||{};let per=3.57;if(e.k==='s'&&s.ex)per=100/s.ex;else if(e.k==='p'&&s.val)per=s.val;y+=e.n*per}chodamaYen=Math.round(y*0.95)}
   {const lt=LS.get('cd_total_yen',null),rt=c.data&&c.data.total;const b=[lt,rt].filter(x=>x&&isFinite(+x.yen)).sort((p,q)=>String(q.at)<String(p.at)?-1:1)[0];if(b)chodamaYen=Math.round(+b.yen)}
- }catch(e){}render()}
+ }catch(e){}bootDone=true;render()}
 // 集計
 function slotMonth(ym){let y=0,h=0,n=0;for(const[d,o]of Object.entries(slot.byDate))if(d.startsWith(ym)){y+=o.yen;h+=o.h;n++}return{y,h,n}}
 function xs(d){const r=D.sched[d];return r&&Array.isArray(r.x)?r.x:[]}
@@ -230,7 +231,7 @@ function lineChart(pts){const W=440,H=210,P=78;if(pts.length<2)return'<div style
  return`<svg viewBox="0 0 ${W} ${H}" width="100%"><defs><linearGradient id="gf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4fd8" stop-opacity=".25"/><stop offset="1" stop-color="#1f4fd8" stop-opacity="0"/></linearGradient></defs>${g}<path d="${d}L${x(pts.length-1)},${H-22}L${x(0)},${H-22}Z" fill="url(#gf)"/><linearGradient id="gs" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${H}"><stop offset="${Math.min(1,Math.max(0,y(0)/H))}" stop-color="#1f4fd8"/><stop offset="${Math.min(1,Math.max(0,y(0)/H))}" stop-color="#e0283a"/></linearGradient><path d="${d}" fill="none" stroke="url(#gs)" stroke-width="2.5"/><circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1][1])}" r="4" fill="${pts[pts.length-1][1]<0?'#e0283a':'#1f4fd8'}"/></svg>`}
 function setRange(r){range=r;LS.set('sk2_range',r);render()}
 function curBalances(){const S=summary();const byYm={};S.forEach(o=>byYm[o.ym]=o);return{S,byYm}}
-function vHome(){const w=D.wallet,cho=chodamaYen??0;const gun=w.pachi+cho,sei=w.cash+w.bank+(+w.other||0),total=gun+sei;
+function vHome(){if(!bootDone&&!HADCACHE)return`<div class="card"><h2>現在所持金</h2><div class="big">読み込み中…</div></div>`;const w=D.wallet,cho=chodamaYen??0;const gun=w.pachi+cho,sei=w.cash+w.bank+(+w.other||0),total=gun+sei;
  const{S,byYm}=curBalances();const cur=byYm[CUR]||{net:0,cum:0},prev=byYm[addM(CUR,-1)]||{net:0,cum:0};
  const prevEnd=prev.cum;const planLeft=D.plans.filter(p=>!p.done&&(p.ym||CUR)===CUR);const pInc=planLeft.reduce((a,p)=>a+(+p.inc||0),0),pExp=planLeft.reduce((a,p)=>a+(+p.exp||0),0);
  const proj=cur.cum+pInc-pExp;const y=TODAY.getFullYear(),mo=TODAY.getMonth()+1;

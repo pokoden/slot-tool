@@ -516,7 +516,7 @@ function home(){setRate(null);$('mach').classList.add('hidden');$('home').classL
  <div class="row"><label>貯玉使用時の表記<small>サンドの表示が玉数か回数か</small></label><select id="s_mode" style="width:130px;font-size:16px" onchange="$('s_perRow').classList.toggle('hidden',this.value!=='count')"><option value="count">回数表記</option><option value="ball">玉数表記</option></select></div>
  <div class="row" id="s_perRow"><label>1回あたりの玉数</label><input inputmode="decimal" id="s_per" type="text" step="any" placeholder="125"></div>
  <button onclick="saveStore()">店舗を保存（同名は上書き）</button></div>
- <div class="card"><h2>保存データ</h2><p class="note">保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
+ <div class="card"><h2>保存データ</h2><p class="note">${!firstSync&&LS.get(TOK,'')&&!hist().length?'読み込み中…':`保存件数：${hist().length}件`}</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
  <div class="card"><h2>同期設定（2台で共有）</h2><p class="note">スロット版で保存したGitHubトークンをそのまま使います（パチンコのデータは pachinko.json に別保存）。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" placeholder="${LS.get(TOK,'')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div>
  <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button>${R166.bkHtml('pachinko')}
@@ -531,6 +531,7 @@ window.delStore=i=>{const s=stores();if(!confirm(`「${s[i].name}」を削除し
 // ===== GitHub同期（pachinko.json） =====
 const SYNC_URL='https://api.github.com/repos/pokoden/slot-data/contents/pachinko.json';
 let syncing=false,again=false,syncT=null;
+let firstSync=false;
 function syncStatus(t){if(t!=null)LS.set('p1_sync_msg',t);const el=$('sy_st');if(!el)return;el.textContent=!LS.get(TOK,'')?'未設定（この端末だけに保存中）':LS.get('p1_sync_msg','')}
 window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set(TOK,v);$('sy_tok').value='';syncNow(true)};
 function syncSoon(){clearTimeout(syncT);syncT=setTimeout(()=>syncNow(false),800)}
@@ -555,7 +556,7 @@ window.syncNow=async manual=>{const tok=LS.get(TOK,'');if(!tok){if(manual)syncSt
    LS.set('p1_stores',seedStores(mg.stores));LS.set('p1_hist',mg.entries);LS.set('p1_machines',mg.machines||[]);loadCM();const chg=pre!==((localStorage.getItem('p1_hist')||'')+(localStorage.getItem('p1_stores')||'')+(localStorage.getItem('p1_machines')||''));
    if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
    const d=new Date();syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`);if(manual||chg)refreshView();break}
- }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;if(again){again=false;syncSoon()}}};
+ }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;const wasLoad=!firstSync&&!!LS.get(TOK,'')&&!hist().length;firstSync=true;if(wasLoad)refreshView();if(again){again=false;syncSoon()}}};
 function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('')}else if($('home').classList.contains('hidden'))return;else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});addEventListener('focus',()=>syncNow(false));
 {const _ss=syncStatus;syncStatus=function(t){if(t!=null){if(/^エラー/.test(t))R166.fail(t);else if(/^最終同期/.test(t)){R166.ok();R166.bkDaily('pachinko')}}return _ss.apply(this,arguments)}}

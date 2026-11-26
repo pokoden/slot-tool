@@ -4069,7 +4069,7 @@ function curPending(id,c){if(!c||c.locked||c.gone||!c.tS)return false;const raw=
  return!raw.some(e=>!e.deleted&&e.mid===id&&((c.recId&&(e.id===c.recId||(e.st&&e.st.recId===c.recId)))||(e.tS&&e.tS===c.tS&&(e.date||'')===(c.date||''))))}
 // 記録を削除したら、その記録の現在入力も保存前として数えない（再び入力すると解除）
 function markGone(list){for(const e of list){const c=LS.get('v2_cur_'+e.mid,null);if(!c)continue;const k=(e.st&&e.st.recId)||e.id;if(c.recId===k||c.recId===e.id||(e.tS&&c.tS===e.tS&&(c.date||'')===(e.date||''))){c.gone=1;LS.set('v2_cur_'+e.mid,c);if(mid===e.mid&&st)st.gone=1}}}
-function todayCard(){// 同じ記録の再保存は最新の1件だけ数える（recId）
+function todayCard(){if(needLoad())return`<div class="card"><h2>本日の収支 <small class="note">${today()}</small></h2><p class="note">読み込み中…</p></div>`;// 同じ記録の再保存は最新の1件だけ数える（recId）
  const seen=new Set(),L=[];for(const e of hist().filter(e=>e.date===today())){const k=(e.st&&e.st.recId)||e.id;if(seen.has(k))continue;seen.add(k);L.push(e)}
  // 保存前：未保存（locked以外）で今日の入力がある現在データ。保存済みを編集中のものは保存済みの記録だけを数える
  let play=0;for(const id of [...Object.keys(M),'free']){const c=LS.get('v2_cur_'+id,null);if(!curPending(id,c)||(c.date||today())!==today())continue;const x=(()=>{try{const s=migrate(Object.assign(blank(),c));const mo=money(s,stores());return{yen:mo.yen,diff:mo.diff,G:playG(s),hours:hrs(s.tS,s.tEman?s.tE:(s.tL||s.tE))}}catch(e){return null}})();if(x){L.push(x);play++}}let yen=0,yn=0,df=0,dn=0,G=0,h=0;for(const e of L){if(e.yen!=null){yen+=e.yen;yn++}const d=e.diff;if(d!=null){df+=d;dn++}G+=recG(e);if(e.hours>0)h+=e.hours}
@@ -4083,7 +4083,7 @@ function home(){$('mach').classList.add('hidden');$('home').classList.remove('hi
  <div class="row"><label>貸出枚数<small>1000円あたり（例：50）</small></label><input inputmode="decimal" id="s_lend" type="text" step="any"></div>
  <div class="row"><label>交換枚数<small>100円あたり何枚か（例：5.6）</small></label><input inputmode="decimal" id="s_ex" type="text" step="any"></div>
  <button onclick="saveStore()">店舗を保存（同名は上書き）</button></div>
- <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${hist().length}件</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
+ <div class="card"><h2>保存データ</h2><p class="note">全機種の保存件数：${needLoad()?'読み込み中…':hist().length+'件'}</p><button onclick="exportCSV(false)">未書き出し分をCSV書き出し</button><button class="sub" onclick="exportCSV(true)">全件をCSV書き出し</button></div>
  <div class="card"><h2>同期設定（2台で共有）</h2><p class="note">GitHubの鍵（トークン）を入れると、店舗設定と保存データが他のiPhoneと自動で同期されます。</p>
  <div class="row"><label>GitHubトークン</label><input id="sy_tok" type="password" autocomplete="off" placeholder="${LS.get('v2_token','')?'保存済み（変更時のみ入力）':'github_pat_…'}"></div>
  <button onclick="saveToken()">保存</button><button class="sub" onclick="syncNow(true)">今すぐ同期</button>${R166.bkHtml('slot')}<button class="sub" onclick="copyToken()">トークンをコピー</button><button class="sub sm" onclick="clearToken()">鍵を削除</button>
@@ -4091,6 +4091,8 @@ function home(){$('mach').classList.add('hidden');$('home').classList.remove('hi
 // ===== GitHub同期 =====
 const SYNC_URL='https://api.github.com/repos/pokoden/slot-data/contents/data.json';
 let syncing=false,again=false,syncT=null;
+let firstSyncDone=false;
+const needLoad=()=>!firstSyncDone&&!!LS.get('v2_token','')&&rawHist().length===0;
 function syncStatus(t){if(t!=null)LS.set('v2_sync_msg',t);const el=$('sy_st');if(!el)return;const tok=LS.get('v2_token','');el.textContent=!tok?'未設定（この端末だけに保存中）':LS.get('v2_sync_msg','')}
 window.saveToken=()=>{const v=$('sy_tok').value.trim();if(!v){alert('トークンを入力してね');return}LS.set('v2_token',v);$('sy_tok').value='';syncNow(true)};
 window.copyToken=async()=>{const t=LS.get('v2_token','');if(!t){alert('この端末にはトークンが入ってないよ');return}try{await navigator.clipboard.writeText(t);alert('コピーしたよ。貯玉管理のトークン欄に貼ってね')}catch(e){prompt('長押しでコピーしてね',t)}};
@@ -4108,7 +4110,7 @@ window.syncNow=async manual=>{const tok=LS.get('v2_token','');if(!tok){if(manual
    LS.set('v2_stores',seedStores(mg.stores));LS.set('v2_hist',mg.entries);LS.set('v2_machines',mg.machines||[]);loadCM();const chg=pre!==((localStorage.getItem('v2_hist')||'')+(localStorage.getItem('v2_stores')||'')+(localStorage.getItem('v2_machines')||''));
    if(!sameData(mg,rm.data)){const r=await ghPut(tok,mg,rm.sha);if(r.status===409||r.status===422){if(i<3)continue;throw new Error('競合が続いたため中断')}if(!r.ok)throw new Error('保存失敗 '+r.status)}
    const d=new Date(),p=n=>String(n).padStart(2,'0');syncStatus(`最終同期：${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);if(manual||chg)refreshView();break}
- }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;if(again){again=false;syncSoon()}}};
+ }catch(e){syncStatus('エラー：'+(e.message||e))}finally{syncing=false;const wasLoad=needLoad();firstSyncDone=true;if(wasLoad)refreshView();if(again){again=false;syncSoon()}}};
 function refreshView(){if(mid&&!$('mach').classList.contains('hidden')){renderH();banner();const dl=$('dl_store');if(dl)dl.innerHTML=stores().map(x=>`<option value="${esc(x.name)}">`).join('');const ss=$('sel_store');if(ss)ss.innerHTML=storeOpts()}else if($('home').classList.contains('hidden'))return;else if(!document.activeElement||document.activeElement.tagName!=='INPUT')home();else{renderStores();banner()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncNow(false)});addEventListener('focus',()=>syncNow(false));
 {const _ss=syncStatus;syncStatus=function(t){if(t!=null){if(/^エラー/.test(t))R166.fail(t);else if(/^最終同期/.test(t)){R166.ok();R166.bkDaily('slot')}}return _ss.apply(this,arguments)}}
