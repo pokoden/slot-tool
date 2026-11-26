@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r303 -->
+<!-- r307 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -85,6 +85,30 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 .kform input{width:100%;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;margin:0 0 8px;font-family:inherit}
 .kform textarea{width:100%;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:10px;margin:0 0 8px;font-family:inherit;resize:vertical}
 .kform .err{color:#d33;font-size:13px;min-height:18px}
+.msg.pop{animation:pop .4s ease-out}
+@keyframes pop{0%{opacity:0;transform:translateY(22px) scale(.9)}70%{opacity:1;transform:translateY(-3px) scale(1.02)}100%{opacity:1;transform:none}}
+.delbtn{margin-left:8px;padding:1px 8px;font-size:12px;border-radius:999px;background:#fff;color:#222;border:1px solid #ccc;vertical-align:1px}
+#newBadge{position:fixed;left:50%;transform:translateX(-50%);bottom:140px;background:#06C755;color:#fff;border:none;font-weight:bold;padding:6px 16px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.3);display:none;z-index:20}
+.lrow{display:flex;gap:5px;align-items:center;padding:6px 0;border-top:1px solid #eee}
+.lrow .no{flex:0 0 16px;font-weight:bold;text-align:right;font-size:14px}
+.lrow input{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit;color:#222}
+.lrow button{flex:0 0 auto;padding:5px 9px;font-size:13px}
+.ric.none{background:#fff;border:1px dashed #555}
+.fbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.fbar button{padding:5px 10px;font-size:13px}
+.fbar button.on{background:#06C755;color:#fff;border-color:#06C755;font-weight:bold}
+.grow{display:flex;gap:6px;align-items:flex-start;padding:7px 0;border-top:1px solid #eee;font-size:14px}
+.grow .gt{flex:1;min-width:0}
+.lbl{display:inline-block;font-size:12px;font-weight:bold;color:#fff;border-radius:6px;padding:0 6px;margin-right:4px}
+.gdt{flex:0 0 auto;font-size:13px;font-weight:bold}
+.addform{display:flex;gap:6px;margin:8px 0;align-items:center}
+.addform select{font-size:16px;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#222}
+.addform input{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit}
+.tlitem{border-top:1px solid #eee;padding:8px 0}
+.tlhead{display:flex;gap:4px;align-items:center;font-weight:bold;font-size:14px;margin-bottom:2px}
+.bubble img.thumb,.bubble video.thumb{max-width:75%;max-height:240px;border-radius:8px;display:block;margin:6px 0;background:#eee;min-width:60px;min-height:40px}
+.upst{font-size:13px;color:#222;margin-left:4px}
+.lerr{color:#d33;font-size:13px;min-height:0}
 </style>
 </head>
 <body>
@@ -93,11 +117,10 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
   <nav>
     <button id="tabChat" class="on">会話</button>
     <button id="tabShare">共有</button>
-    <button id="tabKnow">知識共有</button>
-    <button id="tabHold">保留</button>
   </nav>
 </header>
 <main id="view"></main>
+<button id="newBadge">新着</button>
 <div id="bar"></div>
 <script>
 /* ===== 純粋関数（テスト可能） ===== */
@@ -151,9 +174,70 @@ function parseMessages(md){
     else if(!sender){title=rest;}
     if(sender)name=SENDERS[sender].name;
     if(!name)name='？';
-    msgs.push({id:hashId(dateKey+'|'+time+'|'+rest+'|'+body.slice(0,60)),dateKey:dateKey,date:date,time:time,dt:dateKey?dateKey+' '+(time||'00:00'):'',title:title,sender:sender,name:name,body:body});
+    msgs.push({idx:i,id:hashId(dateKey+'|'+time+'|'+rest+'|'+body.slice(0,60)),dateKey:dateKey,date:date,time:time,dt:dateKey?dateKey+' '+(time||'00:00'):'',title:title,sender:sender,name:name,body:body});
   }
   return msgs;
+}
+function removeMessage(md,id){
+  var parts=String(md||'').split(/^## /m);
+  var hit=parseMessages(md).filter(function(m){return m.id===id;})[0];
+  if(!hit)return null;
+  parts.splice(hit.idx,1);
+  return parts[0]+parts.slice(1).map(function(x){return '## '+x;}).join('');
+}
+var WHO={kosuke:'幸輔',grokbot:'秘書',muse:'Muse',grok:'Grok'};
+function whoKey(name){
+  var t=String(name||'').trim();
+  if(/^幸輔/.test(t))return 'kosuke';
+  if(/^秘書/.test(t))return 'grokbot';
+  if(/^muse$/i.test(t))return 'muse';
+  if(/^grok$/i.test(t))return 'grok';
+  return null;
+}
+function iconHtml(key){
+  var s=SENDERS[key];
+  if(!s)return '<span class="ric none"></span>';
+  return '<span class="ric" style="background:'+s.color+'">'+(s.icon?'<img src="'+esc(s.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+esc(s.short)+'</span>';
+}
+var GIJI_TYPES=['議題','決定','作成','修正','停止','完了'];
+var GIJI_COLORS={'議題':'#2563EB','決定':'#DC2626','作成':'#059669','修正':'#D97706','停止':'#7C3AED','完了':'#0F766E'};
+function parseGiji(md){
+  var out=[];
+  String(md||'').split('\n').forEach(function(line){
+    var m=line.trim().match(/^-\s*(\d{4})\/(\d{1,2})\/(\d{1,2})\s*\[([^\]]+)\]\s*(.*)$/);
+    if(!m)return;
+    var rest=m[5],who=null,mm=rest.match(/^([^｜|]{1,8})[｜|]\s*(.*)$/);
+    if(mm&&whoKey(mm[1])){who=whoKey(mm[1]);rest=mm[2];}
+    out.push({y:+m[1],mo:+m[2],d:+m[3],key:m[1]*10000+m[2]*100+(+m[3]),date:m[1]+'/'+(+m[2])+'/'+(+m[3]),type:m[4].trim(),who:who,text:rest.trim()});
+  });
+  return out;
+}
+function sortGiji(list){
+  list.forEach(function(e,i){e.seq=i;});
+  return list.slice().sort(function(a,b){return b.key-a.key||b.seq-a.seq;});
+}
+function gijiLine(ymd,type,who,text){
+  return '- '+ymd.slice(0,4)+'/'+(+ymd.slice(5,7))+'/'+(+ymd.slice(8,10))+' ['+type+'] '+(WHO[who]||'？')+'｜'+String(text||'').replace(/\s*\n\s*/g,' ').trim();
+}
+function parseTalklog(md){
+  return parseSections(md).map(function(s){
+    var m=s.title.match(/^(\d{4})-(\d{2})-(\d{2})\s*(.*)$/);
+    var who=[];
+    if(m)m[4].split(/[\s　、,・]+/).forEach(function(w){var k=whoKey(w);if(k&&who.indexOf(k)<0)who.push(k);});
+    return {key:m?m[1]+m[2]+m[3]:'',date:m?m[1]+'/'+(+m[2])+'/'+(+m[3]):s.title,who:who,body:s.body};
+  }).reverse().sort(function(a,b){return a.key<b.key?1:(a.key>b.key?-1:0);});
+}
+function normLists(o){
+  o=o&&typeof o==='object'?o:{};
+  ['irai','gidai','ryosho','horyu'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[];});
+  return o;
+}
+var GH_BLOB='https://github.com/pokoden/slot-data/blob/main/';
+function ghMediaHtml(path,name){
+  var ext=(path.split('.').pop()||'').toLowerCase();
+  if(/^(jpg|jpeg|png|gif|webp|heic)$/.test(ext))return '<img class="thumb" data-gh="'+path+'" alt="'+(name||'')+'">';
+  if(/^(mp4|webm|mov|m4v)$/.test(ext))return '<video class="thumb" data-gh="'+path+'" controls playsinline preload="metadata"></video>';
+  return '<a href="#" data-ghfile="'+path+'" data-name="'+(name||'')+'">📎 '+(name||path.split('/').pop())+'</a>';
 }
 function parseSections(md){
   var parts=String(md||'').split(/^## /m),secs=[];
@@ -178,6 +262,9 @@ function parseKvRows(body){
 function renderBody(text){
   var t=esc(text),stash=[];
   function put(html){stash.push(html);return '§'+(stash.length-1)+'§';}
+  var GHRE='https://github\\.com/pokoden/slot-data/blob/main/(ai-board/files/[A-Za-z0-9._%/-]+)';
+  t=t.replace(new RegExp('!?\\[([^\\]]*)\\]\\('+GHRE+'\\)','g'),function(m,name,path){return put(ghMediaHtml(path,name));});
+  t=t.replace(new RegExp(GHRE,'g'),function(m,path){return put(ghMediaHtml(path,''));});
   t=t.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,function(m,alt,url){return put('<img src="'+url+'" alt="'+esc(alt)+'" loading="lazy">');});
   t=t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,function(m,txt,url){return put('<a href="'+url+'" target="_blank" rel="noopener">'+txt+'</a>');});
   t=t.replace(/https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?v=|shorts\/)([A-Za-z0-9_-]{11})|https?:\/\/youtu\.be\/([A-Za-z0-9_-]{11})/g,function(m,a,b){var id=a||b;return put('<span class="yt"><iframe src="https://www.youtube.com/embed/'+id+'" frameborder="0" allowfullscreen loading="lazy"></iframe></span>');});
@@ -224,13 +311,15 @@ if(typeof document!=='undefined'&&document.getElementById){
   var tab='chat';
   var msgs=[],boardSha=null,boardEtag=null,firstLoaded=false,firstUnreadId=null;
   var talkMsgs=[],talkSha=null,talkEtag=null;
-  var holdText=null;
+  var API_ROOT='https://api.github.com/repos/pokoden/slot-data/contents/';
+  var talkLoadedOnce=false,shownIds=null,newCount=0,readsEtag=null,readsTimer=null;
+  var lists=null,localBlank={irai:[],gidai:[],ryosho:[],horyu:[]},gijiEntries=null,gijiFilter='',talklogs={board:null,app:null},tlMode='board';
+  var opChain=Promise.resolve(),blobProm={};
   var DEST_KEY='ai-board-dest-v1';
   var pending=[];
-  var readsData={grokbot:'',muse:''},readsSha=null;
+  var readsData={grokbot:'',muse:'',kosuke:''},readsSha=null;
   var shareText=null,shareSha=null,shareEditing=false;
   var secTimes={},secTimesSha=null;
-  var knowText=null,knowSha=null,knowEditing=false;
   var secOpen={};
   function $(id){return document.getElementById(id);}
   function getTok(){
@@ -304,6 +393,9 @@ if(typeof document!=='undefined'&&document.getElementById){
         var g=SENDERS.grokbot;
         h+='<span class="ric" style="background:'+g.color+'">'+(g.icon?'<img src="'+esc(g.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+esc(g.short)+'</span>';
       }
+      if(m.sender!=='kosuke'&&readsData.kosuke&&readsData.kosuke>=m.dt){
+        h+=iconHtml('kosuke');
+      }
       if(m.sender!=='muse'&&readsData.muse&&readsData.muse>=m.dt){
         var u=SENDERS.muse;
         h+='<span class="ric" style="background:'+u.color+'">'+(u.icon?'<img src="'+esc(u.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+esc(u.short)+'</span>';
@@ -315,10 +407,12 @@ if(typeof document!=='undefined'&&document.getElementById){
     var ai=m.sender?SENDERS[m.sender]:null;
     var color=ai?ai.color:'#0891B2';
     var mine=m.sender==='kosuke';
-    return '<div class="msg'+(mine?' mine':'')+(m.pending?' pending':'')+'" data-id="'+m.id+'">'
+    var isNew=shownIds&&!shownIds.has(m.id)&&m.sender!==getSenderKey();
+    return '<div class="msg'+(mine?' mine':'')+(m.pending?' pending':'')+(isNew?' pop':'')+'" data-id="'+m.id+'"'+(m.dt?' data-dt="'+esc(m.dt)+'"':'')+'>'
       +'<div class="av" style="background:'+color+'">'+(ai&&ai.icon?'<img src="'+esc(ai.icon)+'" alt="" onerror="this.style.display=\'none\'">':'')+(ai?esc(ai.short):'？')+'</div>'
       +'<div class="mbody"><div class="meta"><span class="nm">'+esc(m.name)+'</span>'
-      +(m.time?'<span class="dt">'+esc(m.time)+'</span>':'')+'</div>'
+      +(m.time?'<span class="dt">'+esc(m.time)+'</span>':'')
+      +((!m.pending&&!m.failed&&m.file)?'<button class="delbtn" data-del="'+m.id+'" data-file="'+esc(m.file)+'">削除</button>':'')+'</div>'
       +readIconsHtml(m)
       +'<div class="bubble">'+renderBody(m.body)+'</div>'
       +(m.failed?'<div class="retry"><button class="small" data-retry="'+m.id+'">再送</button></div>':'')
@@ -342,14 +436,20 @@ if(typeof document!=='undefined'&&document.getElementById){
     var all=msgs.concat(talkMsgs);
     all.sort(function(a,b){var x=a.dt||'',y=b.dt||'';return x<y?-1:(x>y?1:0);});
     all=all.concat(pending);
+    var fresh=0;
     all.forEach(function(m){
+      if(shownIds&&!shownIds.has(m.id)&&!m.pending&&m.sender!==getSenderKey())fresh++;
       if(m.date&&m.date!==lastDate){html+='<div class="date-sep"><span>'+esc(m.date)+'</span></div>';lastDate=m.date;}
       if(firstUnreadId&&m.id===firstUnreadId)html+='<div class="unread-sep" id="unreadSep"><span>ここから未読</span></div>';
       html+=msgHtml(m);
     });
     view.innerHTML=html;
+    if(!shownIds)shownIds=new Set();
+    all.forEach(function(m){shownIds.add(m.id);});
+    hydrateMedia(view);
+    if(keepScroll&&!wasBottom&&fresh>0){newCount+=fresh;showBadge();}
     if(keepScroll){
-      if(wasBottom){view.scrollTop=view.scrollHeight;}
+      if(wasBottom){view.scrollTop=view.scrollHeight;scheduleReads();}
       else if(anchor){
         var el=view.querySelector('[data-id="'+anchor+'"]');
         if(el)view.scrollTop+=el.getBoundingClientRect().top-anchorDy;
@@ -361,6 +461,50 @@ if(typeof document!=='undefined'&&document.getElementById){
     var sep=$('unreadSep');
     if(sep){view.scrollTop+=sep.getBoundingClientRect().top-view.getBoundingClientRect().top-6;}
     else{view.scrollTop=view.scrollHeight;}
+    scheduleReads();
+  }
+  function showBadge(){
+    var b=$('newBadge');if(!b)return;
+    if(newCount>0&&tab==='chat'){b.textContent='新着'+newCount+'件 ↓';b.style.display='block';}
+    else{b.style.display='none';}
+  }
+  function atBottom(){var v=$('view');return v.scrollTop+v.clientHeight>=v.scrollHeight-40;}
+  /* ----- 既読の自動更新（見えている一番新しい投稿まで） ----- */
+  function visibleLatest(){
+    var view=$('view'),vb=view.getBoundingClientRect().bottom,latest='';
+    var els=view.querySelectorAll('.msg[data-dt]');
+    for(var i=0;i<els.length;i++){
+      if(els[i].getBoundingClientRect().top<vb-10){var d=els[i].getAttribute('data-dt');if(d>latest)latest=d;}
+    }
+    return latest;
+  }
+  function scheduleReads(){
+    clearTimeout(readsTimer);
+    readsTimer=setTimeout(function(){
+      if(document.hidden||tab!=='chat'||!getTok())return;
+      var l=visibleLatest();if(l)updateReads(l);
+    },2500);
+  }
+  /* ----- 添付の表示（非公開なのでトークン付きで取ってblobにする） ----- */
+  function mimeOf(path){
+    var e=(path.split('.').pop()||'').toLowerCase();
+    return {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',mp4:'video/mp4',m4v:'video/mp4',mov:'video/quicktime',webm:'video/webm',pdf:'application/pdf',txt:'text/plain'}[e]||'application/octet-stream';
+  }
+  function ghBlobUrl(path){
+    if(!blobProm[path]){
+      blobProm[path]=fetch(API_ROOT+path,{cache:'no-store',headers:{'Accept':'application/vnd.github.raw','Authorization':'Bearer '+getTok()}}).then(function(res){
+        if(!res.ok)throw new Error('http '+res.status);
+        return res.arrayBuffer();
+      }).then(function(buf){return URL.createObjectURL(new Blob([buf],{type:mimeOf(path)}));})
+      .catch(function(e){delete blobProm[path];throw e;});
+    }
+    return blobProm[path];
+  }
+  function hydrateMedia(root){
+    var els=root.querySelectorAll('[data-gh]');
+    for(var i=0;i<els.length;i++)(function(el){
+      ghBlobUrl(el.getAttribute('data-gh')).then(function(u){el.src=u;}).catch(function(){el.alt='読み込めなかった';});
+    })(els[i]);
   }
   function loadBoard(){
     if(!getTok())return;
@@ -370,6 +514,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(r.json.sha===boardSha)return;
       boardSha=r.json.sha;
       msgs=parseMessages(b64ToUtf8(r.json.content));
+      msgs.forEach(function(m){m.file='board.md';});
       if(!firstLoaded){
         markRead(loadShown());
         var set=readSet();
@@ -377,6 +522,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         for(var i=0;i<msgs.length;i++){if(!set.has(msgs[i].id)){firstUnreadId=msgs[i].id;break;}}
         saveShown(msgs.map(function(m){return m.id;}));
         firstLoaded=true;
+        shownIds=null;
         renderChat(false);
         requestAnimationFrame(positionInitial);
       }else{
@@ -395,49 +541,33 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(r.json.sha===talkSha)return;
       talkSha=r.json.sha;
       talkMsgs=parseMessages(b64ToUtf8(r.json.content));
+      talkMsgs.forEach(function(m){m.file='talk.md';});
+      if(!talkLoadedOnce){talkLoadedOnce=true;if(shownIds)talkMsgs.forEach(function(m){shownIds.add(m.id);});}
       addShown(talkMsgs.map(function(m){return m.id;}));
       if(tab==='chat')renderChat(true);
     }).catch(function(){});
   }
-  function loadHold(){
-    if(!getTok())return;
-    apiGetJson('unanswered.md',null).then(function(r){
-      holdText=b64ToUtf8(r.json.content);
-      if(tab==='hold')renderHold();
-    }).catch(function(){if(tab==='hold')renderHold();});
-  }
-  function renderHold(){
-    var view=$('view');
-    if(holdText===null){view.innerHTML='<div style="padding:16px">読み込み中…</div>';return;}
-    var secs=parseSections(holdText);
-    if(!secs.length){
-      var flat=holdText.replace(/^#[^\n]*\n?/,'').trim();
-      if(!flat){view.innerHTML='<div style="padding:16px">いま保留・未返答はないよ。</div>';return;}
-      view.innerHTML='<div class="sec"><div class="sec-h" style="cursor:default">未返答・保留</div><div class="sec-b" style="display:block">'+renderBody(flat)+'</div></div>';
-      return;
-    }
-    view.innerHTML=secs.map(function(s){
-      return '<div class="sec"><div class="sec-h" style="cursor:default">'+esc(s.title)+'</div><div class="sec-b" style="display:block">'+renderBody(s.body)+'</div></div>';
-    }).join('');
-  }
   /* ----- 既読 ----- */
   function loadReads(){
     if(!getTok())return;
-    apiGetJson('reads.json',null).then(function(r){
+    apiGetJson('reads.json',readsEtag).then(function(r){
+      if(r===null)return;
+      readsEtag=r.etag;
       try{
         var o=JSON.parse(b64ToUtf8(r.json.content));
-        readsData={grokbot:o.grokbot||'',muse:o.muse||''};
+        if(r.json.sha===readsSha)return;
+        readsData={grokbot:o.grokbot||'',muse:o.muse||'',kosuke:o.kosuke||''};
         readsSha=r.json.sha;
         if(tab==='chat')renderChat(true);
         if(tab==='share')renderShare();
       }catch(e){}
     }).catch(function(){});
   }
-  function updateReads(){
+  function updateReads(upTo){
     var key=getSenderKey();
-    if(key!=='grokbot'&&key!=='muse')return;
-    var latest='';
-    msgs.concat(talkMsgs).forEach(function(m){if(m.dt&&m.dt>latest)latest=m.dt;});
+    if(key!=='grokbot'&&key!=='muse'&&key!=='kosuke')return;
+    var latest=upTo||'';
+    if(!latest)msgs.concat(talkMsgs).forEach(function(m){if(m.dt&&m.dt>latest)latest=m.dt;});
     if(!latest){var n=jstNow();latest=n.ymd+' '+n.hm;}
     if(readsData[key]&&readsData[key]>=latest)return;
     apiGetJson('reads.json',null).then(function(r){
@@ -452,7 +582,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       }
       throw e;
     }).then(function(){
-      readsData[key]=latest;
+      readsData[key]=latest;readsEtag=null;
       if(tab==='chat')renderChat(true);
     }).catch(function(){});
   }
@@ -502,7 +632,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<option value="grokbot">秘書担当</option>'
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
-        +'</select>'+destHtml+' <button class="small" id="readsBtn">既読を更新</button></div>'
+        +'</select>'+destHtml+' <button class="small" id="attachBtn">添付</button><input type="file" id="fileIn" style="display:none"><span class="upst" id="upSt"></span></div>'
         +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
       var sel=$('senderSel');if(sel)sel.value=getSenderKey();
       var dsel=$('destSel');if(dsel)dsel.value=getDest();
@@ -544,83 +674,192 @@ if(typeof document!=='undefined'&&document.getElementById){
     }
     return html;
   }
+  var SEC_NUM={'掲示板ルール':'⑦','アプリ一覧':'⑧','個人情報':'⑨','パスワード':'⑩','キー':'⑪','共有メモ':'⑫'};
+  function isOpen(key,def){return (key in secOpen)?secOpen[key]:def;}
+  function secWrap(key,title,inner,def,badge){
+    var open=isOpen(key,def);
+    return '<div class="sec"><button class="sec-h" data-sec="'+esc(key)+'">'+(open?'▼ ':'▶ ')+title+(badge||'')+'</button>'
+      +'<div class="sec-b" data-secbody="'+esc(key)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
+  }
   function shareSectionsHtml(){
     if(!shareText)return '';
-    var secs=parseSections(shareText);
+    var order=Object.keys(SEC_NUM);
+    var secs=parseSections(shareText).sort(function(a,b){
+      var x=order.indexOf(a.title),y=order.indexOf(b.title);
+      return (x<0?99:x)-(y<0?99:y);
+    });
     var rk=getSenderKey();
     var readAt=(rk==='grokbot'||rk==='muse')?(readsData[rk]||''):'';
     return secs.map(function(s){
       var badge=(readAt&&secTimes[s.title]&&secTimes[s.title]>readAt)?'<span class="newbadge">NEW</span>':'';
-      var open=!!secOpen['sec:'+s.title];
       var inner='';
-      if(s.title==='幸輔への相談'){
-        inner=consultHtml(s.body);
-      }else if(s.title==='パスワード'||s.title==='キー'){
+      if(s.title==='パスワード'||s.title==='キー'){
         var rows=parseKvRows(s.body);
         inner=rows.length?kvRowsHtml(rows):secBodyHtml(s.body);
       }else{
         inner=secBodyHtml(s.body);
       }
-      return '<div class="sec"><button class="sec-h" data-sec="sec:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+badge+'</button>'
-        +'<div class="sec-b" data-secbody="sec:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
+      return secWrap('sec:'+s.title,(SEC_NUM[s.title]||'')+esc(s.title),inner,false,badge);
     }).join('');
   }
-  /* ----- 幸輔への相談（質問ごとに回答欄） ----- */
-  var consultItems=[];
-  function parseConsult(body){
-    var items=[],notes=[];
-    String(body||'').split('\n').forEach(function(line){
-      var t=line.trim();
-      var m=t.match(/^-\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})｜([^｜]+)｜([^｜]+)｜(.+)｜(未回答|回答済み)\s*$/);
-      if(m)items.push({raw:t,dt:m[1],from:m[2],kind:m[3],content:m[4],status:m[5]});
-      else if(t)notes.push(t.replace(/^-\s*/,''));
-    });
-    return {items:items,notes:notes};
-  }
-  function consultHtml(body){
-    var p=parseConsult(body);consultItems=p.items;
-    var html=p.notes.map(function(n){return '<div>'+renderBody(n)+'</div>';}).join('');
-    html+=p.items.map(function(it,i){
-      var h='<div class="csitem"><div class="csmeta">'+esc(it.dt)+' ・ '+esc(it.from)+' ・ '+esc(it.kind)+' ・ '+(it.status==='未回答'?'<strong>未回答</strong>':'回答済み')+'</div>'
-        +'<div>'+renderBody(it.content)+'</div>';
-      if(it.status==='未回答'){
-        h+='<textarea id="ansText'+i+'" rows="2" placeholder="回答を書いてね"></textarea>'
-          +'<button class="pri" data-answer="'+i+'">回答する</button>';
-        if(it.kind==='許可待ち'){
-          h+=' <button data-permit="'+i+'">許可</button> <button data-deny="'+i+'">不要</button>';
-        }
-        h+='<div class="err" id="ansErr'+i+'"></div>';
-      }
-      return h+'</div>';
+  /* ----- ①〜④ リスト（lists.json） ----- */
+  var LISTS=[['irai','①依頼'],['gidai','②議題'],['ryosho','③了承'],['horyu','④保留']];
+  function newId(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+  function listHtml(key){
+    var items=((lists&&lists[key])||[]).concat(localBlank[key]);
+    var saved=(lists&&lists[key])||[];
+    var rows=items.length?items:[{id:'',by:'',text:''}];
+    var h=rows.map(function(it,i){
+      var isSaved=saved.indexOf(it)>=0;
+      return '<div class="lrow"><span class="no">'+(i+1)+'</span>'+(it.by?iconHtml(it.by):'<span class="ric none"></span>')
+        +'<input value="'+esc(it.text)+'" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'
+        +(key==='ryosho'&&isSaved&&it.text?'<button data-reply="'+esc(it.id)+'">返信</button>':'')
+        +(key==='horyu'&&isSaved&&saved.length>1?'<button data-mv="'+esc(it.id)+'|-1">▲</button><button data-mv="'+esc(it.id)+'|1">▼</button>':'')
+        +((it.id||it.text)?'<button data-done="'+key+'|'+esc(it.id)+'">完了</button>':'')+'</div>';
     }).join('');
-    return html||'<div>いま相談はないよ。</div>';
+    return h+'<div style="margin-top:6px"><button class="small" data-add="'+key+'">追加</button></div><div class="lerr" id="lerr_'+key+'"></div>';
   }
-  function answerConsult(i){
-    var it=consultItems[i];if(!it)return;
-    var ta=$('ansText'+i),er=$('ansErr'+i);
-    var text=ta?ta.value.trim():'';
-    if(!text){if(er)er.textContent='回答を書いてね';return;}
-    var now=jstNow();
-    var heading='## '+now.ymd+' '+now.hm+' JST 幸輔より：'+it.from+'への回答 <!-- ai-board-sender:kosuke -->';
-    var body=it.from+'への回答\n質問：'+it.content+'\n回答：'+text;
-    apiGetJson('board.md',null).then(function(r){
-      var cur=b64ToUtf8(r.json.content);
-      var next=(cur.endsWith('\n')?cur:cur+'\n')+'\n'+heading+'\n'+body+'\n';
-      return apiPut('board.md',next,r.json.sha,'幸輔：相談への回答');
-    }).then(function(){
-      return apiGetJson('share.md',null);
-    }).then(function(r){
-      var cur=b64ToUtf8(r.json.content);
-      if(cur.indexOf(it.raw)<0)throw new Error('line not found');
-      shareText=cur.replace(it.raw,it.raw.replace(/｜未回答\s*$/,'｜回答済み'));
-      var n2=jstNow();secTimes['幸輔への相談']=n2.ymd+' '+n2.hm;putSecTimes();
-      return apiPut('share.md',shareText,r.json.sha,'幸輔：相談を回答済みに');
-    }).then(function(){
-      boardSha=null;boardEtag=null;
-      setTab('chat');loadBoard();loadReads();
-    }).catch(function(){
-      if(er)er.textContent='送れなかった。もう一度試してね';
+  function listErr(key,msg){var e=$('lerr_'+key);if(e)e.textContent=msg||'';}
+  function chainOp(fn){
+    opChain=opChain.then(fn,fn);
+    return opChain;
+  }
+  function listsOp(mut,msg,tries){
+    tries=tries||0;
+    return apiGetJson('lists.json',null).then(function(r){return {o:JSON.parse(b64ToUtf8(r.json.content)),sha:r.json.sha};},function(e){if(e.code===404)return {o:{},sha:null};throw e;})
+    .then(function(x){
+      var o=normLists(x.o);mut(o);
+      return apiPut('lists.json',JSON.stringify(o,null,2)+'\n',x.sha,msg).then(function(){lists=o;});
+    }).catch(function(e){
+      if((e.code===409||e.code===422)&&tries<2)return listsOp(mut,msg,tries+1);
+      throw e;
     });
+  }
+  function gijiAppend(type,who,text,tries){
+    tries=tries||0;
+    var n=jstNow(),file='log/giji-'+n.ymd.slice(0,7)+'.md';
+    var line=gijiLine(n.ymd,type,who,text);
+    return apiGetJson(file,null).then(function(r){return {t:b64ToUtf8(r.json.content),sha:r.json.sha};},function(e){
+      if(e.code===404)return {t:'# 議事ログ '+n.ymd.slice(0,7)+'（行動ログ。1行1件、新しいものを一番下に足す。形：「- YYYY/M/D [種類] 名前｜内容」）\n\n',sha:null};throw e;
+    }).then(function(x){
+      var next=(x.t.endsWith('\n')?x.t:x.t+'\n')+line+'\n';
+      return apiPut(file,next,x.sha,'議事ログに1行');
+    }).then(function(){
+      if(gijiEntries){var add=parseGiji(line)[0];if(add){add.seq=1e9+Date.now()%1e6;gijiEntries.unshift(add);}}
+    }).catch(function(e){
+      if((e.code===409||e.code===422)&&tries<2)return gijiAppend(type,who,text,tries+1);
+      throw e;
+    });
+  }
+  function findIn(arr,id){for(var i=0;i<arr.length;i++)if(arr[i].id===id)return i;return -1;}
+  function saveListText(key,id,text){
+    var by=getSenderKey();
+    var li=findIn(localBlank[key],id);
+    if(!text.trim()&&(li>=0||!id))return;
+    var useId=id||newId();
+    chainOp(function(){
+      return listsOp(function(o){
+        var k=findIn(o[key],useId);
+        if(k>=0)o[key][k].text=text;
+        else{var n=jstNow();o[key].push({id:useId,by:by,text:text,at:n.ymd+' '+n.hm});}
+      },'共有リストを更新').then(function(){
+        if(li>=0)localBlank[key]=localBlank[key].filter(function(x){return x.id!==id;});
+        rerenderShareSoft();
+      }).catch(function(){listErr(key,'保存できなかった。もう一度試してね');});
+    });
+  }
+  function completeItem(key,id){
+    var li=findIn(localBlank[key],id);
+    if(li>=0){localBlank[key].splice(li,1);renderShare();return;}
+    if(!id)return;
+    var done=null,who=getSenderKey(),label={irai:'依頼',gidai:'議題',ryosho:'了承',horyu:'保留'}[key];
+    chainOp(function(){
+      return listsOp(function(o){var k=findIn(o[key],id);if(k>=0){done=o[key][k];o[key].splice(k,1);}},'共有リストの完了').then(function(){
+        renderShare();
+        if(done&&done.text)return gijiAppend('完了',who,label+'：'+done.text).then(function(){if(tab==='share')renderShare();});
+      }).catch(function(){listErr(key,'完了にできなかった。もう一度試してね');});
+    });
+  }
+  function moveItem(id,dir){
+    chainOp(function(){
+      return listsOp(function(o){
+        var a=o.horyu,k=findIn(a,id),j=k+dir;
+        if(k<0||j<0||j>=a.length)return;
+        var t=a[k];a[k]=a[j];a[j]=t;
+      },'保留の並べ替え').then(function(){renderShare();}).catch(function(){listErr('horyu','並べ替えできなかった');});
+    });
+  }
+  function replyItem(id){
+    var it=lists&&lists.ryosho[findIn(lists.ryosho,id)];if(!it)return;
+    setTab('chat');
+    var ta=$('ta');if(!ta)return;
+    ta.value=(WHO[it.by]||'')+'へ：【了承】'+it.text+'への回答：\n';
+    ta.focus();
+    try{ta.setSelectionRange(ta.value.length,ta.value.length);}catch(e){}
+  }
+  function rerenderShareSoft(){
+    var a=document.activeElement;
+    if(tab==='share'&&!(a&&a.getAttribute&&a.getAttribute('data-litem')))renderShare();
+  }
+  /* ----- ⑤ 議事ログ ----- */
+  function prevMonthYmd(ymd){var y=+ymd.slice(0,4),m=+ymd.slice(5,7)-1;if(m<1){m=12;y--;}return y+'-'+('0'+m).slice(-2)+'-01';}
+  function gijiHtml(){
+    var h='<div class="fbar"><button data-gf="" class="'+(gijiFilter===''?'on':'')+'">すべて</button>'
+      +GIJI_TYPES.map(function(t){return '<button data-gf="'+t+'" class="'+(gijiFilter===t?'on':'')+'">'+t+'</button>';}).join('')+'</div>'
+      +'<div class="addform"><select id="gType">'+GIJI_TYPES.map(function(t){return '<option>'+t+'</option>';}).join('')+'</select>'
+      +'<input id="gText" placeholder="1行で書く" enterkeyhint="done"><button class="small" id="gAdd">追加</button></div><div class="lerr" id="lerr_giji"></div>';
+    if(gijiEntries===null)return h+'<div>読み込み中…</div>';
+    var list=gijiEntries.filter(function(e){return !gijiFilter||e.type===gijiFilter;});
+    if(!list.length)return h+'<div>まだないよ。</div>';
+    return h+list.map(function(e){
+      return '<div class="grow"><span class="gdt">'+esc(e.date)+'</span><div class="gt"><span class="lbl" style="background:'+(GIJI_COLORS[e.type]||'#2563EB')+'">'+esc(e.type)+'</span>'
+        +(e.who?iconHtml(e.who)+' ':'')+renderBody(e.text)+'</div></div>';
+    }).join('');
+  }
+  function loadGiji(){
+    var n=jstNow();
+    var files=['log/giji-'+prevMonthYmd(n.ymd).slice(0,7)+'.md','log/giji-'+n.ymd.slice(0,7)+'.md'];
+    Promise.all(files.map(function(f){return apiGetJson(f,null).then(function(r){return b64ToUtf8(r.json.content);},function(){return '';});})).then(function(arr){
+      gijiEntries=sortGiji(parseGiji(arr[0]).concat(parseGiji(arr[1])));
+      rerenderShareSoft();
+    });
+  }
+  function addGiji(){
+    var t=$('gText'),ty=$('gType');var text=t?t.value.trim():'';
+    if(!text){listErr('giji','書いてから追加してね');return;}
+    var type=ty?ty.value:'決定';
+    chainOp(function(){
+      return gijiAppend(type,getSenderKey(),text).then(function(){gijiEntries=sortGiji(gijiEntries||[]);renderShare();}).catch(function(){listErr('giji','追加できなかった。もう一度試してね');});
+    });
+  }
+  /* ----- ⑥ 会話ログ ----- */
+  function talklogHtml(){
+    var h='<div class="fbar"><button data-tl="board" class="'+(tlMode==='board'?'on':'')+'">掲示板会話</button><button data-tl="app" class="'+(tlMode==='app'?'on':'')+'">アプリ会話</button></div>';
+    var list=talklogs[tlMode];
+    if(list===null)return h+'<div>読み込み中…</div>';
+    if(!list.length)return h+'<div>まだないよ。</div>';
+    return h+list.map(function(e){
+      return '<div class="tlitem"><div class="tlhead">'+esc(e.date)+' '+e.who.map(iconHtml).join('')+'</div><div>'+renderShareMd(e.body)+'</div></div>';
+    }).join('');
+  }
+  function loadTalklogs(){
+    ['board','app'].forEach(function(k){
+      apiGetJson('log/talklog-'+k+'.md',null).then(function(r){talklogs[k]=parseTalklog(b64ToUtf8(r.json.content));},function(){talklogs[k]=[];})
+      .then(function(){rerenderShareSoft();});
+    });
+  }
+  function loadLists(){
+    apiGetJson('lists.json',null).then(function(r){lists=normLists(JSON.parse(b64ToUtf8(r.json.content)));},function(){lists=normLists({});})
+    .then(function(){rerenderShareSoft();});
+  }
+  function fixedSectionsHtml(){
+    var h=LISTS.map(function(l){
+      var n=lists&&lists[l[0]]?lists[l[0]].length:0;
+      return secWrap('list:'+l[0],l[1]+(n?'（'+n+'）':''),lists?listHtml(l[0]):'読み込み中…',true);
+    }).join('');
+    h+=secWrap('giji','⑤議事ログ',gijiHtml(),false);
+    h+=secWrap('talklog','⑥会話ログ',talklogHtml(),false);
+    return h;
   }
   function renderShare(){
     var view=$('view');
@@ -637,8 +876,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<div class="err" id="shareErr"></div></div></div>';
       return;
     }
-    if(shareText===null){view.innerHTML='';return;}
-    view.innerHTML=(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml())
+    view.innerHTML=fixedSectionsHtml()+(shareText===null?'':(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml()))
       +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
   }
   function loadSecTimes(){
@@ -665,7 +903,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   }
   function loadShareFrame(){
     if(!getTok())return;
-    loadSecTimes();
+    loadSecTimes();loadLists();loadGiji();loadTalklogs();
     apiGetJson('share.md',null).then(function(r){
       shareText=b64ToUtf8(r.json.content);
       shareSha=r.json.sha;
@@ -698,95 +936,48 @@ if(typeof document!=='undefined'&&document.getElementById){
       fail();
     });
   }
-  /* ----- 知識共有（公開・鍵なし） ----- */
-  var KNOW_API='https://api.github.com/repos/pokoden/slot-tool/contents/ai-board/';
-  function knowSectionsHtml(){
-    if(!knowText)return '';
-    return parseSections(knowText).map(function(s){
-      var open=!!secOpen['know:'+s.title];
-      return '<div class="sec"><button class="sec-h" data-sec="know:'+esc(s.title)+'">'+(open?'▼ ':'▶ ')+esc(s.title)+'</button>'
-        +'<div class="sec-b" data-secbody="know:'+esc(s.title)+'" style="display:'+(open?'block':'none')+'">'+secBodyHtml(s.body)+'</div></div>';
-    }).join('');
-  }
-  function renderKnow(){
-    var view=$('view');
-    if(knowEditing){
-      view.innerHTML='<div class="vcard"><div class="kform"><textarea id="knowText" rows="16">'+esc(knowText||'')+'</textarea>'
-        +'<button class="pri" id="saveKnow">保存</button> <button id="cancelKnow">やめる</button>'
-        +'<div class="err" id="knowErr"></div></div></div>';
-      return;
-    }
-    if(knowText===null){view.innerHTML='';return;}
-    view.innerHTML=(knowText==='' ? '<div class="scard">まだ中身がないよ。</div>' : knowSectionsHtml())
-      +(getTok()?'<div class="scard"><button class="small" id="editKnow">編集（見出しを足す・直す）</button></div>':'');
-  }
-  function loadKnow(){
-    fetch('knowledge.md',{cache:'no-store'}).then(function(res){
-      if(!res.ok)throw new Error('http '+res.status);
-      return res.text();
-    }).then(function(t){knowText=t;if(tab==='know')renderKnow();})
-    .catch(function(){knowText='';if(tab==='know')renderKnow();});
-  }
-  function knowGetSha(){
-    return fetch(KNOW_API+'knowledge.md',{cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok()}}).then(function(res){
-      if(res.status===404)return null;
-      if(!res.ok)throw new Error('http '+res.status);
-      return res.json().then(function(j){return j.sha;});
-    });
-  }
-  function saveKnow(){
-    var text=$('knowText').value;
-    function fail(){var er=$('knowErr');if(er)er.textContent='保存できなかった。もう一度試してね。';}
-    knowGetSha().then(function(sha){
-      var body={message:'知識共有を更新',content:utf8ToB64(text)};
-      if(sha)body.sha=sha;
-      return fetch(KNOW_API+'knowledge.md',{method:'PUT',cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok(),'Content-Type':'application/json'},body:JSON.stringify(body)});
-    }).then(function(res){
-      if(!res.ok)throw new Error('http '+res.status);
-      knowText=text;knowEditing=false;renderKnow();
-    }).catch(fail);
-  }
   /* ----- タブ ----- */
   function setTab(t){
     tab=t;
     $('tabChat').className=t==='chat'?'on':'';
     $('tabShare').className=t==='share'?'on':'';
-    $('tabKnow').className=t==='know'?'on':'';
-    $('tabHold').className=t==='hold'?'on':'';
     renderBar('');
+    if(t!=='chat'){newCount=0;}
+    showBadge();
     if(t==='chat'){renderChat(false);if(firstLoaded)positionInitial();else{loadBoard();loadReads();}loadTalk();}
     else if(t==='share'){renderShare();loadShareFrame();}
-    else if(t==='hold'){renderHold();loadHold();}
-    else{renderKnow();loadKnow();}
   }
   /* ----- イベント ----- */
   document.addEventListener('click',function(ev){
     var el=ev.target;
     if(el.id==='tabChat')setTab('chat');
     else if(el.id==='tabShare')setTab('share');
-    else if(el.id==='tabKnow')setTab('know');
-    else if(el.id==='tabHold')setTab('hold');
-    else if(el.id==='editKnow'){knowEditing=true;renderKnow();}
-    else if(el.id==='cancelKnow'){knowEditing=false;renderKnow();}
-    else if(el.id==='saveKnow')saveKnow();
-    else if(el.getAttribute&&el.getAttribute('data-answer')!==null)answerConsult(+el.getAttribute('data-answer'));
-    else if(el.getAttribute&&el.getAttribute('data-permit')!==null){var pi=+el.getAttribute('data-permit');var pta=$('ansText'+pi);if(pta){pta.value='許可';answerConsult(pi);}}
-    else if(el.getAttribute&&el.getAttribute('data-deny')!==null){var di=+el.getAttribute('data-deny');var dta=$('ansText'+di);if(dta){dta.value='不要';answerConsult(di);}}
+    else if(el.id==='newBadge'){var vv=$('view');vv.scrollTop=vv.scrollHeight;newCount=0;showBadge();}
+    else if(el.id==='attachBtn'){var fi=$('fileIn');if(fi)fi.click();}
+    else if(el.id==='gAdd')addGiji();
+    else if(el.getAttribute&&el.getAttribute('data-del')){deletePost(el.getAttribute('data-file'),el.getAttribute('data-del'));}
+    else if(el.getAttribute&&el.getAttribute('data-ghfile')){ev.preventDefault();openGhFile(el.getAttribute('data-ghfile'),el.getAttribute('data-name'));}
+    else if(el.tagName==='IMG'&&el.getAttribute('data-gh')&&el.src){window.open(el.src,'_blank');}
+    else if(el.getAttribute&&el.getAttribute('data-add')){var ak=el.getAttribute('data-add');localBlank[ak].push({id:newId(),by:getSenderKey(),text:''});renderShare();var ins=document.querySelectorAll('[data-litem^="'+ak+'|"]');if(ins.length)ins[ins.length-1].focus();}
+    else if(el.getAttribute&&el.getAttribute('data-done')){var dd=el.getAttribute('data-done').split('|');completeItem(dd[0],dd[1]);}
+    else if(el.getAttribute&&el.getAttribute('data-mv')){var mv=el.getAttribute('data-mv').split('|');moveItem(mv[0],+mv[1]);}
+    else if(el.getAttribute&&el.getAttribute('data-reply')){replyItem(el.getAttribute('data-reply'));}
+    else if(el.getAttribute&&el.getAttribute('data-gf')!==null){gijiFilter=el.getAttribute('data-gf');renderShare();}
+    else if(el.getAttribute&&el.getAttribute('data-tl')){tlMode=el.getAttribute('data-tl');renderShare();}
     else if(el.id==='saveTok'){
       var v=($('tk').value||'').trim();
       if(!v){var er=$('barErr')||$('shareErr');if(er)er.textContent='トークンを入れてね';return;}
       setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();loadTalk();loadReads();if(tab==='share'){renderShare();loadShareFrame();}
     }
-    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];holdText=null;firstLoaded=false;msgs=[];shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
+    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
     else if(el.id==='sendBtn')sendPost();
-    else if(el.id==='readsBtn')updateReads();
     else if(el.id==='editShare'){shareEditing=true;renderShare();}
     else if(el.id==='cancelEdit'){shareEditing=false;renderShare();}
     else if(el.id==='saveShare')saveShare();
     else if(el.getAttribute&&el.getAttribute('data-sec')){
       var skey2=el.getAttribute('data-sec');
-      secOpen[skey2]=!secOpen[skey2];
       var bodyEl=document.querySelector('[data-secbody="'+skey2+'"]');
+      secOpen[skey2]=bodyEl?bodyEl.style.display==='none':!secOpen[skey2];
       if(bodyEl)bodyEl.style.display=secOpen[skey2]?'block':'none';
       el.textContent=(secOpen[skey2]?'▼ ':'▶ ')+el.textContent.replace(/^[▼▶] /,'');
     }
@@ -808,14 +999,76 @@ if(typeof document!=='undefined'&&document.getElementById){
   document.addEventListener('change',function(ev){
     if(ev.target&&ev.target.id==='senderSel'){setSenderKey(ev.target.value);var taEl=$('ta');var keep=taEl?taEl.value:'';renderBar('');var taEl2=$('ta');if(taEl2)taEl2.value=keep;}
     if(ev.target&&ev.target.id==='destSel')setDest(ev.target.value);
+    if(ev.target&&ev.target.id==='fileIn'){var f=ev.target.files&&ev.target.files[0];ev.target.value='';if(f)uploadFile(f);}
+    if(ev.target&&ev.target.getAttribute&&ev.target.getAttribute('data-litem')){var li2=ev.target.getAttribute('data-litem').split('|');saveListText(li2[0],li2[1],ev.target.value);}
   });
   document.addEventListener('keydown',function(ev){
     if(ev.target&&ev.target.id==='ta'&&(ev.metaKey||ev.ctrlKey)&&ev.key==='Enter')sendPost();
+    if(ev.target&&ev.key==='Enter'&&!ev.isComposing&&ev.keyCode!==229){
+      if(ev.target.getAttribute&&ev.target.getAttribute('data-litem'))ev.target.blur();
+      else if(ev.target.id==='gText')addGiji();
+    }
   });
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden&&tab==='chat'){loadBoard();loadTalk();loadReads();}
   });
-  setInterval(function(){if(tab==='chat'){loadBoard();loadTalk();loadReads();}},15000);
+  /* 自動更新：開いている間20秒おき（ETagで変わっていなければ軽い） */
+  setInterval(function(){if(!document.hidden&&tab==='chat'&&getTok()){loadBoard();loadTalk();loadReads();}},20000);
+  $('view').addEventListener('scroll',function(){
+    if(tab!=='chat')return;
+    if(newCount&&atBottom()){newCount=0;showBadge();}
+    scheduleReads();
+  },{passive:true});
+  /* ----- 投稿の削除 ----- */
+  function deletePost(file,id){
+    if(file!=='board.md'&&file!=='talk.md')return;
+    if(!confirm('この投稿を消しますか？（元に戻せません）'))return;
+    var tries=0;
+    (function go(){
+      apiGetJson(file,null).then(function(r){
+        var next=removeMessage(b64ToUtf8(r.json.content),id);
+        if(next===null){alert('見つからなかった（もう消えているかも）');return;}
+        return apiPut(file,next,r.json.sha,'投稿を削除').then(function(){
+          if(file==='talk.md'){talkSha=null;talkEtag=null;loadTalk();}
+          else{boardSha=null;boardEtag=null;loadBoard();}
+        });
+      }).catch(function(e){
+        if((e.code===409||e.code===422)&&tries++<2){go();return;}
+        alert('消せなかった。もう一度試してね');
+      });
+    })();
+  }
+  /* ----- 添付のアップロード ----- */
+  var MAX_UP=20*1024*1024;
+  function setUpSt(t){var e=$('upSt');if(e)e.textContent=t||'';}
+  function uploadFile(file){
+    if(file.size>MAX_UP){setUpSt('20MBまでにしてね（'+(file.size/1048576).toFixed(1)+'MB）');alert('ファイルが大きすぎます（'+(file.size/1048576).toFixed(1)+'MB）。20MBまでにしてね。');return;}
+    var n=jstNow();
+    var em=String(file.name||'').match(/\.([A-Za-z0-9]{1,5})$/);
+    var ext=em?em[1].toLowerCase():((file.type||'').split('/')[1]||'bin').replace(/[^a-z0-9]/g,'').slice(0,5)||'bin';
+    var path='ai-board/files/'+n.ymd.slice(0,7)+'/'+n.ymd.replace(/-/g,'')+'-'+n.hm.replace(':','')+'-'+Math.random().toString(36).slice(2,7)+'.'+ext;
+    setUpSt('アップ中…');
+    var btn=$('attachBtn');if(btn)btn.disabled=true;
+    new Promise(function(res,rej){var fr=new FileReader();fr.onload=function(){res(fr.result);};fr.onerror=rej;fr.readAsArrayBuffer(file);})
+    .then(function(buf){
+      return fetch(API_ROOT+path,{method:'PUT',cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+getTok(),'Content-Type':'application/json'},body:JSON.stringify({message:'添付を追加',content:bytesToB64(new Uint8Array(buf))})});
+    }).then(function(res){
+      if(!res.ok)throw new Error('http '+res.status);
+      var label=String(file.name||'添付').replace(/[\[\]()\n]/g,'');
+      var isImg=/^(jpg|jpeg|png|gif|webp|heic)$/.test(ext);
+      var md=(isImg?'!':'')+'['+label+']('+GH_BLOB+path+')';
+      var ta=$('ta');
+      if(ta){ta.value=(ta.value&&!/\n$/.test(ta.value)?ta.value+'\n':ta.value)+md+'\n';}
+      setUpSt('添付OK。送信で投稿に付くよ');
+    }).catch(function(){setUpSt('アップできなかった。もう一度試してね');})
+    .then(function(){var b=$('attachBtn');if(b)b.disabled=false;});
+  }
+  function openGhFile(path,name){
+    ghBlobUrl(path).then(function(u){
+      var a=document.createElement('a');a.href=u;a.download=name||path.split('/').pop();a.target='_blank';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }).catch(function(){alert('開けなかった。もう一度試してね');});
+  }
   /* ----- 起動 ----- */
   renderTokCtl();
   renderBar('');
