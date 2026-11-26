@@ -649,7 +649,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
         +'</select>';
-      bar.innerHTML='<div class="row srow">'+senderHtml+destHtml+' <button class="small" id="attachBtn">添付</button><input type="file" id="fileIn" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.md,.json,.xlsx,.xls,.xlsm,.doc,.docx,.ppt,.pptx,.zip" style="display:none"><span class="upst" id="upSt"></span></div>'
+      var markHtml=(sk0==='muse'||sk0==='grokbot')?'<button class="small" id="markReadBtn">既読にする</button>':'';bar.innerHTML='<div class="row srow">'+senderHtml+destHtml+markHtml+' <button class="small" id="attachBtn">添付</button><input type="file" id="fileIn" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.md,.json,.xlsx,.xls,.xlsm,.doc,.docx,.ppt,.pptx,.zip" style="display:none"><span class="upst" id="upSt"></span></div>'
         +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
       var sel=$('senderSel');if(sel)sel.value=getSenderKey();
       var dsel=$('destSel');if(dsel)dsel.value=getDest();
@@ -992,7 +992,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();loadTalk();loadReads();if(tab==='share'){renderShare();loadShareFrame();}
     }
     else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
-    else if(el.id==='sendBtn')sendPost();
+    else if(el.id==='markReadBtn'){updateReads(visibleLatest(),true);}else if(el.id==='sendBtn')sendPost();
     else if(el.id==='editShare'){shareEditing=true;renderShare();}
     else if(el.id==='cancelEdit'){shareEditing=false;renderShare();}
     else if(el.id==='saveShare')saveShare();
