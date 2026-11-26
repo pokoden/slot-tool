@@ -241,10 +241,8 @@ function hyOk(rows,set,axis,from,to,B,base){if(!base)return null;let m=HOK.get(b
 // memo=true のときだけ base ごとに結果を覚える（精度チェック用）
 function analysisFor(rows,set,ranks,store,axis,from,to,B,base,memo){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}const HS=hyOk(rows,set,axis,from,to,B,base);if(!memo||!base)return finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);
  let m=AFM.get(base);if(!m)AFM.set(base,m=new Map());const k=[rows.length,store,axis,from,to,JSON.stringify(B),JSON.stringify(set.groups||{}),JSON.stringify(set.types||{})].join('~');let v=m.get(k);if(!v){v=finalize(analyzeStore(rows,set,ranks,store,axis,from,to,B,base),B,base,HS);m.set(k,v)}return v}
-// 店舗分析：店×機種を1行に集計する（台分析の店舗版）。標準指数は台分析と同じ母集団と比べる。
-// 店舗機種指数は「その店のその機種の中」で取る偏差値なので、1行に集計した店舗分析には存在しない
-// （他店と比べるものではない）。総合は標準指数のみ、○判定も標準指数のラインだけで見る
-// （日別集計・項目別集計・当日と同じ決まり。B.allL/axL は hy のラインだけを渡すこと）
+// 店舗分析：店×機種を1行に集計する（台分析の店舗版）。標準指数は台分析と同じ母集団と比べ、
+// 店舗機種指数・上位%は「同じ機種グループの全店舗の行」同士で比べる。○は judge（ボーダー＋合格ライン）で台分析と同じ決まり
 function storeAnalysis(rows,set,ranks,axis,from,to,B,base){if(B&&(B.allL||B.axL)){B=Object.assign({},B);if(axis!=='all')B.allL=B.axL;delete B.axL}
  const HS=hyOk(rows,set,axis,from,to,B,base);const out=new Map(),all=[];
  // グループの現在台数（期間内の最終日にいる台番の数）。検索割合の分母に使う
@@ -259,7 +257,16 @@ function storeAnalysis(rows,set,ranks,axis,from,to,B,base){if(B&&(B.allL||B.axL)
  for(const u of all){const nd=(out.get(u.s).get(u.k).cal[u.v]||0);u.ratio=nd&&u.unitsTotal?u.cnt/(u.unitsTotal*nd):0;u.avg=u.cnt?u.g/u.cnt:0;u.rbR=u.g>0?u.rb/u.g:0;u.gsR=u.g>0?(u.bb+u.rb)/u.g:0;u.okR=u.cnt?u.okN/u.cnt:0;
   const sb=base.rot[u.typ],pb=base.prob[u.k]||{};u.noRb=zr.rb.has(u.k)||zr.both.has(u.k);u.noGs=zr.both.has(u.k);
   const b=[dev(u.avg,sb),u.noRb?null:dev(u.rbR,pb.rb),u.noGs?null:dev(u.gsR,pb.gs)];const ok2=HS&&HS.n&&(!has(B.ratio)||u.ratio*100+1e-9>=+B.ratio)?dev(u.okR,HS):null;const i2=idx(...b,ok2);u.hy={g:b[0],rb:b[1],gs:b[2],ok:ok2,p:i2.p,t:i2.t}}
- for(const u of all){u.tk=null;u.sp=null;u.dp=null;u.tt=u.hy.t;u.auto=judge(u,B,u.k)}
+ const byG=new Map();for(const u of all){let a=byG.get(u.k);if(!a)byG.set(u.k,a=[]);a.push(u)}
+ for(const L of byG.values()){const pool0=L.filter(u=>!has(B.ratio)||u.ratio*100>=+B.ratio);const inP=new Set(pool0);
+  const pool=pool0.length?pool0:L;
+  const sg={avg:stat(pool.map(u=>u.avg)),rb:stat(pool.map(u=>u.rbR)),gs:stat(pool.map(u=>u.gsR)),ok:stat(pool.map(u=>u.okR))};
+  const val={g:u=>u.avg,rb:u=>u.rbR,gs:u=>u.gsR};const sp={},dp={};
+  for(const m in val){sp[m]=topFn(pool0.map(val[m]));const bv=new Map();for(const u of pool0){let a=bv.get(u.v);if(!a)bv.set(u.v,a=[]);a.push(val[m](u))}dp[m]=new Map([...bv].map(([v,a])=>[v,topFn(a)]))}
+  for(const u of L){const a=[dev(u.avg,sg.avg),u.noRb?null:dev(u.rbR,sg.rb),u.noGs?null:dev(u.gsR,sg.gs)];const ok1=dev(u.okR,sg.ok);const i1=idx(...a,ok1);u.tk={g:a[0],rb:a[1],gs:a[2],ok:ok1,p:i1.p,t:i1.t};
+   u.tt=u.tk.t!=null&&u.hy.t!=null?Math.round(u.tk.t*P.wTk+u.hy.t*(1-P.wTk)):null;
+   if(inP.has(u)){u.sp={};u.dp={};for(const m in val){u.sp[m]=sp[m](val[m](u));u.dp[m]=dp[m].get(u.v)(val[m](u))}}else{u.sp=null;u.dp=null}
+   u.auto=judge(u,B,u.k)}}
  return out}
 // ボーダー判定。空欄の条件は見ない。条件が1つもなければ自動○なし。入れた条件は全部満たす台に○
 const EPS=1e-9;// 以上・以下はぴったりも含む（小数の誤差で外れないように）
