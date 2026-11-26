@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<!-- r307 -->
+<!-- r308 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AI伝言板</title>
+<title>HKM掲示板</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%}
@@ -109,11 +111,25 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 .bubble img.thumb,.bubble video.thumb{max-width:75%;max-height:240px;border-radius:8px;display:block;margin:6px 0;background:#eee;min-width:60px;min-height:40px}
 .upst{font-size:13px;color:#222;margin-left:4px}
 .lerr{color:#d33;font-size:13px;min-height:0}
+.lrow textarea{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit;color:#222;resize:none;overflow:hidden;line-height:1.5}
+@media (min-width:900px){
+  header{max-width:1100px}
+  #view{max-width:1100px;padding:20px 18px 36px;line-height:1.8}
+  #bar{max-width:1100px}
+  .hbar h1{font-size:20px}
+  nav button{font-size:16px}
+  .bubble{font-size:16.5px}
+  .mbody{max-width:70%}
+  .msg.mine .mbody{max-width:74%}
+  .sec-b{font-size:16px}
+  #view.sharemode{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;align-items:start}
+  #view.sharemode .scard:last-child{grid-column:1/-1}
+}
 </style>
 </head>
 <body>
 <header>
-  <div class="hbar"><h1>AI伝言板</h1><span id="tokCtl"></span></div>
+  <div class="hbar"><h1>HKM掲示板</h1><span id="tokCtl"></span></div>
   <nav>
     <button id="tabChat" class="on">会話</button>
     <button id="tabShare">共有</button>
@@ -488,7 +504,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   /* ----- 添付の表示（非公開なのでトークン付きで取ってblobにする） ----- */
   function mimeOf(path){
     var e=(path.split('.').pop()||'').toLowerCase();
-    return {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',mp4:'video/mp4',m4v:'video/mp4',mov:'video/quicktime',webm:'video/webm',pdf:'application/pdf',txt:'text/plain'}[e]||'application/octet-stream';
+    return {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',mp4:'video/mp4',m4v:'video/mp4',mov:'video/quicktime',webm:'video/webm',pdf:'application/pdf',txt:'text/plain',csv:'text/csv',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',xlsm:'application/vnd.ms-excel.sheet.macroEnabled.12'}[e]||'application/octet-stream';
   }
   function ghBlobUrl(path){
     if(!blobProm[path]){
@@ -627,12 +643,13 @@ if(typeof document!=='undefined'&&document.getElementById){
     }else{
       var sk0=getSenderKey();
       var destHtml=(sk0==='muse'||sk0==='grokbot')?' <select id="destSel"><option value="board.md">板へ</option><option value="talk.md">やり取りへ</option></select>':'';
-      bar.innerHTML='<div class="row srow"><select id="senderSel">'
+      var senderHtml=(sk0==='kosuke')?'':'<select id="senderSel">'
         +'<option value="kosuke">幸輔</option>'
         +'<option value="grokbot">秘書担当</option>'
         +'<option value="grok">Grok</option>'
         +'<option value="muse">Muse</option>'
-        +'</select>'+destHtml+' <button class="small" id="attachBtn">添付</button><input type="file" id="fileIn" style="display:none"><span class="upst" id="upSt"></span></div>'
+        +'</select>';
+      bar.innerHTML='<div class="row srow">'+senderHtml+destHtml+' <button class="small" id="attachBtn">添付</button><input type="file" id="fileIn" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.md,.json,.xlsx,.xls,.xlsm,.doc,.docx,.ppt,.pptx,.zip" style="display:none"><span class="upst" id="upSt"></span></div>'
         +'<div class="row"><textarea id="ta" rows="2"></textarea><button class="pri" id="sendBtn">送信</button></div>';
       var sel=$('senderSel');if(sel)sel.value=getSenderKey();
       var dsel=$('destSel');if(dsel)dsel.value=getDest();
@@ -705,14 +722,18 @@ if(typeof document!=='undefined'&&document.getElementById){
   /* ----- ①〜④ リスト（lists.json） ----- */
   var LISTS=[['irai','①依頼'],['gidai','②議題'],['ryosho','③了承'],['horyu','④保留']];
   function newId(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+  function autoGrowTa(el){if(!el)return;el.style.height='auto';el.style.height=Math.min(el.scrollHeight+2,220)+'px';}
   function listHtml(key){
     var items=((lists&&lists[key])||[]).concat(localBlank[key]);
     var saved=(lists&&lists[key])||[];
     var rows=items.length?items:[{id:'',by:'',text:''}];
     var h=rows.map(function(it,i){
       var isSaved=saved.indexOf(it)>=0;
+      var field=(key==='horyu')
+        ?'<input value="'+esc(it.text)+'" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'
+        :'<textarea rows="1" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'+esc(it.text)+'</textarea>';
       return '<div class="lrow"><span class="no">'+(i+1)+'</span>'+(it.by?iconHtml(it.by):'<span class="ric none"></span>')
-        +'<input value="'+esc(it.text)+'" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'
+        +field
         +(key==='ryosho'&&isSaved&&it.text?'<button data-reply="'+esc(it.id)+'">返信</button>':'')
         +(key==='horyu'&&isSaved&&saved.length>1?'<button data-mv="'+esc(it.id)+'|-1">▲</button><button data-mv="'+esc(it.id)+'|1">▼</button>':'')
         +((it.id||it.text)?'<button data-done="'+key+'|'+esc(it.id)+'">完了</button>':'')+'</div>';
@@ -878,6 +899,8 @@ if(typeof document!=='undefined'&&document.getElementById){
     }
     view.innerHTML=fixedSectionsHtml()+(shareText===null?'':(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml()))
       +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
+    var ltas=view.querySelectorAll('textarea[data-litem]');
+    for(var ti=0;ti<ltas.length;ti++)autoGrowTa(ltas[ti]);
   }
   function loadSecTimes(){
     if(!getTok())return;
@@ -939,6 +962,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   /* ----- タブ ----- */
   function setTab(t){
     tab=t;
+    $('view').classList.toggle('sharemode',t==='share');
     $('tabChat').className=t==='chat'?'on':'';
     $('tabShare').className=t==='share'?'on':'';
     renderBar('');
@@ -995,6 +1019,9 @@ if(typeof document!=='undefined'&&document.getElementById){
       var id=el.getAttribute('data-retry');
       pending.forEach(function(p){if(p.id===id){p.pending=true;p.failed=false;renderChat(true);doPut(p,0);}});
     }
+  });
+  document.addEventListener('input',function(ev){
+    if(ev.target&&ev.target.tagName==='TEXTAREA'&&ev.target.getAttribute&&ev.target.getAttribute('data-litem'))autoGrowTa(ev.target);
   });
   document.addEventListener('change',function(ev){
     if(ev.target&&ev.target.id==='senderSel'){setSenderKey(ev.target.value);var taEl=$('ta');var keep=taEl?taEl.value:'';renderBar('');var taEl2=$('ta');if(taEl2)taEl2.value=keep;}
