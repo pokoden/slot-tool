@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- r309 -->
+<!-- r310 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -729,9 +729,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     var rows=items.length?items:[{id:'',by:'',text:''}];
     var h=rows.map(function(it,i){
       var isSaved=saved.indexOf(it)>=0;
-      var field=(key==='horyu')
-        ?'<input value="'+esc(it.text)+'" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'
-        :'<textarea rows="1" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'+esc(it.text)+'</textarea>';
+      var field='<textarea rows="1" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'+esc(it.text)+'</textarea>';
       return '<div class="lrow"><span class="no">'+(i+1)+'</span>'+(it.by?iconHtml(it.by):'<span class="ric none"></span>')
         +field
         +(key==='ryosho'&&isSaved&&it.text?'<button data-reply="'+esc(it.id)+'">返信</button>':'')
