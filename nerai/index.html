@@ -722,13 +722,18 @@ function anaPage(){if(an.ax==='all')an.ax='matsu';const R=S.rows,set=setObj();co
  {let last='0';for(const r of R)if(r.d>last)last=r.d;if(last!=='0'){const OD=NC.addDay(last,1);
   const ovs={matsu:String(NC.segOf(OD,'matsu')),hi:String(NC.segOf(OD,'hi')),you:String(NC.segOf(OD,'you'))};
   const ovHead=`対象日 ${OD.slice(0,4)}/${+OD.slice(5,7)}/${+OD.slice(8)}（${vLab('matsu',ovs.matsu)}・${vLab('hi',ovs.hi)}・${vLab('you',ovs.you)}）`;
-  if(an.s==='*'){ovHtml=`<div class="card"><h2>🎯 総合判断</h2><p class="note">店を選ぶと、その店の台ごとの総合判断（${ovHead}の3つの区分の期間一致を集約）が出るよ</p></div>`}
+  if(an.s==='*'){ovHtml=`<div class="card"><h2>🎯 総合判断</h2><p class="note">店を選ぶと、その店の台・状態順ごとの総合判断（${ovHead}の3つの区分の期間一致を集約）が出るよ</p></div>`}
   else{const MM={};for(const ax of['matsu','hi','you'])MM[ax]=anMW(ax,[an.s],B);const ovR=[];const s=an.s;
    for(const g of groups){if(an.g&&g!==an.g)continue;const lt=LT.get(s+'|'+g);if(!lt)continue;
     for(const t of[...lt].sort((a,b)=>ACOL.compare(a,b))){const es=['matsu','hi','you'].map(ax=>NC.mwEval(MM[ax].map(per=>{const m=per[s];return m?m.get(g+'|'+ovs[ax]+'|'+t)||null:null})));
      ovR.push({g,t,ov:NC.mwOverall(es),es})}}
+   // 状態順の行も総合判断に含める（主表に出ている状態順キー全部。並びは主表の状態順。前回系の窓は軸ごとに matsu/dou/you を対応させる）
+   const ovS=[];const sAO=AN[s];
+   if(sAO)for(const g of groups){if(an.g&&g!==an.g)continue;const o=sAO.get(g);if(!o)continue;
+    for(const k of[...new Set(o.stL.map(u=>u.k))].sort((a,b)=>NC.skOrd(a)-NC.skOrd(b))){const es=['matsu','hi','you'].map(ax=>{const w0=k.split('~')[0].split('_')[0];const kk=(w0==='matsu'||w0==='dou'||w0==='you')?NC.AXWIN[ax]+k.slice(w0.length):k;return NC.mwEval(MM[ax].map(per=>{const m=per[s];return m?m.get(g+'|'+ovs[ax]+'|'+kk)||null:null}))});
+     ovS.push({g,k,ov:NC.mwOverall(es),es})}}
    ovR.sort((a,b)=>b.ov.good-a.ov.good||b.ov.tot-a.ov.tot||a.g.localeCompare(b.g,'ja')||ACOL.compare(a.t,b.t));
-   if(ovR.length)ovHtml=`<div class="card"><h2>🎯 総合判断（${ovHead}）</h2><p class="note">台ごとに、対象日の3つの区分それぞれの期間一致をまとめた総合判定だよ。区分の欄は「一致 傾向（長期・中期・短期の○×）」</p><div class="tw"><table><tr><th class="l">機種</th><th>台番</th><th>総合</th><th>傾向</th><th>${AXN.matsu}</th><th>${AXN.hi}</th><th>${AXN.you}</th></tr>${ovR.map(x=>`<tr><td class="l">${esc(mShort(x.g))}</td><td style="text-align:center">${esc(x.t)}</td><td style="text-align:center;font-weight:700">${x.ov.sym}</td><td style="text-align:center">${x.ov.trend}</td>${x.es.map(e=>`<td>${e.sym} ${e.trend}（${e.list.map(w=>w?w.auto?'○':'×':'―').join('')}）</td>`).join('')}</tr>`).join('')}</table></div></div>`}}}
+   if(ovR.length||ovS.length)ovHtml=`<div class="card"><h2>🎯 総合判断（${ovHead}）</h2><p class="note">台・状態順ごとに、対象日の3つの区分それぞれの期間一致をまとめた総合判定だよ。区分の欄は「一致 傾向（長期・中期・短期の○×）」</p><div class="tw"><table><tr><th class="l">機種</th><th>台番</th><th>総合</th><th>傾向</th><th>${AXN.matsu}</th><th>${AXN.hi}</th><th>${AXN.you}</th></tr>${ovR.map(x=>`<tr><td class="l">${esc(mShort(x.g))}</td><td style="text-align:center">${esc(x.t)}</td><td style="text-align:center;font-weight:700">${x.ov.sym}</td><td style="text-align:center">${x.ov.trend}</td>${x.es.map(e=>`<td>${e.sym} ${e.trend}（${e.list.map(w=>w?w.auto?'○':'×':'―').join('')}）</td>`).join('')}</tr>`).join('')}${ovS.map(x=>`<tr><td class="l">${esc(mShort(x.g))}</td><td class="l"><span style="color:#1f5fd6">${stLab(x.k)}</span></td><td style="text-align:center;font-weight:700">${x.ov.sym}</td><td style="text-align:center">${x.ov.trend}</td>${x.es.map(e=>`<td>${e.sym} ${e.trend}（${e.list.map(w=>w?w.auto?'○':'×':'―').join('')}）</td>`).join('')}</tr>`).join('')}</table></div></div>`}}}
  // 行が多いとき（全店舗・全機種・全部の日）に固まらないよう、見えている前後の行だけ描く（スクロールで入れ替え。全行たどれる）
  const items=[];let shown=0;
  for(const bk of blocks){shown+=bk.A.length;items.push({bk,u:null});for(const u of bk.A)items.push({bk,u})}
