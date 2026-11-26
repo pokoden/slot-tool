@@ -245,7 +245,7 @@ function parseTalklog(md){
 }
 function normLists(o){
   o=o&&typeof o==='object'?o:{};
-  ['irai','gidai','ryosho','horyu'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[];});
+  ['irai','gidai','ryosho','horyu','routine'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[];});
   return o;
 }
 var GH_BLOB='https://github.com/pokoden/slot-data/blob/main/';
@@ -329,7 +329,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   var talkMsgs=[],talkSha=null,talkEtag=null;
   var API_ROOT='https://api.github.com/repos/pokoden/slot-data/contents/';
   var talkLoadedOnce=false,shownIds=null,newCount=0,readsEtag=null,readsTimer=null;
-  var lists=null,localBlank={irai:[],gidai:[],ryosho:[],horyu:[]},gijiEntries=null,gijiFilter='',talklogs={board:null,app:null},tlMode='board';
+  var lists=null,localBlank={irai:[],gidai:[],ryosho:[],horyu:[],routine:[]},gijiEntries=null,gijiFilter='',talklogs={board:null,app:null},tlMode='board';
   var opChain=Promise.resolve(),blobProm={};
   var DEST_KEY='ai-board-dest-v1';
   var pending=[];
@@ -720,7 +720,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }).join('');
   }
   /* ----- ①〜④ リスト（lists.json） ----- */
-  var LISTS=[['irai','①依頼'],['gidai','②議題'],['ryosho','③了承'],['horyu','④保留']];
+  var LISTS=[['irai','①依頼'],['gidai','②議題'],['ryosho','③了承'],['horyu','④保留'],['routine','ルーティン']];
   function newId(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
   function autoGrowTa(el){if(!el)return;el.style.height='auto';el.style.height=Math.min(el.scrollHeight+2,220)+'px';}
   function listHtml(key){
@@ -791,7 +791,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     var li=findIn(localBlank[key],id);
     if(li>=0){localBlank[key].splice(li,1);renderShare();return;}
     if(!id)return;
-    var done=null,who=getSenderKey(),label={irai:'依頼',gidai:'議題',ryosho:'了承',horyu:'保留'}[key];
+    var done=null,who=getSenderKey(),label={irai:'依頼',gidai:'議題',ryosho:'了承',horyu:'保留',routine:'ルーティン'}[key];
     chainOp(function(){
       return listsOp(function(o){var k=findIn(o[key],id);if(k>=0){done=o[key][k];o[key].splice(k,1);}},'共有リストの完了').then(function(){
         renderShare();
