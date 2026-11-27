@@ -698,6 +698,26 @@ if(typeof document!=='undefined'&&document.getElementById){
     return '<div class="sec"><button class="sec-h" data-sec="'+esc(key)+'">'+(open?'▼ ':'▶ ')+title+(badge||'')+'</button>'
       +'<div class="sec-b" data-secbody="'+esc(key)+'" style="display:'+(open?'block':'none')+'">'+inner+'</div></div>';
   }
+  function oneShareSectionHtml(title){
+    if(!shareText)return '';
+    var secs=parseSections(shareText);
+    for(var i=0;i<secs.length;i++){
+      if(secs[i].title!==title)continue;
+      var s=secs[i];
+      var rk=getSenderKey();
+      var readAt=(rk==='grokbot'||rk==='muse')?(readsData[rk]||''):'';
+      var badge=(readAt&&secTimes[s.title]&&secTimes[s.title]>readAt)?'<span class="newbadge">NEW</span>':'';
+      var inner;
+      if(s.title==='パスワード'||s.title==='キー'){
+        var rows=parseKvRows(s.body);
+        inner=rows.length?kvRowsHtml(rows):secBodyHtml(s.body);
+      }else{
+        inner=secBodyHtml(s.body);
+      }
+      return secWrap('sec:'+s.title,(SEC_NUM[s.title]||'')+esc(s.title),inner,true,badge);
+    }
+    return '';
+  }
   function shareSectionsHtml(){
     if(!shareText)return '';
     var order=Object.keys(SEC_NUM);
@@ -707,6 +727,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     });
     var rk=getSenderKey();
     var readAt=(rk==='grokbot'||rk==='muse')?(readsData[rk]||''):'';
+    secs=secs.filter(function(s){return s.title!=='定期報告';});
     return secs.map(function(s){
       var badge=(readAt&&secTimes[s.title]&&secTimes[s.title]>readAt)?'<span class="newbadge">NEW</span>':'';
       var inner='';
@@ -895,7 +916,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<div class="err" id="shareErr"></div></div></div>';
       return;
     }
-    view.innerHTML=fixedSectionsHtml()+(shareText===null?'':(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml()))
+    view.innerHTML=oneShareSectionHtml('定期報告')+fixedSectionsHtml()+(shareText===null?'':(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml()))
       +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
     var ltas=view.querySelectorAll('textarea[data-litem]');
     for(var ti=0;ti<ltas.length;ti++)autoGrowTa(ltas[ti]);
