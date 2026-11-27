@@ -54,7 +54,7 @@ nav button.on{font-weight:bold;border-bottom-color:#06C755}
 .csmeta{font-size:13px;font-weight:bold;margin-bottom:4px}
 .csitem textarea{width:100%;box-sizing:border-box;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:8px;margin:6px 0;font-family:inherit;resize:vertical}
 .msg.mine .bubble a{color:#fff;text-decoration:underline}
-.bubble img{max-width:100%;border-radius:8px;display:block;margin:6px 0}
+.bubble img{max-width:100%;border-radius:8px;display:block;margin:6px 0;min-height:120px;background:#f2f2f2}
 .bubble video{max-width:100%;border-radius:8px;display:block;margin:6px 0}
 .bubble .yt{display:block;position:relative;width:100%;aspect-ratio:16/9;margin:6px 0}
 .bubble .yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:8px}
@@ -108,7 +108,7 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 .addform input{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit}
 .tlitem{border-top:1px solid #eee;padding:8px 0}
 .tlhead{display:flex;gap:4px;align-items:center;font-weight:bold;font-size:14px;margin-bottom:2px}
-.bubble img.thumb,.bubble video.thumb{max-width:75%;max-height:240px;border-radius:8px;display:block;margin:6px 0;background:#eee;min-width:60px;min-height:40px}
+.bubble img.thumb,.bubble video.thumb{max-width:75%;max-height:240px;border-radius:8px;display:block;margin:6px 0;background:#eee;min-width:60px;min-height:200px}
 .upst{font-size:13px;color:#222;margin-left:4px}
 .lerr{color:#d33;font-size:13px;min-height:0}
 .lrow textarea{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit;color:#222;resize:none;overflow:hidden;line-height:1.5}
@@ -329,6 +329,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   var talkMsgs=[],talkSha=null,talkEtag=null;
   var API_ROOT='https://api.github.com/repos/pokoden/slot-data/contents/';
   var talkLoadedOnce=false,shownIds=null,newCount=0,readsEtag=null,readsTimer=null;
+  var renderDeferred=false,forceRender=false;
   var lists=null,localBlank={irai:[],gidai:[],ryosho:[],horyu:[],routine:[]},gijiEntries=null,gijiFilter='',talklogs={board:null,app:null},tlMode='board';
   var opChain=Promise.resolve(),blobProm={};
   var DEST_KEY='ai-board-dest-v1';
@@ -435,6 +436,16 @@ if(typeof document!=='undefined'&&document.getElementById){
       +'</div></div>';
   }
   function renderChat(keepScroll){
+    if(keepScroll&&firstLoaded&&tab==='chat'&&!forceRender){
+      var v0=$('view');
+      if(v0&&(v0.scrollTop+v0.clientHeight<v0.scrollHeight-40)){
+        var all0=msgs.concat(talkMsgs),fr0=0;
+        if(shownIds)all0.forEach(function(m){if(!shownIds.has(m.id)&&m.sender!==getSenderKey())fr0++;});
+        if(fr0>0)newCount=fr0;
+        renderDeferred=true;showBadge();return;
+      }
+    }
+    forceRender=false;renderDeferred=false;
     var view=$('view');
     var anchor=null,anchorDy=0,wasBottom=false;
     if(keepScroll){
@@ -529,7 +540,9 @@ if(typeof document!=='undefined'&&document.getElementById){
       boardEtag=r.etag;
       if(r.json.sha===boardSha)return;
       boardSha=r.json.sha;
-      msgs=parseMessages(b64ToUtf8(r.json.content));
+      var btxt=b64ToUtf8(r.json.content);
+      try{localStorage.setItem('aib2-board',JSON.stringify({sha:r.json.sha,text:btxt}));}catch(e){}
+      msgs=parseMessages(btxt);
       msgs.forEach(function(m){m.file='board.md';});
       if(!firstLoaded){
         markRead(loadShown());
@@ -556,7 +569,9 @@ if(typeof document!=='undefined'&&document.getElementById){
       talkEtag=r.etag;
       if(r.json.sha===talkSha)return;
       talkSha=r.json.sha;
-      talkMsgs=parseMessages(b64ToUtf8(r.json.content));
+      var ttxt=b64ToUtf8(r.json.content);
+      try{localStorage.setItem('aib2-talk',JSON.stringify({sha:r.json.sha,text:ttxt}));}catch(e){}
+      talkMsgs=parseMessages(ttxt);
       talkMsgs.forEach(function(m){m.file='talk.md';});
       if(!talkLoadedOnce){talkLoadedOnce=true;if(shownIds)talkMsgs.forEach(function(m){shownIds.add(m.id);});}
       addShown(talkMsgs.map(function(m){return m.id;}));
@@ -617,7 +632,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }).catch(function(e){
       if((e.code===409||e.code===422)&&retry<2){doPut(p,retry+1);return;}
       p.pending=false;p.failed=true;
-      renderChat(true);
+      forceRender=true;renderChat(true);
     });
   }
   function sendPost(){
@@ -995,7 +1010,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     var el=ev.target;
     if(el.id==='tabChat')setTab('chat');
     else if(el.id==='tabShare')setTab('share');
-    else if(el.id==='newBadge'){var vv=$('view');vv.scrollTop=vv.scrollHeight;newCount=0;showBadge();}
+    else if(el.id==='newBadge'){if(renderDeferred){renderDeferred=false;renderChat(true);}var vv=$('view');vv.scrollTop=vv.scrollHeight;newCount=0;showBadge();}
     else if(el.id==='attachBtn'){var fi=$('fileIn');if(fi)fi.click();}
     else if(el.id==='gAdd')addGiji();
     else if(el.getAttribute&&el.getAttribute('data-del')){deletePost(el.getAttribute('data-file'),el.getAttribute('data-del'));}
@@ -1012,7 +1027,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(!v){var er=$('barErr')||$('shareErr');if(er)er.textContent='トークンを入れてね';return;}
       setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();loadTalk();loadReads();if(tab==='share'){renderShare();loadShareFrame();}
     }
-    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
+    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];try{localStorage.removeItem('aib2-board');localStorage.removeItem('aib2-talk');}catch(e){}shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
     else if(el.id==='markReadBtn'){updateReads(visibleLatest(),true);}else if(el.id==='sendBtn')sendPost();
     else if(el.id==='editShare'){shareEditing=true;renderShare();}
     else if(el.id==='cancelEdit'){shareEditing=false;renderShare();}
@@ -1036,7 +1051,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     }
     else if(el.getAttribute&&el.getAttribute('data-retry')){
       var id=el.getAttribute('data-retry');
-      pending.forEach(function(p){if(p.id===id){p.pending=true;p.failed=false;renderChat(true);doPut(p,0);}});
+      pending.forEach(function(p){if(p.id===id){p.pending=true;p.failed=false;forceRender=true;renderChat(true);doPut(p,0);}});
     }
   });
   document.addEventListener('input',function(ev){
@@ -1062,11 +1077,13 @@ if(typeof document!=='undefined'&&document.getElementById){
   setInterval(function(){if(!document.hidden&&tab==='chat'&&getTok()){loadBoard();loadTalk();loadReads();}},20000);
   $('view').addEventListener('scroll',function(){
     if(tab!=='chat')return;
+    if(renderDeferred&&atBottom()){renderDeferred=false;renderChat(true);return;}
     if(newCount&&atBottom()){newCount=0;showBadge();}
     scheduleReads();
   },{passive:true});
   /* ----- 投稿の削除 ----- */
   function deletePost(file,id){
+    forceRender=true;
     if(file!=='board.md'&&file!=='talk.md')return;
     if(!confirm('この投稿を消しますか？（元に戻せません）'))return;
     var tries=0;
@@ -1116,9 +1133,26 @@ if(typeof document!=='undefined'&&document.getElementById){
     }).catch(function(){alert('開けなかった。もう一度試してね');});
   }
   /* ----- 起動 ----- */
+  function primeFromCache(){
+    try{
+      var cb=JSON.parse(localStorage.getItem('aib2-board')||'null');
+      if(!cb||!cb.text)return;
+      var ct=JSON.parse(localStorage.getItem('aib2-talk')||'null');
+      boardSha=cb.sha;msgs=parseMessages(cb.text);
+      msgs.forEach(function(m){m.file='board.md';});
+      if(ct&&ct.text){talkSha=ct.sha;talkMsgs=parseMessages(ct.text);talkMsgs.forEach(function(m){m.file='talk.md';});talkLoadedOnce=true;}
+      markRead(loadShown());
+      var set=readSet();firstUnreadId=null;
+      for(var i=0;i<msgs.length;i++){if(!set.has(msgs[i].id)){firstUnreadId=msgs[i].id;break;}}
+      saveShown(msgs.map(function(m){return m.id;}));
+      firstLoaded=true;shownIds=null;
+      renderChat(false);
+      requestAnimationFrame(positionInitial);
+    }catch(e){}
+  }
   renderTokCtl();
   renderBar('');
-  if(getTok()){loadBoard();loadTalk();loadReads();}
+  if(getTok()){primeFromCache();loadBoard();loadTalk();loadReads();}
 })();
 }
 </script>
