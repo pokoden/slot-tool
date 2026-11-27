@@ -709,7 +709,8 @@ function anaPage(){const R=S.rows,set=setObj();const B=bordEff();
  $('main').innerHTML=`<div class="card"><div class="row"><button class="b" ${anDirty?'':'disabled'} onclick="anSave()">保存${anDirty?'（未保存あり）':''}</button></div><div id="sv" class="st"></div></div>
  <div class="card"><h2>🔍 検索期間</h2>
  <div class="row"><label>期間 <input type="date" value="${from}" onchange="anPd('from',this.value)" style="width:136px;font-size:16px"></label>〜<input type="date" value="${to}" onchange="anPd('to',this.value)" style="width:136px;font-size:16px"><button class="b sub" onclick="anPd('',0)">全期間</button></div>
- <div class="chips">${[1,2,3,4,6].map(n=>{const p=mPer(n);return`<button class="${from===p[0]&&to===p[1]?'on':''}" onclick="anPm(${n})">${n}ヶ月${n>1?'間':''}</button>`}).join('')}</div></div>
+ <div class="chips">${[1,2,3,4,6].map(n=>{const p=mPer(n);return`<button class="${from===p[0]&&to===p[1]?'on':''}" onclick="anPm(${n})">${n}ヶ月${n>1?'間':''}</button>`}).join('')}</div>
+ <div class="chips">${[1,2,3,4,6].map(n=>{const p=rPer(n);return`<button class="${from===p[0]&&to===p[1]?'on':''}" onclick="anPmr(${n})">直近${n}ヶ月${n>1?'間':''}</button>`}).join('')}</div></div>
  ${borHtml()}
  <div class="card"><h2>👁 表示する範囲</h2>
  <div class="chips">${NC.AXES.map(k=>`<button class="${an.ax===k?'on':''}" onclick="anAx('${k}')">${AXN[k]}</button>`).join('')}</div>
@@ -734,6 +735,11 @@ window.anPd=(k,v)=>{const p=Object.assign({},anPer());delete p.rel;delete p.m;if
 function mPer(n){const t=new Date();const y=t.getFullYear(),m=t.getMonth();const p2=x=>String(x).padStart(2,'0');const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
  if(!n)return[ymd(new Date(y,m,1)),ymd(t)];return[ymd(new Date(y,m-n,1)),ymd(new Date(y,m,0))]}
 window.anPm=n=>{const p=mPer(n);const o=Object.assign({},anPer());delete o.rel;o.from=p[0];o.to=p[1];o.m=n;S.an.period=o;anDirty=true;NRC={};anaPage()};
+// 日付文字列をnヶ月ずらす（月末はその月の末日に丸める）
+function addMonS(s,dm){const[y,m,d]=s.split('-').map(Number);const t=new Date(y,m-1+dm,1);const last=new Date(t.getFullYear(),t.getMonth()+1,0).getDate();const p2=x=>String(x).padStart(2,'0');return t.getFullYear()+'-'+p2(t.getMonth()+1)+'-'+p2(Math.min(d,last))}
+// 直近nヶ月（今日までのnヶ月分。mは負数で保存し、狙い側では狙う日の前日までの直近nヶ月に読み替える）
+function rPer(n){const t=new Date();const p2=x=>String(x).padStart(2,'0');const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());return[NC.addDay(addMonS(ymd(t),-n),1),ymd(t)]}
+window.anPmr=n=>{const p=rPer(n);const o=Object.assign({},anPer());delete o.rel;o.from=p[0];o.to=p[1];o.m=-n;S.an.period=o;anDirty=true;NRC={};anaPage()};
 window.anAx=k=>{if(!an.vs)an.vs={};an.vs[an.ax]=an.val;an.ax=k;an.val=an.vs[k]!=null?an.vs[k]:'all';an.so='t';an.rev=0;NRC={};anaPage()};
 window.anOnly=()=>{an.only=an.only?0:1;anaPage()};
 window.anSo=k=>{if(an.so===k)an.rev=an.rev?0:1;else{an.so=k;an.rev=0}anaPage()};
@@ -773,6 +779,8 @@ function nerFor(store,date,members,tRanks){const k=store+'|'+date;if(NRC[k])retu
  const PD=anPer();let from=PD.from||first;let to=PD.to||'9999-12-31';const pv=NC.addDay(date,-1);if(to>pv)to=pv;
  // Nヶ月ボタンで選んだときは、狙う日の前の月までのNヶ月（例：3ヶ月・10/16→7/1〜9/30）
  if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);from=ymOf(y,m-1-(+PD.m))+'-01';to=NC.addDay(date.slice(0,7)+'-01',-1)}
+ // 直近nヶ月（mが負数）のときは、狙う日の前日までの直近nヶ月
+ if(+PD.m<0){to=pv;from=NC.addDay(addMonS(pv,+PD.m),1)}
  const base=NC.stdBase(S.rows,set,to);
  const hasPrev=NC.storeHas(S.rows,store,pv);const L=NC.neraiList(S.rows,set,base,allRanks(),{store,date,members,tRanks,from,to,border:bordEff(),marks:S.an.marks||{},cfg:nerCfg(),hasPrev});L.from=from;L.to=to;nrEval(L,store,date,from,to);return NRC[k]=L}
 // 狙いの評価：台分析で○の区分だけ印を付ける（各種数値設定の「台分析で○」の印と色）。
@@ -917,7 +925,7 @@ function nerPage(){const R=S.rows,set=setObj();const stores=[...new Set(R.map(r=
  const num=(path,v,w)=>`<input inputmode="decimal" type="text" step="any" value="${esc(v)}" style="width:${w||60}px" onchange="nrSet('${path}',this.value)">`;
  
  const stat=asBar();
- $('main').innerHTML=`${stat}${autoOn()&&date?autoLine(ss.length?ss:stores,date):''}<div class="card"><h2>🏆 狙いリスト ${(()=>{const PD=anPer();const md=d=>d?+d.slice(5,7)+'/'+ +d.slice(8,10):'';let f='',t='';if(nr.d){const date=nr.d;if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);f=ymOf(y,m-1-(+PD.m))+'-01';t=NC.addDay(date.slice(0,7)+'-01',-1)}else{f=PD.from||'';t=PD.to||'';const pv=NC.addDay(date,-1);if(t>pv)t=pv}}return f&&t?'分析期間 '+md(f)+'〜'+md(t):''})()}</h2>
+ $('main').innerHTML=`${stat}${autoOn()&&date?autoLine(ss.length?ss:stores,date):''}<div class="card"><h2>🏆 狙いリスト ${(()=>{const PD=anPer();const md=d=>d?+d.slice(5,7)+'/'+ +d.slice(8,10):'';let f='',t='';if(nr.d){const date=nr.d;if(+PD.m>0){const[y,m]=date.slice(0,7).split('-').map(Number);f=ymOf(y,m-1-(+PD.m))+'-01';t=NC.addDay(date.slice(0,7)+'-01',-1)}else if(+PD.m<0){const pv=NC.addDay(date,-1);t=pv;f=NC.addDay(addMonS(pv,+PD.m),1)}else{f=PD.from||'';t=PD.to||'';const pv=NC.addDay(date,-1);if(t>pv)t=pv}}return f&&t?'分析期間 '+md(f)+'〜'+md(t):''})()}</h2>
  ${stChips('nr',ss,stores)}<div class="row">${sel('g',[['','すべての機種']].concat(groups.slice().sort(gOrd()).map(g=>[g,mShort(g)])),nr.g||'')}</div>
  <div class="row"><input type="date" value="${esc(nr.d)}" min="${first}" max="${mx}" onchange="nrDate(this.value)" style="width:150px;font-size:16px"><button class="b sub" onclick="nrDef()">標準の並びに戻す</button><button class="b sub" onclick="nr.g='';ssAll('nr')">条件リセット</button></div>
  <div class="tw"><table>${head}${body}</table></div>${T.length?'':`<div class="row">${units.length?'狙いがないよ':'その日のデータがないよ'}</div>`}
