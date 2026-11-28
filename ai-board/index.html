@@ -793,7 +793,7 @@ if(typeof document!=='undefined'&&document.getElementById){
         +field
         +(key==='ryosho'&&isSaved&&it.text?'<button data-reply="'+esc(it.id)+'">返信</button>':'')
         +(key==='horyu'&&isSaved&&saved.length>1?'<button data-mv="'+esc(it.id)+'|-1">▲</button><button data-mv="'+esc(it.id)+'|1">▼</button>':'')
-        +((it.id||it.text)?'<button data-done="'+key+'|'+esc(it.id)+'">完了</button>':'')+'</div>';
+        +((key!=='routine'&&(it.id||it.text))?'<button data-done="'+key+'|'+esc(it.id)+'">完了</button>':'')+'</div>';
     }).join('');
     return h+'<div style="margin-top:6px"><button class="small" data-add="'+key+'">追加</button></div><div class="lerr" id="lerr_'+key+'"></div>';
   }
@@ -933,7 +933,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   function fixedSectionsHtml(){
     var h=LISTS.map(function(l){
       var n=lists&&lists[l[0]]?lists[l[0]].length:0;
-      return secWrap('list:'+l[0],l[1]+(n?'（'+n+'）':''),lists?listHtml(l[0]):'読み込み中…',true);
+      return secWrap('list:'+l[0],l[1]+(n?'（'+n+'）':''),lists?listHtml(l[0]):'読み込み中…',l[0]!=='routine');
     }).join('');
     h+=secWrap('giji','⑤議事ログ',gijiHtml(),false);
     h+=secWrap('talklog','⑥会話ログ',talklogHtml(),false);
