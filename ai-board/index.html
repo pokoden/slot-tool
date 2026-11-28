@@ -101,6 +101,7 @@ pre.stxt{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-siz
 .lrow input{flex:1;min-width:0;font-size:16px;padding:6px 8px;border:1px solid #ccc;border-radius:8px;font-family:inherit;color:#222}
 .lrow button{flex:0 0 auto;padding:5px 9px;font-size:13px}
 .ric.none{background:#fff;border:1px dashed #555}
+.rarrow{flex:0 0 auto;color:#888;font-size:11px}
 .fbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .fbar button{padding:5px 10px;font-size:13px}
 .fbar button.on{background:#06C755;color:#fff;border-color:#06C755;font-weight:bold}
@@ -805,7 +806,7 @@ if(typeof document!=='undefined'&&document.getElementById){
     var h=rows.map(function(it,i){
       var isSaved=saved.indexOf(it)>=0;
       var field='<textarea rows="1" data-litem="'+key+'|'+esc(it.id)+'" enterkeyhint="done">'+esc(it.text)+'</textarea>';
-      return '<div class="lrow"><span class="no">'+(i+1)+'</span>'+(it.by?iconHtml(it.by):'<span class="ric none"></span>')
+      return '<div class="lrow"><span class="no">'+(i+1)+'</span>'+(it.by?iconHtml(it.by):'<span class="ric none"></span>')+(it.by2?'<span class="rarrow">→</span>'+iconHtml(it.by2):'')
         +field
         +(key==='ryosho'&&isSaved&&it.text?'<button data-reply="'+esc(it.id)+'">返信</button>':'')
         +(key==='horyu'&&isSaved&&saved.length>1?'<button data-mv="'+esc(it.id)+'|-1">▲</button><button data-mv="'+esc(it.id)+'|1">▼</button>':'')
@@ -1080,7 +1081,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       var skey2=el.getAttribute('data-sec');
       var bodyEl=document.querySelector('[data-secbody="'+skey2+'"]');
       secOpen[skey2]=bodyEl?bodyEl.style.display==='none':!secOpen[skey2];
-      if(bodyEl)bodyEl.style.display=secOpen[skey2]?'block':'none';
+      if(bodyEl){bodyEl.style.display=secOpen[skey2]?'block':'none';if(secOpen[skey2]){var tas9=bodyEl.querySelectorAll('textarea');for(var qi=0;qi<tas9.length;qi++)autoGrowTa(tas9[qi]);}}
       el.textContent=(secOpen[skey2]?'▼ ':'▶ ')+el.textContent.replace(/^[▼▶] /,'');
     }
     else if(el.getAttribute&&el.getAttribute('data-copy')){
