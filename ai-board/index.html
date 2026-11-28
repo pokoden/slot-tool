@@ -352,7 +352,7 @@ if(typeof document!=='undefined'&&document.getElementById){
   var DEST_KEY='ai-board-dest-v1';
   var pending=[];
   var readsData={grokbot:'',muse:'',kosuke:''},readsSha=null;
-  var shareText=null,shareSha=null,shareEditing=false;
+  var shareText=null,shareSha=null,shareEditing=false,shareEditTitle=null;
   var secTimes={},secTimesSha=null;
   var secOpen={};
   function $(id){return document.getElementById(id);}
@@ -769,6 +769,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       }else{
         inner=secBodyHtml(s.body);
       }
+      if((s.title!=='パスワード'&&s.title!=='キー')||getSenderKey()==='muse'||getSenderKey()==='grokbot')inner+='<div style="margin-top:8px"><button class="small" data-secedit="'+esc(s.title)+'">このセクションを編集</button></div>';
       return secWrap('sec:'+s.title,(SEC_NUM[s.title]||'')+esc(s.title),inner,true,badge);
     }
     return '';
@@ -792,6 +793,7 @@ if(typeof document!=='undefined'&&document.getElementById){
       }else{
         inner=secBodyHtml(s.body);
       }
+      if((s.title!=='パスワード'&&s.title!=='キー')||getSenderKey()==='muse'||getSenderKey()==='grokbot')inner+='<div style="margin-top:8px"><button class="small" data-secedit="'+esc(s.title)+'">このセクションを編集</button></div>';
       return secWrap('sec:'+s.title,(SEC_NUM[s.title]||'')+esc(s.title),inner,false,badge);
     }).join('');
   }
@@ -971,6 +973,20 @@ if(typeof document!=='undefined'&&document.getElementById){
         +'<div class="err" id="shareErr"></div></div></div>';
       return;
     }
+    if(shareEditTitle){
+      if((shareEditTitle==='パスワード'||shareEditTitle==='キー')&&getSenderKey()!=='muse'&&getSenderKey()!=='grokbot')shareEditTitle=null;
+    }
+    if(shareEditTitle){
+      var esec=null;
+      parseSections(shareText||'').forEach(function(x){if(x.title===shareEditTitle)esec=x;});
+      if(esec){
+        view.innerHTML='<div class="vcard"><h3>'+esc(esec.title)+' を編集</h3><div class="kform"><textarea id="shareSecText" rows="16">'+esc('## '+esec.title+'\n'+esec.body)+'</textarea>'
+          +'<button class="pri" id="saveShareSec">保存</button> <button id="cancelSecEdit">やめる</button>'
+          +'<div class="err" id="shareErr"></div></div></div>';
+        return;
+      }
+      shareEditTitle=null;
+    }
     view.innerHTML=oneShareSectionHtml('定期報告')+fixedSectionsHtml()+(shareText===null?'':(shareText==='' ? '<div class="scard">まだ中身がないよ。「編集」から作れるよ。</div>' : shareSectionsHtml()))
       +'<div class="scard"><button class="small" id="editShare">編集（見出しを足す・直す）</button></div>';
     var ltas=view.querySelectorAll('textarea[data-litem]');
@@ -1010,12 +1026,21 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(tab==='share')renderShare();
     });
   }
-  function saveShare(){
-    var text=$('shareText').value;
+  function commitShareText(text){
     function fail(){var er=$('shareErr');if(er)er.textContent='保存できなかった。もう一度試してね。';}
+    var rk=getSenderKey();
+    if(rk!=='muse'&&rk!=='grokbot'){
+      var oldMap={},newMap={};
+      parseSections(shareText||'').forEach(function(x){oldMap[x.title]=x.body;});
+      parseSections(text||'').forEach(function(x){newMap[x.title]=x.body;});
+      if(oldMap['パスワード']!==newMap['パスワード']||oldMap['キー']!==newMap['キー']){
+        var er=$('shareErr');if(er)er.textContent='パスワードとキーは、MUSEと秘書だけが編集できるよ。';
+        return;
+      }
+    }
     var prevShare=shareText;
     apiPut('share.md',text,shareSha,'共有を更新').then(function(){
-      shareText=text;shareEditing=false;
+      shareText=text;shareEditing=false;shareEditTitle=null;
       touchSecTimes(prevShare,text);
       return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
     }).then(function(){renderShare();}).catch(function(e){
@@ -1024,7 +1049,7 @@ if(typeof document!=='undefined'&&document.getElementById){
           shareSha=(r&&r.json)?r.json.sha:null;
           return apiPut('share.md',text,shareSha,'共有を更新');
         }).then(function(){
-          shareText=text;shareEditing=false;
+          shareText=text;shareEditing=false;shareEditTitle=null;
           touchSecTimes(prevShare,text);
           return apiGetJson('share.md',null).then(function(r){if(r&&r.json)shareSha=r.json.sha;});
         }).then(function(){renderShare();}).catch(fail);
@@ -1032,6 +1057,30 @@ if(typeof document!=='undefined'&&document.getElementById){
       }
       fail();
     });
+  }
+  function saveShare(){
+    commitShareText($('shareText').value);
+  }
+  function sectionSpan(text,title){
+    text=String(text||'');
+    var re=/^## /gm,m,start=-1;
+    while((m=re.exec(text))!==null){
+      if(start>=0)return {start:start,end:m.index};
+      var nl=text.indexOf('\n',m.index);
+      var head=(nl<0?text.slice(m.index+3):text.slice(m.index+3,nl)).trim();
+      if(head===title)start=m.index;
+    }
+    return start<0?null:{start:start,end:text.length};
+  }
+  function saveShareSection(){
+    var ta=$('shareSecText');if(!ta)return;
+    var chunk=ta.value.replace(/\s+$/,'');
+    if(chunk.split('\n')[0].indexOf('## ')!==0){var er=$('shareErr');if(er)er.textContent='1行目の見出し（## ）は消さないでね。';return;}
+    var span=sectionSpan(shareText,shareEditTitle);
+    if(!span){var er2=$('shareErr');if(er2)er2.textContent='セクションが見つからなかった。';return;}
+    var before=String(shareText).slice(0,span.start),after=String(shareText).slice(span.end);
+    chunk+=(after?'\n\n':'\n');
+    commitShareText(before+chunk+after);
   }
   /* ----- タブ ----- */
   function setTab(t){
@@ -1068,11 +1117,14 @@ if(typeof document!=='undefined'&&document.getElementById){
       if(!v){var er=$('barErr')||$('shareErr');if(er)er.textContent='トークンを入れてね';return;}
       setTok(v);renderTokCtl();renderBar('');firstLoaded=false;loadBoard();loadTalk();loadReads();if(tab==='share'){renderShare();loadShareFrame();}
     }
-    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];try{localStorage.removeItem('aib2-board');localStorage.removeItem('aib2-talk');}catch(e){}shareText=null;shareSha=null;shareEditing=false;$('view').innerHTML='';renderTokCtl();renderBar('');}
+    else if(el.id==='delTok'){clearTok();boardSha=null;boardEtag=null;talkSha=null;talkEtag=null;talkMsgs=[];talkLoadedOnce=false;shownIds=null;readsEtag=null;lists=null;gijiEntries=null;talklogs={board:null,app:null};firstLoaded=false;msgs=[];try{localStorage.removeItem('aib2-board');localStorage.removeItem('aib2-talk');}catch(e){}shareText=null;shareSha=null;shareEditing=false;shareEditTitle=null;$('view').innerHTML='';renderTokCtl();renderBar('');}
     else if(el.id==='markReadBtn'){updateReads(visibleLatest(),true);}else if(el.id==='sendBtn')sendPost();
     else if(el.id==='editShare'){shareEditing=true;renderShare();}
     else if(el.id==='cancelEdit'){shareEditing=false;renderShare();}
     else if(el.id==='saveShare')saveShare();
+    else if(el.getAttribute&&el.getAttribute('data-secedit')){shareEditTitle=el.getAttribute('data-secedit');shareEditing=false;renderShare();}
+    else if(el.id==='saveShareSec')saveShareSection();
+    else if(el.id==='cancelSecEdit'){shareEditTitle=null;renderShare();}
     else if(el.closest&&el.closest('[data-wday]')){
       var wd=el.closest('[data-wday]'),det2=wd.nextElementSibling;
       if(det2){var wopen=det2.style.display!=='none';det2.style.display=wopen?'none':'block';var mk=wd.querySelector('.wmark');if(mk)mk.textContent=wopen?'\u25B8':'\u25BE';}
